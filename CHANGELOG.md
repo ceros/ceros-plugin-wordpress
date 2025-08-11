@@ -5,6 +5,20 @@ All notable changes to the Ceros WordPress Plugin will be documented in this fil
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.14.0] - 2025-08-11
+
+### Fixed
+- Experience selection now works on the first click (no longer requires two clicks)
+- Experiences no longer toggle expand/collapse state; selection is independent of folder expansion
+
+### Performance
+- Selection is applied immediately on click for experience nodes (before network requests)
+- Optimized tree updates to avoid full-tree rewrites by using structural sharing when attaching embed codes or children
+- Significantly reduced re-renders and UI lag after multiple selections
+
+### Developer Experience
+- Rebuilt compiled assets to include the above changes
+
 ## [0.13.0] - 2025-08-08
 
 ### Changed

@@ -396,6 +396,10 @@ export default function Edit( { attributes, setAttributes, clientId } ) {
 
 	// Handle click on tree node
 	function handleNodeClick( node ) {
+	// Only toggle expand/collapse for folder nodes. Experience nodes should not
+	// use expand/collapse state, otherwise a prior click would require a second
+	// click to re-select the same experience.
+	if ( ! node.isExperience ) {
 		const newExpanded = new Set( expandedNodes );
 		if ( newExpanded.has( node.resourceId ) ) {
 			newExpanded.delete( node.resourceId );
@@ -405,9 +409,15 @@ export default function Edit( { attributes, setAttributes, clientId } ) {
 
 		newExpanded.add( node.resourceId );
 		setExpandedNodes( newExpanded );
+	}
 
 		// For experience nodes, we need to fetch embed codes
 		if ( node.isExperience ) {
+			// Make selection instantaneous for better UX
+			setSelectedNodeId( node.resourceId );
+			setSelectedExperienceName( node.name );
+			setSelectedEmbedOption( 'full' );
+
 			// If node already has embed codes loaded, don't refetch
 			if ( node.embedCodes ) {
 				// Set the embed codes for preview
@@ -423,9 +433,6 @@ export default function Edit( { attributes, setAttributes, clientId } ) {
 					scrollableEmbedCode: replaceDomains( node.embedCodes.scrollableEmbedCode )
 				};
 				setCurrentEmbedCodes( codesWithDomains );
-				setSelectedExperienceName( node.name );
-				setSelectedNodeId( node.resourceId );
-				setSelectedEmbedOption( 'full' );
 				return;
 			}
 
@@ -475,18 +482,25 @@ export default function Edit( { attributes, setAttributes, clientId } ) {
 						
 						// We fetched embed codes, attach to node and stop further processing
 						setFolderTreeData( ( prev ) => {
-							function attachCodes( nodes ) {
-								return nodes.map( ( n ) => {
-									if ( n.resourceId === node.resourceId ) {
-										return { ...n, embedCodes: res?.body };
+						function attachCodes( nodes ) {
+							let changed = false;
+							const updated = nodes.map( ( n ) => {
+								if ( n.resourceId === node.resourceId ) {
+									changed = true;
+									return { ...n, embedCodes: res?.body };
+								}
+								if ( n.children && n.children.length ) {
+									const updatedChildren = attachCodes( n.children );
+									if ( updatedChildren !== n.children ) {
+										changed = true;
+										return { ...n, children: updatedChildren };
 									}
-									if ( n.children && n.children.length ) {
-										return { ...n, children: attachCodes( n.children ) };
-									}
-									return n;
-								} );
-							}
-							return attachCodes( prev );
+								}
+								return n;
+							} );
+							return changed ? updated : nodes;
+						}
+						return attachCodes( prev );
 						} );
 						return; // done for experience nodes
 					}
@@ -519,18 +533,25 @@ export default function Edit( { attributes, setAttributes, clientId } ) {
 						} ) );
 
 						setFolderTreeData( ( prev ) => {
-							function addChildren( nodes ) {
-								return nodes.map( ( n ) => {
-									if ( n.resourceId === node.resourceId ) {
-										return { ...n, children: ( n.children || [] ).concat( childNodes ) };
+						function addChildren( nodes ) {
+							let changed = false;
+							const updated = nodes.map( ( n ) => {
+								if ( n.resourceId === node.resourceId ) {
+									changed = true;
+									return { ...n, children: ( n.children || [] ).concat( childNodes ) };
+								}
+								if ( n.children && n.children.length ) {
+									const updatedChildren = addChildren( n.children );
+									if ( updatedChildren !== n.children ) {
+										changed = true;
+										return { ...n, children: updatedChildren };
 									}
-									if ( n.children && n.children.length ) {
-										return { ...n, children: addChildren( n.children ) };
-									}
-									return n;
-								} );
-							}
-							return addChildren( prev );
+								}
+								return n;
+							} );
+							return changed ? updated : nodes;
+						}
+						return addChildren( prev );
 						} );
 					}
 				} )
