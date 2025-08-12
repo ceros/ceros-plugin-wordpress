@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       Ceros
  * Description:       Ceros API integration POC plugin
- * Version:           0.15.0
+ * Version:           0.15.1
  * Requires at least: 6.7
  * Requires PHP:      7.4
  * Author:            CopiaDigital.com
