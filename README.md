@@ -211,7 +211,7 @@ For technical support or feature requests, please contact the development team.
 
 See [CHANGELOG.md](CHANGELOG.md) for detailed version history.
 
-### Current Version: 0.15.0
+### Current Version: 0.7.0
 
 ### Recent Updates
 

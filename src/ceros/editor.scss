@@ -218,6 +218,26 @@
 				background-color: rgb(15, 23, 42);
 				line-height: 1.14285714;
 			}
+
+				&:disabled {
+					cursor: not-allowed;
+					border-color: rgb(148, 163, 184);
+					background: rgb(248, 250, 252);
+					box-shadow: none;
+				}
+
+				&:disabled:checked::before {
+					background-color: rgb(100, 116, 139);
+				}
+
+				&:disabled + span {
+					opacity: 0.6;
+					color: rgb(100, 116, 139);
+				}
+
+				&:disabled + span .ceros-block__embed-options-description {
+					color: rgb(148, 163, 184);
+				}
 		}
 	}
 
