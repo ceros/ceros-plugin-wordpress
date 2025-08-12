@@ -5,6 +5,23 @@ All notable changes to the Ceros WordPress Plugin will be documented in this fil
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.15.0] - 2025-08-12
+
+### Changed
+- Improved CSS asset cache busting by appending a version or file modification time to stylesheet URLs so updates take effect immediately
+- Inject block metadata `version` during registration for more reliable cache invalidation
+
+### Enhanced
+- Updated block registration to load from `build/blocks-manifest.php` and manually register the `ceros` block with a server render callback
+- Added detailed debug logging around manifest loading and block registration
+
+### Fixed
+- More robust handling of 403 Forbidden responses across REST endpoints with clear, user-facing error messages
+- Minor editor polish: auto-select embed option based on available codes and reliable toolbar-hide cleanup when closing the modal
+
+### Developer Experience
+- Rebuilt compiled assets to include the above changes
+
 ## [0.14.0] - 2025-08-11
 
 ### Fixed

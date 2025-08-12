@@ -211,10 +211,11 @@ For technical support or feature requests, please contact the development team.
 
 See [CHANGELOG.md](CHANGELOG.md) for detailed version history.
 
-### Current Version: 0.7.0
+### Current Version: 0.15.0
 
 ### Recent Updates
 
+- **v0.15.0** - Improved CSS cache busting, manifest-based block registration with server render callback, enhanced debug logging, better 403 handling, and editor polish
 - **v0.7.0** - Added automatic experience loading with parallel API processing and smart caching
 - **v0.6.0** - Fixed modal persistence and block state management
 - **v0.5.0** - Enhanced API key validation and error handling  

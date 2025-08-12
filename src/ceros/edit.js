@@ -287,6 +287,19 @@ export default function Edit( { attributes, setAttributes, clientId } ) {
 		}
 	}, [attributes.fullHeightEmbedCode, attributes.scrollableEmbedCode]);
 
+    // Auto-select available embed option when codes change
+	useEffect(() => {
+		if (!currentEmbedCodes) return;
+        const hasFull = Boolean(currentEmbedCodes.fullHeightEmbedCode && String(currentEmbedCodes.fullHeightEmbedCode).trim());
+        const hasScroll = Boolean(currentEmbedCodes.scrollableEmbedCode && String(currentEmbedCodes.scrollableEmbedCode).trim());
+		if (!hasFull && hasScroll && selectedEmbedOption !== 'scroll') {
+			setSelectedEmbedOption('scroll');
+		}
+		else if (!hasScroll && hasFull && selectedEmbedOption !== 'full') {
+			setSelectedEmbedOption('full');
+		}
+	}, [currentEmbedCodes, selectedEmbedOption]);
+
 	useEffect( () => {
 		// First, check if API key is configured before making any API calls
 		apiFetch( { path: '/ceros/v1/api-key-status' } )
@@ -470,15 +483,26 @@ export default function Edit( { attributes, setAttributes, clientId } ) {
 						};
 
 						// store embed codes with domain replacement for preview
-						const codes = res?.body || null;
-						const codesWithDomains = codes ? {
-							fullHeightEmbedCode: replaceDomains( codes.fullHeightEmbedCode ),
-							scrollableEmbedCode: replaceDomains( codes.scrollableEmbedCode )
-						} : null;
-						setCurrentEmbedCodes( codesWithDomains );
-						setSelectedExperienceName( node.name );
-						setSelectedNodeId( node.resourceId );
-						setSelectedEmbedOption( 'full' );
+					const codes = res?.body || null;
+					const codesWithDomains = codes ? {
+						fullHeightEmbedCode: replaceDomains( codes.fullHeightEmbedCode ),
+						scrollableEmbedCode: replaceDomains( codes.scrollableEmbedCode )
+					} : null;
+					setCurrentEmbedCodes( codesWithDomains );
+					setSelectedExperienceName( node.name );
+					setSelectedNodeId( node.resourceId );
+					// Choose default option based on availability
+                    if (codesWithDomains) {
+                        const hasFull = Boolean(codesWithDomains.fullHeightEmbedCode && String(codesWithDomains.fullHeightEmbedCode).trim());
+                        const hasScroll = Boolean(codesWithDomains.scrollableEmbedCode && String(codesWithDomains.scrollableEmbedCode).trim());
+						if (!hasFull && hasScroll) {
+							setSelectedEmbedOption('scroll');
+						} else if (hasFull && !hasScroll) {
+							setSelectedEmbedOption('full');
+						} else if (!hasFull && !hasScroll) {
+							setSelectedEmbedOption('full');
+						}
+					}
 						
 						// We fetched embed codes, attach to node and stop further processing
 						setFolderTreeData( ( prev ) => {
@@ -649,25 +673,27 @@ export default function Edit( { attributes, setAttributes, clientId } ) {
 						<h2>Selected Experience: {selectedExperienceName || 'Previously Configured Experience'}</h2>
 						<div className="ceros-block__embed-options">
 							<div>
-								<label className="ceros-block__embed-options-label">
-									<input
-										type="radio"
-										value="full"
-										checked={ selectedEmbedOption === 'full' }
-										onChange={ () => { setSelectedEmbedOption( 'full' ); setAttributes( { selectedOption: 'full' } ); } }
-									/>
+                                <label className="ceros-block__embed-options-label">
+                                    <input
+                                        type="radio"
+                                        value="full"
+                                        checked={ selectedEmbedOption === 'full' }
+                                        disabled={ !Boolean(currentEmbedCodes?.fullHeightEmbedCode && String(currentEmbedCodes?.fullHeightEmbedCode).trim()) }
+                                        onChange={ () => { setSelectedEmbedOption( 'full' ); setAttributes( { selectedOption: 'full' } ); } }
+                                    />
 									<span>
 										<span>Full height</span>
 										<span className="ceros-block__embed-options-description">This option scrolls naturally with your parent page without additional scrollbars.</span>
 									</span>
 								</label>
-								<label className="ceros-block__embed-options-label">
-									<input
-										type="radio"
-										value="scroll"
-										checked={ selectedEmbedOption === 'scroll' }
-										onChange={ () => { setSelectedEmbedOption( 'scroll' ); setAttributes( { selectedOption: 'scroll' } ); } }
-									/>
+                                <label className="ceros-block__embed-options-label">
+                                    <input
+                                        type="radio"
+                                        value="scroll"
+                                        checked={ selectedEmbedOption === 'scroll' }
+                                        disabled={ !Boolean(currentEmbedCodes?.scrollableEmbedCode && String(currentEmbedCodes?.scrollableEmbedCode).trim()) }
+                                        onChange={ () => { setSelectedEmbedOption( 'scroll' ); setAttributes( { selectedOption: 'scroll' } ); } }
+                                    />
 									<span>
 										<span>Scrolling</span>
 										<span className="ceros-block__embed-options-description">Displays your content in a viewport with internal scrollbars.</span>
@@ -765,24 +791,26 @@ export default function Edit( { attributes, setAttributes, clientId } ) {
 								<div className="ceros-block__embed-options">
 									<div>
 										<label className="ceros-block__embed-options-label">
-											<input
-												type="radio"
-												value="full"
-												checked={ selectedEmbedOption === 'full' }
-												onChange={ () => setSelectedEmbedOption( 'full' ) }
-											/>
+                                        <input
+                                            type="radio"
+                                            value="full"
+                                        checked={ selectedEmbedOption === 'full' }
+                                        disabled={ !Boolean(currentEmbedCodes?.fullHeightEmbedCode && String(currentEmbedCodes?.fullHeightEmbedCode).trim()) }
+                                            onChange={ () => setSelectedEmbedOption( 'full' ) }
+                                        />
 											<span>
 												<span>Full height</span>
 												<span className="ceros-block__embed-options-description">This option scrolls naturally with your parent page without additional scrollbars.</span>
 											</span>
 										</label>
 										<label className="ceros-block__embed-options-label">
-											<input
-												type="radio"
-												value="scroll"
-												checked={ selectedEmbedOption === 'scroll' }
-												onChange={ () => setSelectedEmbedOption( 'scroll' ) }
-											/>
+                                        <input
+                                            type="radio"
+                                            value="scroll"
+                                        checked={ selectedEmbedOption === 'scroll' }
+                                        disabled={ !Boolean(currentEmbedCodes?.scrollableEmbedCode && String(currentEmbedCodes?.scrollableEmbedCode).trim()) }
+                                            onChange={ () => setSelectedEmbedOption( 'scroll' ) }
+                                        />
 											<span>
 												<span>Scrolling</span>
 												<span className="ceros-block__embed-options-description">Displays your content in a viewport with internal scrollbars.</span>
