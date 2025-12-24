@@ -17,11 +17,18 @@ if ( ! defined( 'ABSPATH' ) ) {
 class Ceros_API {
 
 	/**
-	 * The base URL for the Ceros API.
+	 * The base URL for the Ceros Production API.
 	 *
 	 * @var string
 	 */
-	protected $base_url = 'https://api.ceros.com';
+	private const API_BASE_URL_PRODUCTION = 'https://rest.ceros.com';
+
+	/**
+	 * The base URL for the Ceros Staging API.
+	 *
+	 * @var string
+	 */
+	private const API_BASE_URL_STAGING = 'https://api-wordpresspoc.dev.flex.cerosdev.com';
 
 	/**
 	 * Holds the singleton instance.
@@ -44,75 +51,28 @@ class Ceros_API {
 	}
 
 	/**
-	 * Make a GET request against the API.
+	 * Get the API base URL based on the selected environment.
 	 *
-	 * @param string $path   Endpoint path, e.g. "/v1/some/endpoint".
-	 * @param array  $args   Extra wp_remote_get arguments.
-	 *
-	 * @return array|WP_Error Returns associative array on success, WP_Error on failure.
+	 * @return string The API base URL.
 	 */
-	public function get( $path, $args = array() ) {
-		return $this->request( 'GET', $path, $args );
-	}
+	private function get_api_base_url() {
+		$environment = get_option( 'ceros_api_environment', 'production' );
 
-	/**
-	 * Perform the actual request using WordPress HTTP API.
-	 *
-	 * @param string $method HTTP method.
-	 * @param string $path   Endpoint path.
-	 * @param array  $args   Additional arguments for wp_remote_ functions.
-	 *
-	 * @return array|WP_Error
-	 */
-	protected function request( $method, $path, $args = array() ) {
-		$endpoint = trailingslashit( $this->base_url ) . ltrim( $path, '/' );
-
-		$defaults = array(
-			'headers' => array(
-				'x-api-key' => ceros_get_api_key(),
-				'Accept'    => 'application/json',
-			),
-		);
-
-		$args = wp_parse_args( $args, $defaults );
-
-		$response = ( 'GET' === $method )
-			? wp_remote_get( $endpoint, $args )
-			: wp_remote_post( $endpoint, $args );
-
-		if ( is_wp_error( $response ) ) {
-			return $response;
+		if ( 'staging' === $environment ) {
+			return self::API_BASE_URL_STAGING;
 		}
 
-		$code = wp_remote_retrieve_response_code( $response );
-		$body = wp_remote_retrieve_body( $response );
-		$data = json_decode( $body, true );
-
-		return array(
-			'code' => $code,
-			'body' => $data,
-		);
+		return self::API_BASE_URL_PRODUCTION;
 	}
 
 	/**
-	 * Example endpoint wrapper.
+	 * Make an authenticated GET request to the Ceros POC API.
 	 *
-	 * Add concrete methods as needed so that block/editor code can fetch data
-	 * without worrying about low-level request logic.
+	 * @param string $endpoint The API endpoint path (e.g., '/accounts/current-account').
+	 *
+	 * @return array|WP_Error Returns ['code' => int, 'body' => array] on success.
 	 */
-	public function get_example() {
-		return $this->get( '/v1/example' );
-	}
-
-	/**
-	 * Fetch the current account details from the Ceros POC API.
-	 *
-	 * Endpoint: https://api-wordpresspoc.dev.flex.cerosdev.com/accounts/current-account
-	 * Auth:     Bearer Token (value = saved API key)
-	 *
-	 * @return array|WP_Error
-	 */
-	public function get_current_account() {
+	private function make_authenticated_request( $endpoint ) {
 		$api_key = ceros_get_api_key();
 
 		if ( empty( $api_key ) ) {
@@ -122,15 +82,15 @@ class Ceros_API {
 			);
 		}
 
-		$url      = 'https://api-wordpresspoc.dev.flex.cerosdev.com/accounts/current-account';
+		$url      = $this->get_api_base_url() . $endpoint;
 		$response = wp_remote_get(
 			$url,
-			array(
-				'headers' => array(
+			[
+				'headers' => [
 					'Authorization' => 'Bearer ' . $api_key,
 					'Accept'        => 'application/json',
-				),
-			)
+				],
+			]
 		);
 
 		if ( is_wp_error( $response ) ) {
@@ -141,16 +101,28 @@ class Ceros_API {
 		$body = wp_remote_retrieve_body( $response );
 		$data = json_decode( $body, true );
 
-		return array(
+		return [
 			'code' => $code,
 			'body' => $data,
-		);
+		];
+	}
+
+	/**
+	 * Fetch the current account details from the Ceros POC API.
+	 *
+	 * Endpoint: /accounts/current-account
+	 * Auth:     Bearer Token (value = saved API key)
+	 *
+	 * @return array|WP_Error
+	 */
+	public function get_current_account() {
+		return $this->make_authenticated_request( '/accounts/current-account' );
 	}
 
 	/**
 	 * Fetch the folder tree for a specific account from the Ceros POC API.
 	 *
-	 * Endpoint: https://api-wordpresspoc.dev.flex.cerosdev.com/accounts/{accountResourceID}/folder-tree
+	 * Endpoint: /accounts/{accountResourceID}/folder-tree
 	 * Auth:     Bearer Token (value = saved API key)
 	 *
 	 * @param string $account_resource_id The account resource ID.
@@ -158,65 +130,34 @@ class Ceros_API {
 	 * @return array|WP_Error
 	 */
 	public function get_folder_tree( $account_resource_id ) {
-		$api_key = ceros_get_api_key();
+		$account_resource_id = ceros_sanitize_resource_id( $account_resource_id );
 
-		if ( empty( $api_key ) ) {
+		if ( false === $account_resource_id ) {
 			return new WP_Error(
-				'ceros_api_key_missing',
-				__( 'Ceros API key is not set. Please add it in the Ceros settings first.', 'ceros' )
+				'ceros_account_resource_id_invalid',
+				__( 'Account resource ID is missing or invalid.', 'ceros' )
 			);
 		}
 
-		if ( empty( $account_resource_id ) ) {
-			return new WP_Error(
-				'ceros_account_resource_id_missing',
-				__( 'Account resource ID is required to fetch folder tree.', 'ceros' )
-			);
-		}
-
-		$url      = 'https://api-wordpresspoc.dev.flex.cerosdev.com/accounts/' . $account_resource_id . '/folder-tree';
-		$response = wp_remote_get(
-			$url,
-			array(
-				'headers' => array(
-					'Authorization' => 'Bearer ' . $api_key,
-					'Accept'        => 'application/json',
-				),
-			)
-		);
-
-		if ( is_wp_error( $response ) ) {
-			return $response;
-		}
-
-		$code = wp_remote_retrieve_response_code( $response );
-		$body = wp_remote_retrieve_body( $response );
-		$data = json_decode( $body, true );
+		$result = $this->make_authenticated_request( '/accounts/' . $account_resource_id . '/folder-tree' );
 
 		// Filter out unwanted elements.
-		if ( is_array( $data ) ) {
-			$data = array_filter( $data, function( $item ) {
+		if ( ! is_wp_error( $result ) && is_array( $result['body'] ) ) {
+			$result['body'] = array_values( array_filter( $result['body'], function( $item ) {
 				if ( ! is_array( $item ) || ! isset( $item['name'] ) ) {
 					return true;
 				}
-				
-				return ! in_array( $item['name'], array( 'Flex Experiences', 'Account Templates' ), true );
-			});
-			
-			// Re-index the array to maintain clean numeric indices.
-			$data = array_values( $data );
+				return ! in_array( $item['name'], [ 'Flex Experiences', 'Account Templates' ], true );
+			} ) );
 		}
 
-		return array(
-			'code' => $code,
-			'body' => $data,
-		);
+		return $result;
 	}
 
 	/**
 	 * Fetch experiences for a specific folder from the Ceros POC API.
 	 *
-	 * Endpoint: https://api-wordpresspoc.dev.flex.cerosdev.com/folder/{resourceId}/experiences
+	 * Endpoint: /folder/{resourceId}/experiences
 	 * Auth:     Bearer Token (value = saved API key)
 	 *
 	 * @param string $resource_id The folder resource ID.
@@ -224,95 +165,67 @@ class Ceros_API {
 	 * @return array|WP_Error
 	 */
 	public function get_experiences( $resource_id ) {
-		$api_key = ceros_get_api_key();
+		$resource_id = ceros_sanitize_resource_id( $resource_id );
 
-		if ( empty( $api_key ) ) {
+		if ( false === $resource_id ) {
 			return new WP_Error(
-				'ceros_api_key_missing',
-				__( 'Ceros API key is not set. Please add it in the Ceros settings first.', 'ceros' )
+				'ceros_resource_id_invalid',
+				__( 'Resource ID is missing or invalid.', 'ceros' )
 			);
 		}
 
-		if ( empty( $resource_id ) ) {
-			return new WP_Error(
-				'ceros_resource_id_missing',
-				__( 'Resource ID is required to fetch experiences.', 'ceros' )
-			);
+		$result = $this->make_authenticated_request( '/folder/' . $resource_id . '/experiences' );
+
+		// Filter out invalid experiences on the backend to reduce data sent to frontend
+		if ( ! is_wp_error( $result ) && isset( $result['body'] ) ) {
+			$experiences = $result['body'];
+
+			// Handle different response structures
+			if ( isset( $experiences['items'] ) && is_array( $experiences['items'] ) ) {
+				$experiences = $experiences['items'];
+			} elseif ( isset( $experiences['data'] ) && is_array( $experiences['data'] ) ) {
+				$experiences = $experiences['data'];
+			} elseif ( ! is_array( $experiences ) ) {
+				$experiences = [];
+			}
+
+			// Filter out experiences that shouldn't be shown
+			$valid_experiences = array_filter( $experiences, function( $exp ) {
+				// Only include published, non-template, non-flex, non-password-protected, non-SSO experiences
+				return isset( $exp['status'] ) && $exp['status'] === 'published' &&
+				       isset( $exp['isTemplate'] ) && $exp['isTemplate'] === false &&
+				       isset( $exp['isFlexExperience'] ) && $exp['isFlexExperience'] === false &&
+				       isset( $exp['isPasswordProtected'] ) && $exp['isPasswordProtected'] === false &&
+				       isset( $exp['isSSOProtected'] ) && $exp['isSSOProtected'] === false;
+			} );
+
+			// Re-index array to ensure sequential keys
+			$result['body'] = array_values( $valid_experiences );
 		}
 
-		$url      = 'https://api-wordpresspoc.dev.flex.cerosdev.com/folder/' . $resource_id . '/experiences';
-		$response = wp_remote_get(
-			$url,
-			array(
-				'headers' => array(
-					'Authorization' => 'Bearer ' . $api_key,
-					'Accept'        => 'application/json',
-				),
-			)
-		);
-
-		if ( is_wp_error( $response ) ) {
-			return $response;
-		}
-
-		$code = wp_remote_retrieve_response_code( $response );
-		$body = wp_remote_retrieve_body( $response );
-		$data = json_decode( $body, true );
-
-		return array(
-			'code' => $code,
-			'body' => $data,
-		);
+		return $result;
 	}
 
 	/**
 	 * Fetch embed codes for a specific experience from the Ceros POC API.
 	 *
-	 * Endpoint: https://api-wordpresspoc.dev.flex.cerosdev.com/experiences/{resourceId}/embed-codes
+	 * Endpoint: /experiences/{resourceId}/embed-codes
+	 * Auth:     Bearer Token (value = saved API key)
 	 *
 	 * @param string $resource_id Experience resource ID.
 	 *
 	 * @return array|WP_Error
 	 */
 	public function get_embed_codes( $resource_id ) {
-		$api_key = ceros_get_api_key();
+		$resource_id = ceros_sanitize_resource_id( $resource_id );
 
-		if ( empty( $api_key ) ) {
+		if ( false === $resource_id ) {
 			return new WP_Error(
-				'ceros_api_key_missing',
-				__( 'Ceros API key is not set. Please add it in the Ceros settings first.', 'ceros' )
+				'ceros_resource_id_invalid',
+				__( 'Resource ID is missing or invalid.', 'ceros' )
 			);
 		}
 
-		if ( empty( $resource_id ) ) {
-			return new WP_Error(
-				'ceros_resource_id_missing',
-				__( 'Resource ID is required to fetch embed codes.', 'ceros' )
-			);
-		}
-
-		$url      = 'https://api-wordpresspoc.dev.flex.cerosdev.com/experiences/' . $resource_id . '/embed-codes';
-		$response = wp_remote_get(
-			$url,
-			array(
-				'headers' => array(
-					'Authorization' => 'Bearer ' . $api_key,
-					'Accept'        => 'application/json',
-				),
-			)
-		);
-
-		if ( is_wp_error( $response ) ) {
-			return $response;
-		}
-
-		$code = wp_remote_retrieve_response_code( $response );
-		$body = wp_remote_retrieve_body( $response );
-		$data = json_decode( $body, true );
-
-		return array(
-			'code' => $code,
-			'body' => $data,
-		);
+		return $this->make_authenticated_request( '/experiences/' . $resource_id . '/embed-codes' );
 	}
-} 
+}

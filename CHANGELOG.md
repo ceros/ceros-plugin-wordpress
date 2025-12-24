@@ -5,6 +5,147 @@ All notable changes to the Ceros WordPress Plugin will be documented in this fil
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.27.0] - 2025-12-24
+
+### Changed
+- Updated all relevant files to version 0.27.0
+
+## [0.26.0] - 2025-12-24
+
+### Changed
+- Updated Changelog.md file
+
+## [0.25.0] - 2025-12-24
+
+### Changed
+- Fixed broken path
+
+## [0.24.0] - 2025-12-24
+
+### Fixed
+- **Critical Bug**: Fixed render.php path - changed from `src/ceros/render.php` to `build/ceros/render.php` to work correctly with release zip that excludes `src/` folder
+
+### Changed
+- **Release Workflow**: Updated rsync exclusions to only exclude files that actually exist in the project
+
+## [0.23.0] - 2025-12-24
+
+### Added
+- **Error Boundary**: Added React Error Boundary component to gracefully handle JavaScript errors in the block editor, showing user-friendly error message with "Try Again" button instead of crashing
+- **Loading States**: Added loading spinner to main block area during initial API calls (API key status, account info, folder tree fetch)
+
+### Changed
+- **PHP Coding Standards**: Converted all `array()` to short syntax `[]` in `includes/functions.php`, `ceros.php`, and `includes/class-ceros-api.php`
+- **Function Naming**: Renamed functions to use `ceros_` prefix per WordPress coding standards:
+  - `create_block_ceros_block_init` → `ceros_block_init`
+  - `render_create_block_ceros` → `ceros_render_block`
+
+### Removed
+- **Dead Code**: Removed unused `ceros_debug_log()` function from `includes/functions.php`
+
+## [0.22.0] - 2025-12-23
+
+### Code Quality
+- **Constants for Embed Options**: Replaced hardcoded `'full'` and `'scroll'` strings with `EMBED_OPTIONS.FULL` and `EMBED_OPTIONS.SCROLL` constants across all JS files (`edit.js`, `modal.js`, `sidebar-controls.js`, `preview.js`)
+- **Removed Unused Imports**: Cleaned up `edit.js` by removing unused imports (`Button`, `PanelBody`, `BaseControl`, `InspectorControls`) that were left after sidebar refactoring
+- **Icon Components Optimization**: Moved `FullHeightIcon` and `ScrollingIcon` components from inside the Edit component to module level, preventing recreation on every render
+- **Code Formatting**: Ran `npm run format` to standardize quotes and formatting across all JS files using WordPress coding standards
+
+### Changed
+- **PHP Modernization**: Removed unnecessary `function_exists()` check in `render.php` (file is loaded via `require_once`); modernized `isset() ? :` ternary to null coalescing operator (`??`)
+- **Version Sync**: Updated `block.json` version from `0.1.0` to `0.21.0` to match plugin version
+
+## [0.21.0] - 2025-12-23
+
+### Security
+- **Encrypted API Key Storage**: API keys are now encrypted using Sodium (libsodium) before storing in the database. Uses WordPress salts for key derivation, providing site-specific encryption.
+- **Masked Display**: API key is now displayed as masked dots in the settings page, never shown in plain text
+- **wp-config.php Support**: Added support for defining API key via `CEROS_API_KEY` constant in wp-config.php for enhanced security
+- **XSS Prevention**: Embed codes from Ceros API are now sanitized using `wp_kses()` with a custom allow-list before storage and output
+- **Embed Code Sanitization**: Added `ceros_sanitize_embed_code()` function with filterable allow-list for HTML tags/attributes
+
+### Changed
+- **Production API URL**: Updated production API endpoint from `api-wordpresspoc.prod.flex.cerosdev.com` to `rest.ceros.com`
+- **Release Workflow**: Simplified GitHub Actions workflow to read version from `ceros.php` instead of prompting for input; developers now update version manually before triggering release
+- **Render Cleanup**: Removed unused `$replace_placeholders` function and `$host` variable from `render.php`; simplified embed code output logic
+
+### Added
+- **Settings Link**: Added "Settings" link to plugin action links on the WordPress Plugins page for quick access to configuration
+- **Ceros_Encryption Class**: New class (`includes/class-ceros-encryption.php`) handles all API key encryption, decryption, and migration from legacy plain text storage
+
+### Removed
+- **Workflow Version Input**: Removed version number prompt from release workflow; version is now extracted from plugin header
+- **Auto Version Update**: Removed automatic version number updates in release workflow; developers manage version in code
+
+### Documentation
+- **Developer Guide**: Added comprehensive developer documentation to README including build commands, `npm run plugin-zip`, linting, and API development guides
+- **Updated README**: Refreshed API endpoint documentation to reflect current production and staging URLs
+
+## [0.20.0] - 2025-12-18
+
+### Fixed
+- **Plugin Installation**: Fixed file permissions on existing plugin files to allow overwrite during plugin updates and reinstallation
+
+### Changed
+- **Code Cleanup**: Removed debug code and comments
+- **Error Messages**: Removed redundant experience missing message
+
+## [0.19.0] - 2025-12-18
+
+### Changed
+- **Deployment**: Updated git push command to use HEAD instead of main branch for more flexible release workflow
+
+## [0.18.0] - 2025-12-18
+
+### Added
+- **Missing Experience Handling**: Enhanced block rendering to gracefully handle cases where a selected experience no longer exists or is unavailable
+- **User Feedback**: Added informative error message when no experience is available, guiding users to select a valid experience
+
+### Enhanced
+- **Block Resilience**: Block now displays helpful message instead of breaking when experience data is missing
+
+## [0.17.0] - 2025-12-15
+
+### Added
+- **API Environment Selector**: New dropdown in Settings > Ceros to switch between Production and Staging API environments
+- **HTTP Error Handling**: Added proper handling for 404 and 500 responses from the Ceros API, returning appropriate HTTP status codes to the client
+
+### Changed
+- **API Class Refactored**: Split single `API_BASE_URL` constant into `API_BASE_URL_PRODUCTION` and `API_BASE_URL_STAGING` with dynamic selection via `get_api_base_url()` method
+- **Default Environment**: Production API is now the default environment for new installations
+- **UI Improvements**: Moved embed type selection controls from preview area to sidebar and block toolbar for better accessibility and user experience
+- **Embed Type Controls**: Embed type options (Full height / Scrolling) are now available in both the sidebar settings panel and the block toolbar dropdown menu
+- **Code Cleanup**: Removed debug code, comments, and unused code throughout the codebase
+
+### Enhanced
+- **Preview Component**: Simplified preview component to focus solely on displaying the selected embed code without embedded controls
+- **Sidebar Controls**: Enhanced sidebar with dedicated Settings panel containing embed type radio buttons with descriptions
+- **Toolbar Integration**: Added embed type dropdown menu to block toolbar with visual icons for Full height and Scrolling options
+
+## [0.16.0] - 2025-11-28
+
+### Changed
+- **Consolidated Cache Busting**: Merged duplicate cache busting functions into single smart implementation using `wp_parse_url()` to replace (not duplicate) version parameters
+- **Refactored API Class**: Extracted common API request logic into `make_authenticated_request()` private method, eliminating code duplication across all API methods
+- **Consolidated REST Callbacks**: Created `ceros_handle_api_response()` function to handle common error/403 checking, simplifying all REST callbacks to one-liners
+- **Consolidated Permission Callbacks**: Created `ceros_rest_permission_check()` function replacing 5 anonymous permission callback functions
+
+### Security
+- **Resource ID Sanitization**: Implemented `ceros_sanitize_resource_id()` validation in all API methods accepting resource IDs (`get_folder_tree()`, `get_experiences()`, `get_embed_codes()`)
+- **Input Validation**: All resource IDs are now validated to contain only alphanumeric characters, hyphens, and underscores before use in API URLs
+
+### Removed
+- **Debug Logging**: Removed all `file_put_contents()` debug calls from block registration
+- **Unused Functions**: Removed unused helper functions: `ceros_get_plugin_path()`, `ceros_get_error_message()`, `ceros_format_experience()`, `ceros_get_experience_embed_code()`
+- **Legacy Code**: Removed unused `$base_url`, `get()`, `request()`, and `get_example()` methods from API class
+
+### Fixed
+- **CSS Triple Version Parameters**: Fixed issue where Ceros CSS files were loading with multiple `ver=` query parameters by using URL parsing to replace instead of append
+
+### Documentation
+- Updated API-DIAGRAMS.md with resource ID sanitization flowcharts
+- Removed references to deleted functions from readme.txt
+
 ## [0.15.0] - 2025-08-12
 
 ### Changed
@@ -77,7 +218,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Consolidated modal state handling (removed z-index workaround in favor of body class)
 - Hardened CSS selectors covering editor popovers, contextual toolbars, and floating portals
 
-## [0.9.0] - 2024-12-19
+## [0.9.0]
 
 ### Added
 - **WordPress-Style Modal Behavior**: Implemented proper block toolbar hiding when modal is open
@@ -104,7 +245,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **API Key Input**: Changed API key input field from text to password type for enhanced security
 - **Visual Privacy**: API keys are now hidden when displayed in WordPress admin settings
 
-## [0.8.0] - 2024-12-19
+## [0.8.0]
 
 ### Enhanced
 - **UI/UX Improvements**: Various styling enhancements and visual improvements
@@ -119,7 +260,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Contributors
 - Styling changes implemented by external developer
 
-## [0.7.0] - 2024-12-19
+## [0.7.0]
 
 ### Added
 - **Automatic Experience Loading**: Added recursive fetching of experiences for all folders in the folder tree during initial load
@@ -155,12 +296,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Eliminated need for sequential folder expansion clicks
   - Reduced total API call count through upfront batch processing
 
-## [0.6.0] - 2024-12-19
+## [0.6.0]
 
 ### Fixed
 - **Block State Persistence**: Fixed modal automatically opening on previously configured blocks - now properly checks for existing embed codes
 
-## [0.5.0] - 2024-12-19
+## [0.5.0]
 
 ### Fixed
 - **Experience Name Display**: Added support for blocks configured before experienceName attribute was introduced
@@ -171,7 +312,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Backward Compatibility**: Enhanced display logic to handle legacy blocks without experienceName
 - **Admin URL Detection**: Fixed "Go to Ceros Settings" link to work with all WordPress configurations including subdirectory installations (e.g., `https://markup.staged.cc/wp/`)
 
-## [0.4.0] - 2024-12-19
+## [0.4.0]
 
 ### Fixed
 - **Cross-Platform Compatibility**: Enhanced URL generation to handle WordPress installations in subdirectories, custom admin paths, and various hosting environments
@@ -181,7 +322,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Fallback URL Detection**: Implemented comprehensive fallback methods for URL detection when server data isn't available
 - **Block Editor Data**: Added localized script data specifically for block editor context
 
-## [0.3.0] - 2024-12-19
+## [0.3.0]
 
 ### Added
 - **Comprehensive API Key Validation**: Added upfront API key checking before making any external API calls
@@ -214,7 +355,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Input Validation**: Enhanced API key configuration checking
 - **Error Information**: Sanitized error messages to prevent information disclosure
 
-## [0.2.0] - 2024-12-18
+## [0.2.0]
 
 ### Added
 - **Block Editor Integration**: WordPress Gutenberg block for embedding Ceros experiences
@@ -230,7 +371,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Responsive Design**: Embed codes adapt to different screen sizes
 - **Cache Busting**: Automatic CSS cache invalidation for development
 
-## [0.1.0] - 2024-12-15
+## [0.1.0]
 
 ### Added
 - **Initial Plugin Structure**: Basic WordPress plugin framework

@@ -1,8 +1,8 @@
 === Ceros ===
 Contributors:      copiadigital
-Tags:              ceros, interactive, experiences, embed, blocks, api
-Tested up to:      6.7
-Stable tag:        0.1.0
+Tags:              ceros, experiences, embed, blocks, api
+Tested up to:      6.9
+Stable tag:        0.27.0
 Requires at least: 6.7
 Requires PHP:      7.4
 License:           GPL-2.0-or-later
@@ -68,12 +68,6 @@ The Ceros plugin seamlessly integrates Ceros interactive experiences into your W
 **Shortcode (if available):**
 ```
 [ceros_experience id="your-experience-id"]
-```
-
-**PHP Function:**
-```php
-$embed_code = ceros_get_experience_embed_code('your-experience-id');
-echo $embed_code;
 ```
 
 == Frequently Asked Questions ==

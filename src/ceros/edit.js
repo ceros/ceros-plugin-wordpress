@@ -11,7 +11,14 @@ import { __ } from '@wordpress/i18n';
  *
  * @see https://developer.wordpress.org/block-editor/reference-guides/packages/packages-block-editor/#useblockprops
  */
-import { useBlockProps } from '@wordpress/block-editor';
+import { useBlockProps, BlockControls } from '@wordpress/block-editor';
+import {
+	ToolbarGroup,
+	ToolbarButton,
+	DropdownMenu,
+	MenuGroup,
+	MenuItem,
+} from '@wordpress/components';
 
 /**
  * Lets webpack process CSS, SASS or SCSS files referenced in JavaScript files.
@@ -21,141 +28,64 @@ import { useBlockProps } from '@wordpress/block-editor';
  */
 import './editor.scss';
 
-import { useEffect, useState } from '@wordpress/element';
+import { useEffect, useReducer, useRef } from '@wordpress/element';
 import { useSelect } from '@wordpress/data';
 import apiFetch from '@wordpress/api-fetch';
-
-// Simple Tree View Component
-const TreeNode = ({ node, onNodeClick, expandedNodes, loadingNodes, selectedNodeId }) => {
-	const isExpanded = expandedNodes.has( node.resourceId );
-	const childArray = node.children || [];
-	const hasChildren = childArray.length > 0;
-	const isLoading = loadingNodes.has( node.resourceId );
-	const isSelected = selectedNodeId === node.resourceId;
-	
-	// Determine if this node should show expand/collapse functionality
-	// Show arrow for folders (not experiences) or for experiences that have children
-	const shouldShowArrow = !node.isExperience || hasChildren;
-
-	return (
-		<div className={node.isExperience ? "ceros-block__file" : "ceros-block__folder"}>
-			<div
-				className={`ceros-block__item ${isSelected ? 'ceros-block__item--selected' : ''}`}
-				onClick={() => onNodeClick(node)}
-				data-resource-id={node.resourceId}
-			>
-				{shouldShowArrow && (isLoading ?
-					<svg className="ceros-block__item-icon -loading" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"></path></svg>
-					: isExpanded ?
-					<svg className="ceros-block__item-icon -arrow" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"></path></svg>
-					:
-					<svg className="ceros-block__item-icon -arrow" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"></path></svg>)}
-					{node.isExperience ? (
-						<svg className="ceros-block__item-icon -file" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"></path><path d="M14 2v4a2 2 0 0 0 2 2h4"></path><path d="M10 9H8"></path><path d="M16 13H8"></path><path d="M16 17H8"></path></svg>
-					) : (
-						<svg className="ceros-block__item-icon -folder" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"></path></svg>
-					)}
-					<span className="ceros-block__item-name">{node.name}</span>
-			</div>
-			{isExpanded && hasChildren && (
-				<div>
-					{childArray.map( ( child, index ) => (
-						<TreeNode
-							key={child.resourceId || index}
-							node={child}
-							onNodeClick={onNodeClick}
-							expandedNodes={expandedNodes}
-							loadingNodes={loadingNodes}
-							selectedNodeId={selectedNodeId}
-						/>
-					) )}
-				</div>
-			)}
-		</div>
-	);
-};
-
-const TreeView = ({ data, onNodeClick, expandedNodes, loadingNodes, selectedNodeId }) => {
-	if (!data || !Array.isArray(data)) {
-		return <p>No tree data available</p>;
-	}
-
-	return (
-		<div className="ceros-block__files">
-			{data.map((node, index) => (
-				<TreeNode
-					key={node.resourceId || index}
-					node={node}
-					onNodeClick={onNodeClick}
-					expandedNodes={expandedNodes}
-					loadingNodes={loadingNodes}
-					selectedNodeId={selectedNodeId}
-				/>
-			))}
-		</div>
-	);
-};
+import { CerosModal } from './components/modal';
+import { CerosPreview } from './components/preview';
+import { SidebarControls } from './components/sidebar-controls';
+import { ACTION_TYPES, EMBED_OPTIONS } from './constants';
 
 /**
- * Recursively fetch experiences for all nodes in the folder tree
+ * Extract error message from various error object structures.
+ * Returns an object with the message and flags for special error types.
+ *
+ * @param {Error|Object|string} err - The error to extract message from
+ * @return {Object} Object with message, is403, and isApiKeyError properties
  */
-async function fetchExperiencesForAllNodes( nodes ) {
-	if ( !Array.isArray( nodes ) ) {
-		return nodes;
+function extractErrorInfo( err ) {
+	let message = '';
+	let is403 = false;
+
+	// Check for 403 Forbidden response first (most specific)
+	if ( err.code === 403 && err.error ) {
+		message = err.error;
+		is403 = true;
+	}
+	// Check for nested error structure
+	else if ( err.data && err.data.code === 403 && err.data.error ) {
+		message = err.data.error;
+		is403 = true;
+	}
+	// Check for direct error property
+	else if ( err.error ) {
+		message = err.error;
+	}
+	// Check for message property
+	else if ( err.message ) {
+		message = err.message;
+	}
+	// Check for nested data error
+	else if ( err.data && err.data.error ) {
+		message = err.data.error;
+	}
+	// Check for string error
+	else if ( typeof err === 'string' ) {
+		message = err;
+	} else {
+		message = 'Unknown error occurred';
 	}
 
-	const processedNodes = await Promise.all( nodes.map( async ( node ) => {
-		let processedNode = { ...node };
+	// Check if this is an API key related error
+	const isApiKeyError =
+		is403 ||
+		message.includes( 'API key is not set' ) ||
+		message.includes( 'api key' ) ||
+		message.includes( 'API key' ) ||
+		message.includes( 'ceros_api_key_missing' ) ||
+		message.includes( 'Ceros API key' );
 
-		// For folder nodes (not experiences), fetch their experiences
-		if ( !node.isExperience ) {
-			try {
-				const experiencesResponse = await apiFetch( { path: `/ceros/v1/folder/${node.resourceId}/experiences` } );
-				
-				let experiences = [];
-				if ( Array.isArray( experiencesResponse?.body ) ) {
-					experiences = experiencesResponse.body;
-				} else if ( Array.isArray( experiencesResponse?.body?.items ) ) {
-					experiences = experiencesResponse.body.items;
-				} else if ( Array.isArray( experiencesResponse?.body?.data ) ) {
-					experiences = experiencesResponse.body.data;
-				}
-
-				// Filter valid experiences
-				const validExperiences = experiences.filter( ( exp ) => (
-					exp.status === 'published' &&
-					exp.isTemplate === false &&
-					exp.isFlexExperience === false &&
-					exp.isPasswordProtected === false &&
-					exp.isSSOProtected === false
-				) );
-
-				// Convert experiences to child nodes
-				const experienceNodes = validExperiences.map( ( exp ) => ( {
-					name: exp.name || exp.title || 'Experience',
-					resourceId: exp.resourceId || exp.id || exp.experienceId || Math.random().toString(36).substr(2,5),
-					children: [],
-					isExperience: true,
-				} ) );
-
-				// Add experiences to the existing children (if any)
-				processedNode.children = [ ...( node.children || [] ), ...experienceNodes ];
-			} catch ( error ) {
-				console.error( `Error fetching experiences for folder ${node.resourceId}:`, error );
-				// Keep the original children if error occurs
-				processedNode.children = node.children || [];
-			}
-		}
-
-		// Recursively process children (both original children and newly added experiences)
-		if ( processedNode.children && processedNode.children.length > 0 ) {
-			processedNode.children = await fetchExperiencesForAllNodes( processedNode.children );
-		}
-
-		return processedNode;
-	} ) );
-
-	return processedNodes;
+	return { message, is403, isApiKeyError };
 }
 
 /**
@@ -163,60 +93,306 @@ async function fetchExperiencesForAllNodes( nodes ) {
  */
 function getCerosSettingsUrl() {
 	// Method 1: Use server-provided settings URL (most reliable)
-	if (window.cerosBlockData && window.cerosBlockData.settingsUrl) {
+	if ( window.cerosBlockData && window.cerosBlockData.settingsUrl ) {
 		return window.cerosBlockData.settingsUrl;
 	}
-	
+
 	// Method 2: Check legacy cerosAdmin data
-	if (window.cerosAdmin && window.cerosAdmin.settingsUrl) {
+	if ( window.cerosAdmin && window.cerosAdmin.settingsUrl ) {
 		return window.cerosAdmin.settingsUrl;
 	}
-	
+
 	// Fallback methods for when server data isn't available
 	let adminUrl = '';
-	
+
 	// Method 3: Check if ajaxurl is available (contains admin-ajax.php)
-	if (window.ajaxurl) {
-		adminUrl = window.ajaxurl.replace('/admin-ajax.php', '/');
+	if ( window.ajaxurl ) {
+		adminUrl = window.ajaxurl.replace( '/admin-ajax.php', '/' );
 	}
-	
+
 	// Method 4: Try to get from current page URL if we're in admin
-	if (!adminUrl && window.location.pathname.includes('/wp-admin/')) {
-		const pathParts = window.location.pathname.split('/wp-admin/');
-		adminUrl = window.location.origin + pathParts[0] + '/wp-admin/';
+	if ( ! adminUrl && window.location.pathname.includes( '/wp-admin/' ) ) {
+		const pathParts = window.location.pathname.split( '/wp-admin/' );
+		adminUrl = window.location.origin + pathParts[ 0 ] + '/wp-admin/';
 	}
-	
+
 	// Method 5: Use WordPress REST API base URL to derive admin URL
-	if (!adminUrl && wp && wp.url && wp.url.path) {
+	if ( ! adminUrl && wp && wp.url && wp.url.path ) {
 		const restBase = wp.url.path;
 		// REST API is typically at /wp-json/, so admin would be at /wp-admin/
-		adminUrl = restBase.replace('/wp-json/', '/wp-admin/');
+		adminUrl = restBase.replace( '/wp-json/', '/wp-admin/' );
 	}
-	
+
 	// Method 6: Parse current URL for WordPress subdirectory installations
-	if (!adminUrl) {
+	if ( ! adminUrl ) {
 		const origin = window.location.origin;
 		const pathname = window.location.pathname;
-		
+
 		// Check if we're in a subdirectory WordPress installation
-		if (pathname.includes('/wp-admin/')) {
-			const pathParts = pathname.split('/wp-admin/');
-			adminUrl = origin + pathParts[0] + '/wp-admin/';
-		} else if (pathname.includes('/wp/')) {
-			const pathParts = pathname.split('/wp/');
-			adminUrl = origin + pathParts[0] + '/wp/wp-admin/';
+		if ( pathname.includes( '/wp-admin/' ) ) {
+			const pathParts = pathname.split( '/wp-admin/' );
+			adminUrl = origin + pathParts[ 0 ] + '/wp-admin/';
+		} else if ( pathname.includes( '/wp/' ) ) {
+			const pathParts = pathname.split( '/wp/' );
+			adminUrl = origin + pathParts[ 0 ] + '/wp/wp-admin/';
 		} else {
 			// Standard WordPress installation
 			adminUrl = origin + '/wp-admin/';
 		}
 	}
-	
+
 	// Ensure adminUrl ends with /
-	if (adminUrl && !adminUrl.endsWith('/')) {
+	if ( adminUrl && ! adminUrl.endsWith( '/' ) ) {
 		adminUrl += '/';
 	}
-	
+
 	return adminUrl + 'options-general.php?page=ceros_settings';
+}
+
+/**
+ * Icon component for full height embed option
+ */
+const FullHeightIcon = ( { isActive = false } ) => {
+	const color = isActive ? '#2271b1' : 'currentColor';
+	return (
+		<svg
+			width="20"
+			height="20"
+			viewBox="0 0 20 20"
+			fill="none"
+			xmlns="http://www.w3.org/2000/svg"
+		>
+			<rect width="20" height="14.5" fill={ color } />
+			<rect x="3" y="17" width="14" height="3" fill={ color } />
+		</svg>
+	);
+};
+
+/**
+ * Icon component for scrolling embed option
+ */
+const ScrollingIcon = ( { isActive = false } ) => {
+	const color = isActive ? '#2271b1' : 'currentColor';
+	return (
+		<svg
+			width="20"
+			height="20"
+			viewBox="0 0 20 20"
+			fill="none"
+			xmlns="http://www.w3.org/2000/svg"
+		>
+			<rect y="5.5" width="20" height="9" fill={ color } />
+			<rect x="3" y="17" width="14" height="3" fill={ color } />
+			<rect x="3" width="14" height="3" fill={ color } />
+		</svg>
+	);
+};
+
+/**
+ * Initial state for the reducer
+ */
+const initialState = ( attributes ) => ( {
+	api: {
+		currentAccountResult: null,
+		folderTreeData: null,
+		currentAccountError: null,
+		folderTreeError: null,
+		isLoadingTree: true,
+		apiKeyConfigured: null, // null = checking, true = configured, false = not configured
+	},
+	tree: {
+		expandedNodes: new Set(),
+		loadingNodes: new Set(),
+	},
+	selection: {
+		selectedNodeId: null,
+		selectedExperienceName: attributes.experienceName || '',
+		currentEmbedCodes: {
+			fullHeightEmbedCode: attributes.fullHeightEmbedCode || '',
+			scrollableEmbedCode: attributes.scrollableEmbedCode || '',
+		},
+		selectedEmbedOption: attributes.selectedOption || EMBED_OPTIONS.FULL,
+	},
+	modal: {
+		isOpen: false,
+		hasOpenedFromInsert: false,
+	},
+} );
+
+/**
+ * Reducer function to manage all component state
+ */
+function cerosReducer( state, action ) {
+	switch ( action.type ) {
+		case ACTION_TYPES.SET_API_KEY_STATUS:
+			return {
+				...state,
+				api: {
+					...state.api,
+					apiKeyConfigured: action.payload,
+				},
+			};
+
+		case ACTION_TYPES.SET_CURRENT_ACCOUNT:
+			return {
+				...state,
+				api: {
+					...state.api,
+					currentAccountResult: action.payload,
+					currentAccountError: null,
+				},
+			};
+
+		case ACTION_TYPES.SET_FOLDER_TREE:
+			return {
+				...state,
+				api: {
+					...state.api,
+					folderTreeData: action.payload,
+					isLoadingTree: false,
+					folderTreeError: null,
+				},
+			};
+
+		case ACTION_TYPES.SET_CURRENT_ACCOUNT_ERROR:
+			return {
+				...state,
+				api: {
+					...state.api,
+					currentAccountError: action.payload,
+					isLoadingTree: false,
+				},
+			};
+
+		case ACTION_TYPES.SET_FOLDER_TREE_ERROR:
+			return {
+				...state,
+				api: {
+					...state.api,
+					folderTreeError: action.payload,
+					isLoadingTree: false,
+				},
+			};
+
+		case ACTION_TYPES.SET_LOADING_TREE:
+			return {
+				...state,
+				api: {
+					...state.api,
+					isLoadingTree: action.payload,
+				},
+			};
+
+		case ACTION_TYPES.UPDATE_FOLDER_TREE_NODE:
+			return {
+				...state,
+				api: {
+					...state.api,
+					folderTreeData: action.payload,
+				},
+			};
+
+		case ACTION_TYPES.TOGGLE_EXPANDED_NODE: {
+			const newExpanded = new Set( state.tree.expandedNodes );
+			if ( newExpanded.has( action.payload ) ) {
+				newExpanded.delete( action.payload );
+			} else {
+				newExpanded.add( action.payload );
+			}
+			return {
+				...state,
+				tree: {
+					...state.tree,
+					expandedNodes: newExpanded,
+				},
+			};
+		}
+
+		case ACTION_TYPES.ADD_LOADING_NODE: {
+			const newLoading = new Set( state.tree.loadingNodes );
+			newLoading.add( action.payload );
+			return {
+				...state,
+				tree: {
+					...state.tree,
+					loadingNodes: newLoading,
+				},
+			};
+		}
+
+		case ACTION_TYPES.REMOVE_LOADING_NODE: {
+			const newLoading = new Set( state.tree.loadingNodes );
+			newLoading.delete( action.payload );
+			return {
+				...state,
+				tree: {
+					...state.tree,
+					loadingNodes: newLoading,
+				},
+			};
+		}
+
+		case ACTION_TYPES.SELECT_EXPERIENCE:
+			return {
+				...state,
+				selection: {
+					...state.selection,
+					selectedNodeId: action.payload.nodeId,
+					selectedExperienceName: action.payload.name,
+					selectedEmbedOption:
+						action.payload.embedOption ||
+						state.selection.selectedEmbedOption,
+				},
+			};
+
+		case ACTION_TYPES.SET_EMBED_CODES:
+			return {
+				...state,
+				selection: {
+					...state.selection,
+					currentEmbedCodes: action.payload,
+				},
+			};
+
+		case ACTION_TYPES.SET_EMBED_OPTION:
+			return {
+				...state,
+				selection: {
+					...state.selection,
+					selectedEmbedOption: action.payload,
+				},
+			};
+
+		case ACTION_TYPES.OPEN_MODAL:
+			return {
+				...state,
+				modal: {
+					...state.modal,
+					isOpen: true,
+				},
+			};
+
+		case ACTION_TYPES.CLOSE_MODAL:
+			return {
+				...state,
+				modal: {
+					...state.modal,
+					isOpen: false,
+				},
+			};
+
+		case ACTION_TYPES.SET_HAS_OPENED_FROM_INSERT:
+			return {
+				...state,
+				modal: {
+					...state.modal,
+					hasOpenedFromInsert: action.payload,
+				},
+			};
+
+		default:
+			return state;
+	}
 }
 
 /**
@@ -228,231 +404,376 @@ function getCerosSettingsUrl() {
  * @return {Element} Element to render.
  */
 export default function Edit( { attributes, setAttributes, clientId } ) {
-	const [ currentAccountResult, setCurrentAccountResult ] = useState( null );
-	const [ folderTreeData, setFolderTreeData ] = useState( null );
-	const [ currentAccountError, setCurrentAccountError ] = useState( null );
-	const [ folderTreeError, setFolderTreeError ] = useState( null );
-	// Hold expanded node ids so we can toggle UI state easily
-	const [ expandedNodes, setExpandedNodes ] = useState( new Set() );
-	const [ currentEmbedCodes, setCurrentEmbedCodes ] = useState( {
-		fullHeightEmbedCode: attributes.fullHeightEmbedCode || '',
-		scrollableEmbedCode: attributes.scrollableEmbedCode || ''
-	} );
-	const [ selectedEmbedOption, setSelectedEmbedOption ] = useState( attributes.selectedOption || 'full' );
-	const [ isLoadingTree, setIsLoadingTree ] = useState( true );
-	const [ loadingNodes, setLoadingNodes ] = useState( new Set() );
-	// Do not auto-open the modal on load; only open when user clicks the button
-	const [ isModalOpen, setIsModalOpen ] = useState( false );
-	const [ selectedExperienceName, setSelectedExperienceName ] = useState( attributes.experienceName || '' );
-	const [ selectedNodeId, setSelectedNodeId ] = useState( null );
-	const [ apiKeyConfigured, setApiKeyConfigured ] = useState( null ); // null = checking, true = configured, false = not configured
-	const [ hasOpenedFromInsert, setHasOpenedFromInsert ] = useState( false );
+	const [ state, dispatch ] = useReducer(
+		cerosReducer,
+		attributes,
+		initialState
+	);
+
+	// Destructure state for easier access
+	const {
+		api: {
+			currentAccountResult,
+			folderTreeData,
+			currentAccountError,
+			folderTreeError,
+			isLoadingTree,
+			apiKeyConfigured,
+		},
+		tree: { expandedNodes, loadingNodes },
+		selection: {
+			selectedNodeId,
+			selectedExperienceName,
+			currentEmbedCodes,
+			selectedEmbedOption,
+		},
+		modal: { isOpen: isModalOpen, hasOpenedFromInsert },
+	} = state;
 
 	// Determine if this block is currently selected (used to detect insertion)
-	const isSelected = useSelect( ( select ) => {
-		const selectedId = select( 'core/block-editor' ).getSelectedBlockClientId?.();
-		return selectedId === clientId;
-	}, [ clientId ] );
+	const isSelected = useSelect(
+		( select ) => {
+			const selectedId =
+				select( 'core/block-editor' ).getSelectedBlockClientId?.();
+			return selectedId === clientId;
+		},
+		[ clientId ]
+	);
+
+	// Track previous modal state to detect when modal first opens
+	const prevModalOpenRef = useRef( false );
+	const hasInitializedSelectionRef = useRef( false );
+	const lastInitializedExperienceNameRef = useRef( null );
+	// Ref to track expandedNodes without causing re-renders when used in useEffect
+	const expandedNodesRef = useRef( expandedNodes );
+
+	// Keep the ref in sync with state
+	useEffect( () => {
+		expandedNodesRef.current = expandedNodes;
+	}, [ expandedNodes ] );
 
 	// If the block is newly inserted (selected) and not configured, open modal once.
-	useEffect(() => {
-		const hasCodes = Boolean(attributes.fullHeightEmbedCode) || Boolean(attributes.scrollableEmbedCode);
-		if (!hasOpenedFromInsert && isSelected && !hasCodes) {
-			setIsModalOpen(true);
-			setHasOpenedFromInsert(true);
+	useEffect( () => {
+		const hasCodes =
+			Boolean( attributes.fullHeightEmbedCode ) ||
+			Boolean( attributes.scrollableEmbedCode );
+		if ( ! hasOpenedFromInsert && isSelected && ! hasCodes ) {
+			dispatch( { type: ACTION_TYPES.OPEN_MODAL } );
+			dispatch( {
+				type: ACTION_TYPES.SET_HAS_OPENED_FROM_INSERT,
+				payload: true,
+			} );
 		}
-	}, [isSelected, hasOpenedFromInsert, attributes.fullHeightEmbedCode, attributes.scrollableEmbedCode]);
+	}, [
+		isSelected,
+		hasOpenedFromInsert,
+		attributes.fullHeightEmbedCode,
+		attributes.scrollableEmbedCode,
+	] );
 
 	// Hide toolbar when modal is open
-	useEffect(() => {
-		if (isModalOpen) {
-			document.body.classList.add('ceros-modal-open');
+	useEffect( () => {
+		if ( isModalOpen ) {
+			document.body.classList.add( 'ceros-modal-open' );
 		} else {
-			document.body.classList.remove('ceros-modal-open');
+			document.body.classList.remove( 'ceros-modal-open' );
 		}
 
 		// Cleanup function to remove class when component unmounts
 		return () => {
-			document.body.classList.remove('ceros-modal-open');
+			document.body.classList.remove( 'ceros-modal-open' );
 		};
-	}, [isModalOpen]);
+	}, [ isModalOpen ] );
+
+	// When modal opens, find and select the currently saved experience in the tree
+	// Run when: modal opens, folder tree loads, or saved experience name changes
+	// But NOT when user manually selects a different experience
+	useEffect( () => {
+		// Reset initialization flag when modal closes
+		if ( ! isModalOpen ) {
+			hasInitializedSelectionRef.current = false;
+			prevModalOpenRef.current = false;
+			lastInitializedExperienceNameRef.current = null;
+			return;
+		}
+
+		// Check if we should initialize:
+		// 1. Modal just opened (transition from closed to open)
+		// 2. Folder tree data just became available
+		// 3. Saved experience name changed (user changed it outside modal)
+		const modalJustOpened = ! prevModalOpenRef.current && isModalOpen;
+		const experienceNameChanged =
+			attributes.experienceName &&
+			attributes.experienceName !==
+				lastInitializedExperienceNameRef.current;
+
+		prevModalOpenRef.current = isModalOpen;
+
+		// Only initialize if we have the necessary data and one of the conditions is met
+		if ( ! folderTreeData || ! attributes.experienceName ) {
+			return;
+		}
+
+		// If we've already initialized for this experience name, don't run again
+		// (unless the experience name changed, which means user changed it outside modal)
+		if ( hasInitializedSelectionRef.current && ! experienceNameChanged ) {
+			return;
+		}
+
+		// Recursive function to search for a node by name and collect parent folder IDs
+		const findNodeByName = ( nodes, targetName, parentIds = [] ) => {
+			for ( const node of nodes ) {
+				if ( node.name === targetName && node.isExperience ) {
+					return { nodeId: node.resourceId, parentIds };
+				}
+				if ( node.children && node.children.length > 0 ) {
+					const found = findNodeByName( node.children, targetName, [
+						...parentIds,
+						node.resourceId,
+					] );
+					if ( found ) return found;
+				}
+			}
+			return null;
+		};
+
+		const result = findNodeByName(
+			folderTreeData,
+			attributes.experienceName
+		);
+		if ( result ) {
+			// Expand all parent folders so the selected node is visible
+			if ( result.parentIds && result.parentIds.length > 0 ) {
+				result.parentIds.forEach( ( parentId ) => {
+					// Use ref to avoid infinite re-renders when expandedNodes changes
+					if ( ! expandedNodesRef.current.has( parentId ) ) {
+						dispatch( {
+							type: ACTION_TYPES.TOGGLE_EXPANDED_NODE,
+							payload: parentId,
+						} );
+					}
+				} );
+			}
+
+			// Select the node
+			dispatch( {
+				type: ACTION_TYPES.SELECT_EXPERIENCE,
+				payload: {
+					nodeId: String( result.nodeId ),
+					name: attributes.experienceName,
+					embedOption:
+						attributes.selectedOption || EMBED_OPTIONS.FULL,
+				},
+			} );
+
+			// Mark as initialized for this experience name
+			hasInitializedSelectionRef.current = true;
+			lastInitializedExperienceNameRef.current =
+				attributes.experienceName;
+		}
+		// Note: expandedNodes intentionally omitted from deps - we use expandedNodesRef
+		// to read latest value without causing re-renders when nodes are toggled
+	}, [ isModalOpen, folderTreeData, attributes.experienceName ] );
 
 	// Initialize currentEmbedCodes from attributes if they exist
-	useEffect(() => {
-		if (attributes.fullHeightEmbedCode || attributes.scrollableEmbedCode) {
-			setCurrentEmbedCodes({
-				fullHeightEmbedCode: attributes.fullHeightEmbedCode || '',
-				scrollableEmbedCode: attributes.scrollableEmbedCode || ''
-			});
+	useEffect( () => {
+		if (
+			attributes.fullHeightEmbedCode ||
+			attributes.scrollableEmbedCode
+		) {
+			dispatch( {
+				type: ACTION_TYPES.SET_EMBED_CODES,
+				payload: {
+					fullHeightEmbedCode: attributes.fullHeightEmbedCode || '',
+					scrollableEmbedCode: attributes.scrollableEmbedCode || '',
+				},
+			} );
 		}
-	}, [attributes.fullHeightEmbedCode, attributes.scrollableEmbedCode]);
+	}, [ attributes.fullHeightEmbedCode, attributes.scrollableEmbedCode ] );
 
-    // Auto-select available embed option when codes change
-	useEffect(() => {
-		if (!currentEmbedCodes) return;
-        const hasFull = Boolean(currentEmbedCodes.fullHeightEmbedCode && String(currentEmbedCodes.fullHeightEmbedCode).trim());
-        const hasScroll = Boolean(currentEmbedCodes.scrollableEmbedCode && String(currentEmbedCodes.scrollableEmbedCode).trim());
-		if (!hasFull && hasScroll && selectedEmbedOption !== 'scroll') {
-			setSelectedEmbedOption('scroll');
+	// Auto-select available embed option when codes change
+	useEffect( () => {
+		if ( ! currentEmbedCodes ) return;
+		const hasFull = Boolean(
+			currentEmbedCodes.fullHeightEmbedCode &&
+				String( currentEmbedCodes.fullHeightEmbedCode ).trim()
+		);
+		const hasScroll = Boolean(
+			currentEmbedCodes.scrollableEmbedCode &&
+				String( currentEmbedCodes.scrollableEmbedCode ).trim()
+		);
+		if (
+			! hasFull &&
+			hasScroll &&
+			selectedEmbedOption !== EMBED_OPTIONS.SCROLL
+		) {
+			dispatch( {
+				type: ACTION_TYPES.SET_EMBED_OPTION,
+				payload: EMBED_OPTIONS.SCROLL,
+			} );
+		} else if (
+			! hasScroll &&
+			hasFull &&
+			selectedEmbedOption !== EMBED_OPTIONS.FULL
+		) {
+			dispatch( {
+				type: ACTION_TYPES.SET_EMBED_OPTION,
+				payload: EMBED_OPTIONS.FULL,
+			} );
 		}
-		else if (!hasScroll && hasFull && selectedEmbedOption !== 'full') {
-			setSelectedEmbedOption('full');
-		}
-	}, [currentEmbedCodes, selectedEmbedOption]);
+	}, [ currentEmbedCodes, selectedEmbedOption ] );
 
+	// Initial API data fetch - runs once on mount only.
+	// Note: Empty dependency array is intentional. This effect should only run once
+	// when the component mounts to fetch the initial account and folder tree data.
+	// The reference to `currentAccountResult` in the catch block is safe because
+	// at mount time it's always null, and we're just checking whether to set the
+	// error on currentAccount vs folderTree based on which API call failed.
 	useEffect( () => {
 		// First, check if API key is configured before making any API calls
 		apiFetch( { path: '/ceros/v1/api-key-status' } )
 			.then( ( statusRes ) => {
-				console.log('API key status response:', statusRes);
-				
-				if ( !statusRes.configured ) {
+				if ( ! statusRes.configured ) {
 					// API key is not configured, show error immediately
-					setApiKeyConfigured( false );
-					setCurrentAccountError( statusRes.message || 'Ceros API key is not set. Please add it in the Ceros settings first.' );
-					setIsLoadingTree( false );
+					dispatch( {
+						type: ACTION_TYPES.SET_API_KEY_STATUS,
+						payload: false,
+					} );
+					dispatch( {
+						type: ACTION_TYPES.SET_CURRENT_ACCOUNT_ERROR,
+						payload:
+							statusRes.message ||
+							'Ceros API key is not set. Please add it in the Ceros settings first.',
+					} );
+					dispatch( {
+						type: ACTION_TYPES.SET_LOADING_TREE,
+						payload: false,
+					} );
 					return; // Stop here, don't make further API calls
 				}
-				
+
 				// API key is configured, proceed with getting current account
-				setApiKeyConfigured( true );
+				dispatch( {
+					type: ACTION_TYPES.SET_API_KEY_STATUS,
+					payload: true,
+				} );
 				return apiFetch( { path: '/ceros/v1/current-account' } );
 			} )
 			.then( ( res ) => {
 				// If we don't have a response (API key was not configured), skip this
-				if ( !res ) return;
-				
-				setCurrentAccountResult( res );
+				if ( ! res ) return;
+
+				dispatch( {
+					type: ACTION_TYPES.SET_CURRENT_ACCOUNT,
+					payload: res,
+				} );
 
 				// Extract accountResourceId from the response - try different possible field names
-				const accountResourceId = res?.body?.accountResourceId ||
-										  res?.body?.accountId ||
-										  res?.body?.id ||
-										  res?.body?.resourceId;
-
-				console.log('Current account response:', res);
-				console.log('Extracted accountResourceId:', accountResourceId);
+				const accountResourceId =
+					res?.body?.accountResourceId ||
+					res?.body?.accountId ||
+					res?.body?.id ||
+					res?.body?.resourceId;
 
 				if ( accountResourceId ) {
 					// Then get the folder tree using the accountResourceId
-					return apiFetch( { path: `/ceros/v1/folder-tree/${accountResourceId}` } );
+					return apiFetch( {
+						path: `/ceros/v1/folder-tree/${ accountResourceId }`,
+					} );
 				} else {
-					throw new Error( `accountResourceId not found in current account response. Available fields: ${Object.keys(res?.body || {}).join(', ')}` );
+					throw new Error(
+						`accountResourceId not found in current account response. Available fields: ${ Object.keys(
+							res?.body || {}
+						).join( ', ' ) }`
+					);
 				}
 			} )
 			.then( ( folderRes ) => {
 				// If we don't have a response (API key was not configured), skip this
-				if ( !folderRes ) return;
-				
-				// Expecting folderRes.body to be an array of folder nodes
+				if ( ! folderRes ) return;
+
+				// Expecting folderRes.body to be an array of folder nodes.
+				// We intentionally ONLY store the folder structure here.
+				// Experiences (files) are fetched lazily when a folder is clicked.
 				const folderTreeNodes = folderRes?.body || [];
-				
-				// Now fetch experiences for each node in the folder tree
-				return fetchExperiencesForAllNodes( folderTreeNodes ).then( ( nodesWithExperiences ) => {
-					setFolderTreeData( nodesWithExperiences );
-					setIsLoadingTree( false );
+				dispatch( {
+					type: ACTION_TYPES.SET_FOLDER_TREE,
+					payload: folderTreeNodes,
 				} );
 			} )
 			.catch( ( err ) => {
-				setIsLoadingTree( false );
-				console.error('API Error:', err);
-				
-				// Extract error message from different possible error structures
-				let errorMessage = '';
-				
-				// Check for 403 Forbidden response first (most specific)
-				if ( err.code === 403 && err.error ) {
-					errorMessage = err.error;
-					setApiKeyConfigured( false );
+				dispatch( {
+					type: ACTION_TYPES.SET_LOADING_TREE,
+					payload: false,
+				} );
+
+				const { message, isApiKeyError } = extractErrorInfo( err );
+
+				if ( isApiKeyError ) {
+					dispatch( {
+						type: ACTION_TYPES.SET_API_KEY_STATUS,
+						payload: false,
+					} );
 				}
-				// Check for nested error structure 
-				else if ( err.data && err.data.code === 403 && err.data.error ) {
-					errorMessage = err.data.error;
-					setApiKeyConfigured( false );
-				}
-				// Check for direct error property
-				else if ( err.error ) {
-					errorMessage = err.error;
-				}
-				// Check for message property
-				else if ( err.message ) {
-					errorMessage = err.message;
-				}
-				// Check for nested data error
-				else if ( err.data && err.data.error ) {
-					errorMessage = err.data.error;
-				}
-				// Check for string error
-				else if ( typeof err === 'string' ) {
-					errorMessage = err;
-				}
-				else {
-					errorMessage = 'Unknown error occurred';
-				}
-				
-				// Check if this is an API key related error (for other error patterns)
-				if ( errorMessage.includes('API key is not set') ||
-					 errorMessage.includes('api key') ||
-					 errorMessage.includes('API key') ||
-					 errorMessage.includes('ceros_api_key_missing') ||
-					 errorMessage.includes('Ceros API key') ) {
-					setApiKeyConfigured( false );
-				}
-				
-				if ( !currentAccountResult ) {
-					setCurrentAccountError( errorMessage );
+
+				if ( ! currentAccountResult ) {
+					dispatch( {
+						type: ACTION_TYPES.SET_CURRENT_ACCOUNT_ERROR,
+						payload: message,
+					} );
 				} else {
-					setFolderTreeError( errorMessage );
+					dispatch( {
+						type: ACTION_TYPES.SET_FOLDER_TREE_ERROR,
+						payload: message,
+					} );
 				}
 			} );
 	}, [] );
 
 	// Handle click on tree node
 	function handleNodeClick( node ) {
-	// Only toggle expand/collapse for folder nodes. Experience nodes should not
-	// use expand/collapse state, otherwise a prior click would require a second
-	// click to re-select the same experience.
-	if ( ! node.isExperience ) {
-		const newExpanded = new Set( expandedNodes );
-		if ( newExpanded.has( node.resourceId ) ) {
-			newExpanded.delete( node.resourceId );
-			setExpandedNodes( newExpanded );
-			return;
-		}
+		// Only toggle expand/collapse for folder nodes. Experience nodes should not
+		// use expand/collapse state, otherwise a prior click would require a second
+		// click to re-select the same experience.
+		if ( ! node.isExperience ) {
+			dispatch( {
+				type: ACTION_TYPES.TOGGLE_EXPANDED_NODE,
+				payload: node.resourceId,
+			} );
 
-		newExpanded.add( node.resourceId );
-		setExpandedNodes( newExpanded );
-	}
+			// If collapsing, return early
+			if ( expandedNodes.has( node.resourceId ) ) {
+				return;
+			}
+		}
 
 		// For experience nodes, we need to fetch embed codes
 		if ( node.isExperience ) {
-			// Make selection instantaneous for better UX
-			setSelectedNodeId( node.resourceId );
-			setSelectedExperienceName( node.name );
-			setSelectedEmbedOption( 'full' );
+			// Make selection instantaneous for better UX - ensure nodeId is a string for consistency
+			dispatch( {
+				type: ACTION_TYPES.SELECT_EXPERIENCE,
+				payload: {
+					nodeId: String( node.resourceId ),
+					name: node.name,
+					embedOption: EMBED_OPTIONS.FULL,
+				},
+			} );
 
 			// If node already has embed codes loaded, don't refetch
 			if ( node.embedCodes ) {
 				// Set the embed codes for preview
-				const replaceDomains = ( embedCode ) => {
-					if ( ! embedCode ) return '';
-					return embedCode
-						.replace( /https:\/\/undefined/g, 'https://wordpresspoc.view.cerosdev.com' )
-						.replace( /"undefined"/g, '"wordpresspoc.view.cerosdev.com"' );
-				};
-
-				const codesWithDomains = {
-					fullHeightEmbedCode: replaceDomains( node.embedCodes.fullHeightEmbedCode ),
-					scrollableEmbedCode: replaceDomains( node.embedCodes.scrollableEmbedCode )
-				};
-				setCurrentEmbedCodes( codesWithDomains );
+				dispatch( {
+					type: ACTION_TYPES.SET_EMBED_CODES,
+					payload: node.embedCodes,
+				} );
 				return;
 			}
 
 			// Add node to loading state for embed codes
-			const newLoadingNodes = new Set( loadingNodes );
-			newLoadingNodes.add( node.resourceId );
-			setLoadingNodes( newLoadingNodes );
+			dispatch( {
+				type: ACTION_TYPES.ADD_LOADING_NODE,
+				payload: node.resourceId,
+			} );
 		} else {
 			// For folder nodes, experiences should already be loaded from initial fetch
 			// If node already has children loaded, don't refetch
@@ -461,52 +782,71 @@ export default function Edit( { attributes, setAttributes, clientId } ) {
 			}
 
 			// Add node to loading state only if we need to fetch experiences
-			const newLoadingNodes = new Set( loadingNodes );
-			newLoadingNodes.add( node.resourceId );
-			setLoadingNodes( newLoadingNodes );
+			dispatch( {
+				type: ACTION_TYPES.ADD_LOADING_NODE,
+				payload: node.resourceId,
+			} );
 		}
 
 		// Determine endpoint based on node type
-		const endpoint = node.isExperience ? `/ceros/v1/experiences/${node.resourceId}/embed-codes` : `/ceros/v1/folder/${node.resourceId}/experiences`;
+		const endpoint = node.isExperience
+			? `/ceros/v1/experiences/${ node.resourceId }/embed-codes`
+			: `/ceros/v1/folder/${ node.resourceId }/experiences`;
 
 		// Only make API call if we actually need to fetch data
-		if ( ( node.isExperience && !node.embedCodes ) || ( !node.isExperience && ( !node.children || node.children.length === 0 ) ) ) {
+		if (
+			( node.isExperience && ! node.embedCodes ) ||
+			( ! node.isExperience &&
+				( ! node.children || node.children.length === 0 ) )
+		) {
 			apiFetch( { path: endpoint } )
 				.then( ( res ) => {
 					if ( node.isExperience ) {
-						// Function to replace undefined domains with correct Ceros domain
-						const replaceDomains = ( embedCode ) => {
-							if ( ! embedCode ) return '';
-							return embedCode
-								.replace( /https:\/\/undefined/g, 'https://wordpresspoc.view.cerosdev.com' )
-								.replace( /"undefined"/g, '"wordpresspoc.view.cerosdev.com"' );
-						};
+						// Store embed codes for preview
+						const codes = res?.body || null;
+						dispatch( {
+							type: ACTION_TYPES.SET_EMBED_CODES,
+							payload: codes,
+						} );
+						// Ensure nodeId is a string for consistency (selection already happened immediately above)
+						dispatch( {
+							type: ACTION_TYPES.SELECT_EXPERIENCE,
+							payload: {
+								nodeId: String( node.resourceId ),
+								name: node.name,
+							},
+						} );
 
-						// store embed codes with domain replacement for preview
-					const codes = res?.body || null;
-					const codesWithDomains = codes ? {
-						fullHeightEmbedCode: replaceDomains( codes.fullHeightEmbedCode ),
-						scrollableEmbedCode: replaceDomains( codes.scrollableEmbedCode )
-					} : null;
-					setCurrentEmbedCodes( codesWithDomains );
-					setSelectedExperienceName( node.name );
-					setSelectedNodeId( node.resourceId );
-					// Choose default option based on availability
-                    if (codesWithDomains) {
-                        const hasFull = Boolean(codesWithDomains.fullHeightEmbedCode && String(codesWithDomains.fullHeightEmbedCode).trim());
-                        const hasScroll = Boolean(codesWithDomains.scrollableEmbedCode && String(codesWithDomains.scrollableEmbedCode).trim());
-						if (!hasFull && hasScroll) {
-							setSelectedEmbedOption('scroll');
-						} else if (hasFull && !hasScroll) {
-							setSelectedEmbedOption('full');
-						} else if (!hasFull && !hasScroll) {
-							setSelectedEmbedOption('full');
+						// Choose default option based on availability
+						if ( codes ) {
+							const hasFull = Boolean(
+								codes.fullHeightEmbedCode &&
+									String( codes.fullHeightEmbedCode ).trim()
+							);
+							const hasScroll = Boolean(
+								codes.scrollableEmbedCode &&
+									String( codes.scrollableEmbedCode ).trim()
+							);
+							if ( ! hasFull && hasScroll ) {
+								dispatch( {
+									type: ACTION_TYPES.SET_EMBED_OPTION,
+									payload: EMBED_OPTIONS.SCROLL,
+								} );
+							} else if ( hasFull && ! hasScroll ) {
+								dispatch( {
+									type: ACTION_TYPES.SET_EMBED_OPTION,
+									payload: EMBED_OPTIONS.FULL,
+								} );
+							} else if ( ! hasFull && ! hasScroll ) {
+								dispatch( {
+									type: ACTION_TYPES.SET_EMBED_OPTION,
+									payload: EMBED_OPTIONS.FULL,
+								} );
+							}
 						}
-					}
-						
+
 						// We fetched embed codes, attach to node and stop further processing
-						setFolderTreeData( ( prev ) => {
-						function attachCodes( nodes ) {
+						const attachCodes = ( nodes ) => {
 							let changed = false;
 							const updated = nodes.map( ( n ) => {
 								if ( n.resourceId === node.resourceId ) {
@@ -514,22 +854,31 @@ export default function Edit( { attributes, setAttributes, clientId } ) {
 									return { ...n, embedCodes: res?.body };
 								}
 								if ( n.children && n.children.length ) {
-									const updatedChildren = attachCodes( n.children );
+									const updatedChildren = attachCodes(
+										n.children
+									);
 									if ( updatedChildren !== n.children ) {
 										changed = true;
-										return { ...n, children: updatedChildren };
+										return {
+											...n,
+											children: updatedChildren,
+										};
 									}
 								}
 								return n;
 							} );
 							return changed ? updated : nodes;
-						}
-						return attachCodes( prev );
+						};
+
+						dispatch( {
+							type: ACTION_TYPES.UPDATE_FOLDER_TREE_NODE,
+							payload: attachCodes( folderTreeData ),
 						} );
 						return; // done for experience nodes
 					}
 
 					if ( ! node.isExperience ) {
+						// Backend now filters experiences, so we can use the response directly
 						let experiences = [];
 						if ( Array.isArray( res?.body ) ) {
 							experiences = res.body;
@@ -537,317 +886,439 @@ export default function Edit( { attributes, setAttributes, clientId } ) {
 							experiences = res.body.items;
 						} else if ( Array.isArray( res?.body?.data ) ) {
 							experiences = res.body.data;
-						} else {
-							console.warn( 'Unexpected experiences response shape', res.body );
 						}
 
-						const validExperiences = experiences.filter( ( exp ) => (
-							exp.status === 'published' &&
-							exp.isTemplate === false &&
-							exp.isFlexExperience === false &&
-							exp.isPasswordProtected === false &&
-							exp.isSSOProtected === false
-						) );
-
-						const childNodes = validExperiences.map( ( exp ) => ( {
+						// Experiences are already filtered by the backend
+						const childNodes = experiences.map( ( exp ) => ( {
 							name: exp.name || exp.title || 'Experience',
-							resourceId: exp.resourceId || exp.id || exp.experienceId || Math.random().toString(36).substr(2,5),
+							resourceId:
+								exp.resourceId ||
+								exp.id ||
+								exp.experienceId ||
+								Math.random().toString( 36 ).substr( 2, 5 ),
 							children: [],
 							isExperience: true,
 						} ) );
 
-						setFolderTreeData( ( prev ) => {
-						function addChildren( nodes ) {
+						// If this folder has no valid experiences and no existing children (subfolders),
+						// add an empty message node styled like a file
+						let nodesToAdd = childNodes;
+						if (
+							childNodes.length === 0 &&
+							( ! node.children || node.children.length === 0 )
+						) {
+							nodesToAdd = [
+								{
+									name: 'No experiences found',
+									resourceId: `empty-${ node.resourceId }`,
+									children: [],
+									isExperience: false,
+									isEmptyMessage: true,
+								},
+							];
+						}
+
+						const addChildren = ( nodes ) => {
 							let changed = false;
 							const updated = nodes.map( ( n ) => {
 								if ( n.resourceId === node.resourceId ) {
 									changed = true;
-									return { ...n, children: ( n.children || [] ).concat( childNodes ) };
+									return {
+										...n,
+										children: ( n.children || [] ).concat(
+											nodesToAdd
+										),
+									};
 								}
 								if ( n.children && n.children.length ) {
-									const updatedChildren = addChildren( n.children );
+									const updatedChildren = addChildren(
+										n.children
+									);
 									if ( updatedChildren !== n.children ) {
 										changed = true;
-										return { ...n, children: updatedChildren };
+										return {
+											...n,
+											children: updatedChildren,
+										};
 									}
 								}
 								return n;
 							} );
 							return changed ? updated : nodes;
-						}
-						return addChildren( prev );
+						};
+
+						dispatch( {
+							type: ACTION_TYPES.UPDATE_FOLDER_TREE_NODE,
+							payload: addChildren( folderTreeData ),
 						} );
 					}
 				} )
 				.catch( ( err ) => {
-					console.error( 'Error fetching experiences:', err );
-					
-					// Extract error message with the same logic as the main API call
-					let errorMessage = '';
-					
-					// Check for 403 Forbidden response first (most specific)
-					if ( err.code === 403 && err.error ) {
-						errorMessage = err.error;
-						setApiKeyConfigured( false );
-					}
-					// Check for nested error structure 
-					else if ( err.data && err.data.code === 403 && err.data.error ) {
-						errorMessage = err.data.error;
-						setApiKeyConfigured( false );
-					}
-					// Check for direct error property
-					else if ( err.error ) {
-						errorMessage = err.error;
-					}
-					// Check for message property
-					else if ( err.message ) {
-						errorMessage = err.message;
-					}
-					// Check for nested data error
-					else if ( err.data && err.data.error ) {
-						errorMessage = err.data.error;
-					}
-					// Check for string error
-					else if ( typeof err === 'string' ) {
-						errorMessage = err;
-					}
-					
-					// If we have an error message, show it
-					if ( errorMessage ) {
-						setCurrentAccountError( errorMessage );
-						
-						// Check if this is an API key related error
-						if ( errorMessage.includes('API key is not set') ||
-							 errorMessage.includes('api key') ||
-							 errorMessage.includes('API key') ||
-							 errorMessage.includes('ceros_api_key_missing') ||
-							 errorMessage.includes('Ceros API key') ) {
-							setApiKeyConfigured( false );
+					const { message, isApiKeyError } = extractErrorInfo( err );
+
+					if ( message ) {
+						dispatch( {
+							type: ACTION_TYPES.SET_CURRENT_ACCOUNT_ERROR,
+							payload: message,
+						} );
+
+						if ( isApiKeyError ) {
+							dispatch( {
+								type: ACTION_TYPES.SET_API_KEY_STATUS,
+								payload: false,
+							} );
 						}
 					}
 				} )
 				.finally( () => {
 					// Remove node from loading state
-					const newLoadingNodes = new Set( loadingNodes );
-					newLoadingNodes.delete( node.resourceId );
-					setLoadingNodes( newLoadingNodes );
+					dispatch( {
+						type: ACTION_TYPES.REMOVE_LOADING_NODE,
+						payload: node.resourceId,
+					} );
 				} );
 		} else {
 			// Remove node from loading state immediately if no API call needed
-			const newLoadingNodes = new Set( loadingNodes );
-			newLoadingNodes.delete( node.resourceId );
-			setLoadingNodes( newLoadingNodes );
+			dispatch( {
+				type: ACTION_TYPES.REMOVE_LOADING_NODE,
+				payload: node.resourceId,
+			} );
 		}
 	}
 
+	// Helper function to check if embed code exists
+	const hasEmbedCode = ( code ) => {
+		return Boolean( code && String( code ).trim() );
+	};
+
+	// Check if embed codes are available
+	const hasFullHeight =
+		hasEmbedCode( attributes.fullHeightEmbedCode ) ||
+		hasEmbedCode( currentEmbedCodes?.fullHeightEmbedCode );
+	const hasScrolling =
+		hasEmbedCode( attributes.scrollableEmbedCode ) ||
+		hasEmbedCode( currentEmbedCodes?.scrollableEmbedCode );
+
+	// Always use saved attributes for block preview to ensure it doesn't change until confirmed
+	// This ensures the preview stays visible and unchanged when modal opens or new item is selected
+	const previewEmbedCodes = {
+		fullHeightEmbedCode: attributes.fullHeightEmbedCode || '',
+		scrollableEmbedCode: attributes.scrollableEmbedCode || '',
+	};
+	const previewEmbedOption = attributes.selectedOption || EMBED_OPTIONS.FULL;
+
+	// Determine if toolbar should be shown
+	// Always show toolbar if there's any saved experience data, even when modal is open
+	const hasExperience = Boolean(
+		selectedExperienceName ||
+			attributes.experienceName ||
+			attributes.fullHeightEmbedCode ||
+			attributes.scrollableEmbedCode ||
+			hasFullHeight ||
+			hasScrolling
+	);
+	// Keep toolbar (embed option + Replace) available even when modal is open
+	const showToolbar = hasExperience;
+
+	// Get current icon for toolbar button - use saved option from attributes
+	const toolbarEmbedOption =
+		attributes.selectedOption || selectedEmbedOption || EMBED_OPTIONS.FULL;
+	const getCurrentIcon = () => {
+		return toolbarEmbedOption === EMBED_OPTIONS.FULL ? (
+			<FullHeightIcon isActive={ false } />
+		) : (
+			<ScrollingIcon isActive={ false } />
+		);
+	};
+
 	return (
-		<div { ...useBlockProps() }>
-			{/* Main Block Display */}
-			<div className="ceros-block">
-							{/* Show API key error immediately if present */}
-			{(apiKeyConfigured === false || (currentAccountError && (
-				currentAccountError.includes('API key is not set') ||
-				currentAccountError.includes('api key') ||
-				currentAccountError.includes('API key') ||
-				currentAccountError.includes('ceros_api_key_missing') ||
-				currentAccountError.includes('Ceros API key')
-			))) ? (
-					<div className="ceros-block__error">
-						<div className="ceros-block__error-content">
-							<svg className="ceros-block__error-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-								<circle cx="12" cy="12" r="10"></circle>
-								<line x1="15" y1="9" x2="9" y2="15"></line>
-								<line x1="9" y1="9" x2="15" y2="15"></line>
-							</svg>
-							<div>
-								<h3>Ceros API Key Required</h3>
-								<p>The Ceros API key has not been set. Please configure your API key in the Ceros settings to use this block.</p>
-								<a href={getCerosSettingsUrl()} className="ceros-block__settings-link" target="_blank" rel="noopener noreferrer">
-									Go to Ceros Settings
-								</a>
-							</div>
-						</div>
-					</div>
-				) : (selectedExperienceName || attributes.fullHeightEmbedCode || attributes.scrollableEmbedCode) && !isModalOpen ? (
-					<div className="ceros-block__selected">
-						<h2>Selected Experience: {selectedExperienceName || 'Previously Configured Experience'}</h2>
-						<div className="ceros-block__embed-options">
-							<div>
-                                <label className="ceros-block__embed-options-label">
-                                    <input
-                                        type="radio"
-                                        value="full"
-                                        checked={ selectedEmbedOption === 'full' }
-                                        disabled={ !Boolean(currentEmbedCodes?.fullHeightEmbedCode && String(currentEmbedCodes?.fullHeightEmbedCode).trim()) }
-                                        onChange={ () => { setSelectedEmbedOption( 'full' ); setAttributes( { selectedOption: 'full' } ); } }
-                                    />
-									<span>
-										<span>Full height</span>
-										<span className="ceros-block__embed-options-description">This option scrolls naturally with your parent page without additional scrollbars.</span>
-									</span>
-								</label>
-                                <label className="ceros-block__embed-options-label">
-                                    <input
-                                        type="radio"
-                                        value="scroll"
-                                        checked={ selectedEmbedOption === 'scroll' }
-                                        disabled={ !Boolean(currentEmbedCodes?.scrollableEmbedCode && String(currentEmbedCodes?.scrollableEmbedCode).trim()) }
-                                        onChange={ () => { setSelectedEmbedOption( 'scroll' ); setAttributes( { selectedOption: 'scroll' } ); } }
-                                    />
-									<span>
-										<span>Scrolling</span>
-										<span className="ceros-block__embed-options-description">Displays your content in a viewport with internal scrollbars.</span>
-									</span>
-								</label>
-							</div>
-						</div>
-
-						{/* Preview Section */}
-						{currentEmbedCodes && (
-							<div className="ceros-block__preview-section">
-								<h2>Preview</h2>
-								{selectedEmbedOption === 'full' && currentEmbedCodes?.fullHeightEmbedCode && (
-									<div className="ceros-block__preview" dangerouslySetInnerHTML={{ __html: currentEmbedCodes.fullHeightEmbedCode }} />
-								)}
-								{selectedEmbedOption === 'scroll' && currentEmbedCodes?.scrollableEmbedCode && (
-									<div className="ceros-block__preview" dangerouslySetInnerHTML={{ __html: currentEmbedCodes.scrollableEmbedCode }} />
-								)}
-							</div>
-						)}
-
-						<div className="ceros-block__actions">
-							<button 
-								className="ceros-block__button ceros-block__button--primary"
-								onClick={() => setIsModalOpen(true)}
-							>
-								Change Experience
-							</button>
-						</div>
-					</div>
-				) : !isModalOpen && !currentAccountError && apiKeyConfigured !== false && (
-					<div className="ceros-block__empty">
-						<h3>No Experience Selected</h3>
-						<p>Click the button below to browse and select a Ceros experience.</p>
-						<button 
-							className="ceros-block__button ceros-block__button--primary"
-							onClick={() => setIsModalOpen(true)}
+		<>
+			{ /* Toolbar Controls */ }
+			{ showToolbar && (
+				<BlockControls>
+					<ToolbarGroup>
+						<DropdownMenu
+							icon={ getCurrentIcon() }
+							label={ __( 'Change embed type', 'ceros' ) }
+							toggleProps={ {
+								'aria-label': __(
+									'Change embed type',
+									'ceros'
+								),
+							} }
 						>
-							Browse Experiences
-						</button>
-					</div>
-				)}
-			</div>
+							{ ( { onClose } ) => {
+								const menuItemTextStyle = {
+									display: 'flex',
+									flexDirection: 'column',
+									alignItems: 'flex-start',
+								};
+								const isFullSelected =
+									toolbarEmbedOption === EMBED_OPTIONS.FULL;
+								const isScrollSelected =
+									toolbarEmbedOption === EMBED_OPTIONS.SCROLL;
+								const fullTitleStyle = {
+									fontWeight: 500,
+									color: isFullSelected
+										? '#2271b1'
+										: 'inherit',
+								};
+								const scrollTitleStyle = {
+									fontWeight: 500,
+									color: isScrollSelected
+										? '#2271b1'
+										: 'inherit',
+								};
+								const descriptionStyle = {
+									fontSize: '12px',
+									color: '#757575',
+									marginTop: '2px',
+								};
 
-			{/* Modal/Popup */}
-			{isModalOpen && (
-				<div className="ceros-block__modal-overlay" onClick={() => setIsModalOpen(false)}>
-					<div className="ceros-block__modal" onClick={(e) => e.stopPropagation()}>
-						<div className="ceros-block__modal-header">
-							<h2>Browse Ceros Content</h2>
-							<button
-								className="ceros-block__modal-close"
-								onClick={() => setIsModalOpen(false)}
-							>
-								<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-x h-4 w-4"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>
-							</button>
-						</div>
-
-						<div className="ceros-block__modal-body">
-							{ currentAccountError && <p style={ { color: 'red' } }>{ currentAccountError }</p> }
-							{ folderTreeError && <p style={ { color: 'red' } }>{ folderTreeError }</p> }
-
-							{/* { currentAccountResult && (
-								<pre style={ { fontSize: '0.8rem', maxHeight: '300px', overflow: 'auto' } }>
-									{ JSON.stringify( currentAccountResult, null, 2 ) }
-								</pre>
-							) } */}
-
-							{/* { folderTreeData && (
-								<pre style={ { fontSize: '0.8rem', maxHeight: '300px', overflow: 'auto' } }>
-									{ JSON.stringify( folderTreeData, null, 2 ) }
-								</pre>
-							) } */}
-
-							{ isLoadingTree && (
-								<div className="ceros-block__loading">
-									<svg className="ceros-block__loading-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"></path></svg>
-								</div>
-							) }
-
-							{ folderTreeData && !isLoadingTree && (
-								<TreeView
-									data={folderTreeData}
-									onNodeClick={handleNodeClick}
-									expandedNodes={expandedNodes}
-									loadingNodes={loadingNodes}
-									selectedNodeId={selectedNodeId}
-								/>
-							) }
-						</div>
-
-						{/* Embed code section in modal */}
-						{ currentEmbedCodes && (
-							<div className="ceros-block__modal-footer">
-								<div className="ceros-block__embed-options">
-									<div>
-										<label className="ceros-block__embed-options-label">
-                                        <input
-                                            type="radio"
-                                            value="full"
-                                        checked={ selectedEmbedOption === 'full' }
-                                        disabled={ !Boolean(currentEmbedCodes?.fullHeightEmbedCode && String(currentEmbedCodes?.fullHeightEmbedCode).trim()) }
-                                            onChange={ () => setSelectedEmbedOption( 'full' ) }
-                                        />
-											<span>
-												<span>Full height</span>
-												<span className="ceros-block__embed-options-description">This option scrolls naturally with your parent page without additional scrollbars.</span>
-											</span>
-										</label>
-										<label className="ceros-block__embed-options-label">
-                                        <input
-                                            type="radio"
-                                            value="scroll"
-                                        checked={ selectedEmbedOption === 'scroll' }
-                                        disabled={ !Boolean(currentEmbedCodes?.scrollableEmbedCode && String(currentEmbedCodes?.scrollableEmbedCode).trim()) }
-                                            onChange={ () => setSelectedEmbedOption( 'scroll' ) }
-                                        />
-											<span>
-												<span>Scrolling</span>
-												<span className="ceros-block__embed-options-description">Displays your content in a viewport with internal scrollbars.</span>
-											</span>
-										</label>
-									</div>
-								</div>
-								<div className="ceros-block__modal-actions">
-									<button 
-										className="ceros-block__button ceros-block__button--secondary"
-										onClick={() => setIsModalOpen(false)}
-									>
-										Cancel
-									</button>
-									<button
-										className="ceros-block__button ceros-block__button--primary"
-										disabled={!selectedNodeId}
-										onClick={() => {
-											if (currentEmbedCodes) {
-												setAttributes({
-													fullHeightEmbedCode: currentEmbedCodes.fullHeightEmbedCode,
-													scrollableEmbedCode: currentEmbedCodes.scrollableEmbedCode,
-													selectedOption: selectedEmbedOption,
-													experienceName: selectedExperienceName
-												});
-												setIsModalOpen(false);
+								return (
+									<MenuGroup>
+										<MenuItem
+											icon={
+												<FullHeightIcon
+													isActive={ isFullSelected }
+												/>
 											}
-										}}
+											onClick={ () => {
+												if ( hasFullHeight ) {
+													dispatch( {
+														type: ACTION_TYPES.SET_EMBED_OPTION,
+														payload:
+															EMBED_OPTIONS.FULL,
+													} );
+													setAttributes( {
+														selectedOption:
+															EMBED_OPTIONS.FULL,
+													} );
+												}
+												onClose();
+											} }
+											isSelected={ isFullSelected }
+											disabled={ ! hasFullHeight }
+										>
+											<div style={ menuItemTextStyle }>
+												<span style={ fullTitleStyle }>
+													{ __(
+														'Full height',
+														'ceros'
+													) }
+												</span>
+												<span
+													style={ descriptionStyle }
+												>
+													{ __(
+														'Scrolls with the page.',
+														'ceros'
+													) }
+												</span>
+											</div>
+										</MenuItem>
+										<MenuItem
+											icon={
+												<ScrollingIcon
+													isActive={
+														isScrollSelected
+													}
+												/>
+											}
+											onClick={ () => {
+												if ( hasScrolling ) {
+													dispatch( {
+														type: ACTION_TYPES.SET_EMBED_OPTION,
+														payload:
+															EMBED_OPTIONS.SCROLL,
+													} );
+													setAttributes( {
+														selectedOption:
+															EMBED_OPTIONS.SCROLL,
+													} );
+												}
+												onClose();
+											} }
+											isSelected={ isScrollSelected }
+											disabled={ ! hasScrolling }
+										>
+											<div style={ menuItemTextStyle }>
+												<span
+													style={ scrollTitleStyle }
+												>
+													{ __(
+														'Scrolling',
+														'ceros'
+													) }
+												</span>
+												<span
+													style={ descriptionStyle }
+												>
+													{ __(
+														'Scrolls in its own set area.',
+														'ceros'
+													) }
+												</span>
+											</div>
+										</MenuItem>
+									</MenuGroup>
+								);
+							} }
+						</DropdownMenu>
+					</ToolbarGroup>
+					<ToolbarGroup>
+						<ToolbarButton
+							onClick={ () =>
+								dispatch( { type: ACTION_TYPES.OPEN_MODAL } )
+							}
+							label={ __( 'Change experience', 'ceros' ) }
+						>
+							{ __( 'Replace', 'ceros' ) }
+						</ToolbarButton>
+					</ToolbarGroup>
+				</BlockControls>
+			) }
+
+			{ /* Sidebar Controls */ }
+			{ hasExperience && (
+				<SidebarControls
+					selectedExperienceName={ selectedExperienceName }
+					attributes={ attributes }
+					selectedEmbedOption={ selectedEmbedOption }
+					hasFullHeight={ hasFullHeight }
+					hasScrolling={ hasScrolling }
+					dispatch={ dispatch }
+					setAttributes={ setAttributes }
+				/>
+			) }
+			<div { ...useBlockProps() }>
+				{ /* Main Block Display */ }
+				<div className="ceros-block">
+					{ /* Show API key error immediately if present */ }
+					{ apiKeyConfigured === false ||
+					( currentAccountError &&
+						( currentAccountError.includes(
+							'API key is not set'
+						) ||
+							currentAccountError.includes( 'api key' ) ||
+							currentAccountError.includes( 'API key' ) ||
+							currentAccountError.includes(
+								'ceros_api_key_missing'
+							) ||
+							currentAccountError.includes(
+								'Ceros API key'
+							) ) ) ? (
+						<div className="ceros-block__error">
+							<div className="ceros-block__error-content">
+								<svg
+									className="ceros-block__error-icon"
+									xmlns="http://www.w3.org/2000/svg"
+									width="24"
+									height="24"
+									viewBox="0 0 24 24"
+									fill="none"
+									stroke="currentColor"
+									strokeWidth="2"
+									strokeLinecap="round"
+									strokeLinejoin="round"
+								>
+									<circle cx="12" cy="12" r="10"></circle>
+									<line x1="15" y1="9" x2="9" y2="15"></line>
+									<line x1="9" y1="9" x2="15" y2="15"></line>
+								</svg>
+								<div>
+									<h3>Ceros API Key Required</h3>
+									<p>
+										The Ceros API key has not been set.
+										Please configure your API key in the
+										Ceros settings to use this block.
+									</p>
+									<a
+										href={ getCerosSettingsUrl() }
+										className="ceros-block__settings-link"
+										target="_blank"
+										rel="noopener noreferrer"
 									>
-										Add Experience
-									</button>
+										Go to Ceros Settings
+									</a>
 								</div>
 							</div>
-						) }
-					</div>
+						</div>
+					) : selectedExperienceName ||
+					  attributes.experienceName ||
+					  attributes.fullHeightEmbedCode ||
+					  attributes.scrollableEmbedCode ? (
+						<div className="ceros-block__selected">
+							<CerosPreview
+								currentEmbedCodes={ previewEmbedCodes }
+								selectedEmbedOption={ previewEmbedOption }
+							/>
+						</div>
+					) : isLoadingTree ? (
+						<div className="ceros-block__loading">
+							<svg
+								className="ceros-block__loading-icon"
+								xmlns="http://www.w3.org/2000/svg"
+								width="24"
+								height="24"
+								viewBox="0 0 24 24"
+								fill="none"
+								stroke="currentColor"
+								strokeWidth="2"
+								strokeLinecap="round"
+								strokeLinejoin="round"
+							>
+								<path d="M21 12a9 9 0 1 1-6.219-8.56" />
+							</svg>
+						</div>
+					) : (
+						! isModalOpen &&
+						! currentAccountError &&
+						apiKeyConfigured !== false && (
+							<div className="ceros-block__empty">
+								<h3>No Experience Selected</h3>
+								<p>
+									Click the button below to browse and select
+									a Ceros experience.
+								</p>
+								<button
+									className="ceros-block__button ceros-block__button--primary"
+									onClick={ () =>
+										dispatch( {
+											type: ACTION_TYPES.OPEN_MODAL,
+										} )
+									}
+								>
+									Browse Experiences
+								</button>
+							</div>
+						)
+					) }
 				</div>
-			)}
-		</div>
+			</div>
+			<CerosModal
+				isOpen={ isModalOpen }
+				onClose={ () => dispatch( { type: ACTION_TYPES.CLOSE_MODAL } ) }
+				state={ {
+					currentAccountError,
+					folderTreeError,
+					isLoadingTree,
+					folderTreeData,
+					handleNodeClick,
+					expandedNodes,
+					loadingNodes,
+					selectedNodeId,
+					currentEmbedCodes,
+					selectedEmbedOption,
+					setSelectedEmbedOption: ( option ) =>
+						dispatch( {
+							type: ACTION_TYPES.SET_EMBED_OPTION,
+							payload: option,
+						} ),
+					setAttributes,
+					selectedExperienceName,
+				} }
+			/>
+		</>
 	);
 }
