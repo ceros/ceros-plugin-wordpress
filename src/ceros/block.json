@@ -2,13 +2,15 @@
 	"$schema": "https://schemas.wp.org/trunk/block.json",
 	"apiVersion": 3,
 	"name": "create-block/ceros",
-	"version": "0.27.0",
+	"version": "0.30.0",
 	"title": "Ceros",
 	"category": "widgets",
 	"icon": "smiley",
-	"description": "Add Ceros experience to your site.",
+	"description": "Add Ceros experiences to your site.",
 	"supports": {
-		"html": false
+		"html": false,
+		"customClassName": false,
+		"anchor": false
 	},
 	"textdomain": "ceros",
 	"editorScript": "file:./index.js",
@@ -18,7 +20,8 @@
 		"fullHeightEmbedCode": { "type": "string", "default": "" },
 		"scrollableEmbedCode": { "type": "string", "default": "" },
 		"selectedOption": { "type": "string", "default": "full" },
-		"experienceName": { "type": "string", "default": "" }
+		"experienceName": { "type": "string", "default": "" },
+		"experienceResourceId": { "type": "string", "default": "" }
 	},
 	"render": "file:./render.php",
 	"viewScript": "file:./view.js"

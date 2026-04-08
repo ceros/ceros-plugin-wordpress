@@ -5,13 +5,15 @@ return array(
 		'$schema' => 'https://schemas.wp.org/trunk/block.json',
 		'apiVersion' => 3,
 		'name' => 'create-block/ceros',
-		'version' => '0.27.0',
+		'version' => '0.30.0',
 		'title' => 'Ceros',
 		'category' => 'widgets',
 		'icon' => 'smiley',
-		'description' => 'Add Ceros experience to your site.',
+		'description' => 'Add Ceros experiences to your site.',
 		'supports' => array(
-			'html' => false
+			'html' => false,
+			'customClassName' => false,
+			'anchor' => false
 		),
 		'textdomain' => 'ceros',
 		'editorScript' => 'file:./index.js',
@@ -31,6 +33,10 @@ return array(
 				'default' => 'full'
 			),
 			'experienceName' => array(
+				'type' => 'string',
+				'default' => ''
+			),
+			'experienceResourceId' => array(
 				'type' => 'string',
 				'default' => ''
 			)

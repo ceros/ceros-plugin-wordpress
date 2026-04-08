@@ -17,20 +17,6 @@ if ( ! defined( 'ABSPATH' ) ) {
 class Ceros_API {
 
 	/**
-	 * The base URL for the Ceros Production API.
-	 *
-	 * @var string
-	 */
-	private const API_BASE_URL_PRODUCTION = 'https://rest.ceros.com';
-
-	/**
-	 * The base URL for the Ceros Staging API.
-	 *
-	 * @var string
-	 */
-	private const API_BASE_URL_STAGING = 'https://api-wordpresspoc.dev.flex.cerosdev.com';
-
-	/**
 	 * Holds the singleton instance.
 	 *
 	 * @var Ceros_API|null
@@ -56,13 +42,7 @@ class Ceros_API {
 	 * @return string The API base URL.
 	 */
 	private function get_api_base_url() {
-		$environment = get_option( 'ceros_api_environment', 'production' );
-
-		if ( 'staging' === $environment ) {
-			return self::API_BASE_URL_STAGING;
-		}
-
-		return self::API_BASE_URL_PRODUCTION;
+		return ceros_get_api_base_url();
 	}
 
 	/**
@@ -82,14 +62,21 @@ class Ceros_API {
 			);
 		}
 
-		$url      = $this->get_api_base_url() . $endpoint;
+		$base_url = $this->get_api_base_url();
+
+		if ( empty( $base_url ) ) {
+			return new WP_Error(
+				'ceros_api_url_missing',
+				__( 'Staging API URL is not configured. Please set it in the Ceros settings.', 'ceros' )
+			);
+		}
+
+		$url = $base_url . $endpoint;
 		$response = wp_remote_get(
 			$url,
 			[
-				'headers' => [
-					'Authorization' => 'Bearer ' . $api_key,
-					'Accept'        => 'application/json',
-				],
+				'headers' => ceros_get_api_headers( $api_key ),
+				'timeout' => CEROS_API_REQUEST_TIMEOUT,
 			]
 		);
 
@@ -100,6 +87,12 @@ class Ceros_API {
 		$code = wp_remote_retrieve_response_code( $response );
 		$body = wp_remote_retrieve_body( $response );
 		$data = json_decode( $body, true );
+
+		// Normalise non-JSON / scalar bodies to an array so downstream code can
+		// safely access keys without tripping undefined-index warnings.
+		if ( ! is_array( $data ) ) {
+			$data = [];
+		}
 
 		return [
 			'code' => $code,
@@ -116,7 +109,7 @@ class Ceros_API {
 	 * @return array|WP_Error
 	 */
 	public function get_current_account() {
-		return $this->make_authenticated_request( '/accounts/current-account' );
+		return $this->make_authenticated_request( CEROS_ENDPOINT_CURRENT_ACCOUNT );
 	}
 
 	/**
@@ -141,14 +134,29 @@ class Ceros_API {
 
 		$result = $this->make_authenticated_request( '/accounts/' . $account_resource_id . '/folder-tree' );
 
-		// Filter out unwanted elements.
-		if ( ! is_wp_error( $result ) && is_array( $result['body'] ) ) {
-			$result['body'] = array_values( array_filter( $result['body'], function( $item ) {
-				if ( ! is_array( $item ) || ! isset( $item['name'] ) ) {
-					return true;
-				}
-				return ! in_array( $item['name'], [ 'Flex Experiences', 'Account Templates' ], true );
-			} ) );
+		// Only filter successful responses that actually contain a folder list.
+		// Skip WP_Error, non-2xx responses, and non-list bodies (e.g. `{"message": "..."}`
+		// error payloads) so their structure is preserved for the error handler downstream.
+		$body_is_list = is_array( $result['body'] ?? null )
+			&& ( [] === $result['body'] || array_keys( $result['body'] ) === range( 0, count( $result['body'] ) - 1 ) );
+		if (
+			! is_wp_error( $result ) &&
+			isset( $result['code'] ) && $result['code'] >= 200 && $result['code'] < 300 &&
+			$body_is_list
+		) {
+			$result['body'] = array_values(
+				array_filter(
+					$result['body'],
+					function ( $item ) {
+						if ( ! is_array( $item ) || ! isset( $item['name'] ) ) {
+							return true;
+						}
+
+						// Still hide "Account Templates", but allow "Flex Experiences".
+						return ! in_array( $item['name'], [ 'Account Templates' ], true );
+					}
+				)
+			);
 		}
 
 		return $result;
@@ -190,14 +198,17 @@ class Ceros_API {
 			}
 
 			// Filter out experiences that shouldn't be shown
-			$valid_experiences = array_filter( $experiences, function( $exp ) {
-				// Only include published, non-template, non-flex, non-password-protected, non-SSO experiences
-				return isset( $exp['status'] ) && $exp['status'] === 'published' &&
-				       isset( $exp['isTemplate'] ) && $exp['isTemplate'] === false &&
-				       isset( $exp['isFlexExperience'] ) && $exp['isFlexExperience'] === false &&
-				       isset( $exp['isPasswordProtected'] ) && $exp['isPasswordProtected'] === false &&
-				       isset( $exp['isSSOProtected'] ) && $exp['isSSOProtected'] === false;
-			} );
+			$valid_experiences = array_filter(
+				$experiences,
+				function ( $exp ) {
+					// Only include published, non-template, non-password-protected, non-SSO experiences.
+					// Flex Experiences are now allowed.
+					return isset( $exp['status'] ) && 'published' === $exp['status'] &&
+						isset( $exp['isTemplate'] ) && false === $exp['isTemplate'] &&
+						isset( $exp['isPasswordProtected'] ) && false === $exp['isPasswordProtected'] &&
+						isset( $exp['isSSOProtected'] ) && false === $exp['isSSOProtected'];
+				}
+			);
 
 			// Re-index array to ensure sequential keys
 			$result['body'] = array_values( $valid_experiences );

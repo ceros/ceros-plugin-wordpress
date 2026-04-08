@@ -21,11 +21,18 @@ if ( ! defined( 'ABSPATH' ) ) {
 class Ceros_Encryption {
 
 	/**
-	 * Option name for the encrypted API key.
+	 * Option name for the encrypted API key (production).
 	 *
 	 * @var string
 	 */
 	const OPTION_NAME = 'ceros_api_key_encrypted';
+
+	/**
+	 * Option name for the encrypted staging API key.
+	 *
+	 * @var string
+	 */
+	const STAGING_OPTION_NAME = 'ceros_api_key_encrypted_staging';
 
 	/**
 	 * Option name for the legacy plain text key (for migration).
@@ -35,71 +42,101 @@ class Ceros_Encryption {
 	const LEGACY_OPTION_NAME = 'ceros_api_key';
 
 	/**
-	 * Get the API key (decrypted).
+	 * Get the option name for the given environment.
+	 *
+	 * @param string $environment 'production' or 'staging'.
+	 * @return string The option name.
+	 */
+	private static function option_name_for( $environment ) {
+		return 'staging' === $environment ? self::STAGING_OPTION_NAME : self::OPTION_NAME;
+	}
+
+	/**
+	 * Get the API key (decrypted) for the current or specified environment.
 	 *
 	 * Priority:
-	 * 1. wp-config.php constant (CEROS_API_KEY)
-	 * 2. Encrypted value in database
-	 * 3. Legacy plain text value (triggers migration)
+	 * 1. wp-config.php constant (CEROS_API_KEY) — applies to all environments
+	 * 2. Encrypted value in database for the environment
+	 * 3. Legacy plain text value (triggers migration to production key)
 	 *
+	 * @param string|null $environment Optional environment override ('production' or 'staging').
 	 * @return string The API key or empty string.
 	 */
-	public static function get_api_key() {
+	public static function get_api_key( $environment = null ) {
 		// Priority 1: Check for wp-config.php constant.
 		if ( defined( 'CEROS_API_KEY' ) && CEROS_API_KEY ) {
 			return CEROS_API_KEY;
 		}
 
-		// Priority 2: Check for encrypted key.
-		$encrypted = get_option( self::OPTION_NAME, '' );
+		if ( null === $environment ) {
+			$environment = get_option( 'ceros_api_environment', 'production' );
+		}
+
+		$option_name = self::option_name_for( $environment );
+
+		// Priority 2: Check for encrypted key for this environment.
+		$encrypted = get_option( $option_name, '' );
 		if ( ! empty( $encrypted ) ) {
 			$decrypted = self::decrypt( $encrypted );
 			if ( ! empty( $decrypted ) ) {
 				return $decrypted;
 			}
 			// Decryption failed - key may be corrupted or salts changed.
-			// Clear the invalid encrypted key.
-			delete_option( self::OPTION_NAME );
+			delete_option( $option_name );
 		}
 
-		// Priority 3: Check for legacy plain text key and migrate.
-		$legacy_key = get_option( self::LEGACY_OPTION_NAME, '' );
-		if ( ! empty( $legacy_key ) && ! self::is_encrypted( $legacy_key ) ) {
-			// Migrate to encrypted storage.
-			self::save_api_key( $legacy_key );
-			// Remove legacy option.
-			delete_option( self::LEGACY_OPTION_NAME );
-			return $legacy_key;
+		// Priority 3: Legacy migration (production only).
+		// Plain text keys must never remain in the database.
+		if ( 'production' === $environment ) {
+			$legacy_key = get_option( self::LEGACY_OPTION_NAME, '' );
+			if ( ! empty( $legacy_key ) && ! self::is_encrypted( $legacy_key ) ) {
+				// Always delete the plain text key first.
+				delete_option( self::LEGACY_OPTION_NAME );
+
+				// Attempt to re-save it encrypted.
+				self::save_api_key( $legacy_key, 'production' );
+
+				return $legacy_key;
+			}
 		}
 
 		return '';
 	}
 
 	/**
-	 * Save the API key (encrypted).
+	 * Save the API key (encrypted) for the current or specified environment.
 	 *
-	 * @param string $key The plain text API key.
+	 * @param string      $key         The plain text API key.
+	 * @param string|null $environment Optional environment override ('production' or 'staging').
 	 * @return bool True on success, false on failure.
 	 */
-	public static function save_api_key( $key ) {
-		// Sanitize input.
+	public static function save_api_key( $key, $environment = null ) {
 		$key = sanitize_text_field( $key );
 
+		if ( null === $environment ) {
+			$environment = get_option( 'ceros_api_environment', 'production' );
+		}
+
+		$option_name = self::option_name_for( $environment );
+
 		if ( empty( $key ) ) {
-			delete_option( self::OPTION_NAME );
-			delete_option( self::LEGACY_OPTION_NAME );
+			delete_option( $option_name );
+			if ( 'production' === $environment ) {
+				delete_option( self::LEGACY_OPTION_NAME );
+			}
 			return true;
 		}
 
 		$encrypted = self::encrypt( $key );
 		if ( false === $encrypted ) {
-			// Fallback to plain text if encryption fails.
-			return update_option( self::LEGACY_OPTION_NAME, $key );
+			// Encryption is required — never store in plain text.
+			return false;
 		}
 
-		// Save encrypted and clean up legacy.
-		$result = update_option( self::OPTION_NAME, $encrypted );
-		delete_option( self::LEGACY_OPTION_NAME );
+		$result = update_option( $option_name, $encrypted );
+		if ( 'production' === $environment ) {
+			delete_option( self::LEGACY_OPTION_NAME );
+		}
 		return $result;
 	}
 
@@ -185,9 +222,13 @@ class Ceros_Encryption {
 			$salt .= LOGGED_IN_SALT;
 		}
 
-		// Fallback if salts are not defined (shouldn't happen in production).
+		// Fail closed if the site's WordPress salts are missing. Previously we
+		// fell back to a predictable derivation from the site URL, which would
+		// let anyone who could read the encrypted option derive the key.
 		if ( empty( $salt ) ) {
-			$salt = 'ceros-fallback-' . get_site_url();
+			throw new RuntimeException(
+				'Ceros encryption requires LOGGED_IN_KEY and LOGGED_IN_SALT to be defined in wp-config.php.'
+			);
 		}
 
 		// Derive a 32-byte key using Sodium's generic hash.
@@ -228,12 +269,13 @@ class Ceros_Encryption {
 	}
 
 	/**
-	 * Check if API key is configured (either via constant or database).
+	 * Check if API key is configured for the current or specified environment.
 	 *
+	 * @param string|null $environment Optional environment override.
 	 * @return bool
 	 */
-	public static function is_configured() {
-		return ! empty( self::get_api_key() );
+	public static function is_configured( $environment = null ) {
+		return ! empty( self::get_api_key( $environment ) );
 	}
 
 	/**

@@ -35,7 +35,7 @@ export function SidebarControls( {
 	return (
 		<InspectorControls>
 			<PanelBody
-				title={ __( 'File selected', 'ceros' ) }
+				title={ __( 'Experiences selected', 'ceros' ) }
 				initialOpen={ true }
 			>
 				<BaseControl>
@@ -44,7 +44,7 @@ export function SidebarControls( {
 							<span className="ceros-sidebar__file-name">
 								{ selectedExperienceName ||
 									attributes?.experienceName ||
-									__( 'No file selected', 'ceros' ) }
+									__( 'No experiences selected', 'ceros' ) }
 							</span>
 						</div>
 						<Button
@@ -64,7 +64,7 @@ export function SidebarControls( {
 									<path d="m19 7-3-3-8.5 8.5-1 4 4-1L19 7Zm-7 11.5H5V20h7v-1.5Z"></path>
 								</svg>
 							}
-							label={ __( 'Change file', 'ceros' ) }
+							label={ __( 'Change experiences', 'ceros' ) }
 						/>
 					</div>
 				</BaseControl>

@@ -389,6 +389,7 @@
 		background-color: #fff;
 		min-height: 39px;
 		cursor: text;
+		max-width: 100%;
 	}
 
 	&__file-name {
@@ -403,7 +404,7 @@
 
 	&__file-edit-btn {
 		position: absolute;
-		right: 10px;
+		right: 0;
 		padding: 0;
 		min-width: auto;
 		height: 24px;
@@ -433,7 +434,7 @@
 	}
 
 	&__radio-input {
-		margin-top: 2px;
+		margin: 2px !important;
 		flex-shrink: 0;
 	}
 

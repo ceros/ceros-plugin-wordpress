@@ -19,7 +19,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 function ceros_get_version() {
 	$plugin_data = get_file_data( CEROS_PLUGIN_FILE, [ 'Version' => 'Version' ] );
-	return $plugin_data['Version'] ?? '0.27.0';
+	return $plugin_data['Version'] ?? '0.30.0';
 }
 
 /**
@@ -55,7 +55,7 @@ function ceros_sanitize_resource_id( $resource_id ) {
 	$resource_id = trim( $resource_id );
 
 	// Basic validation for Ceros resource ID format (alphanumeric with hyphens and underscores)
-	if ( ! preg_match( '/^[a-zA-Z0-9\-_]+$/', $resource_id ) ) {
+	if ( ! preg_match( '/^' . CEROS_RESOURCE_ID_PATTERN . '$/', $resource_id ) ) {
 		return false;
 	}
 
@@ -72,6 +72,24 @@ function ceros_sanitize_resource_id( $resource_id ) {
  */
 function ceros_is_api_configured() {
 	return Ceros_Encryption::is_configured();
+}
+
+/**
+ * Build the standard headers for outgoing Ceros API requests.
+ *
+ * Includes authentication, content negotiation, and identification
+ * headers so the Ceros API can identify the plugin and version.
+ *
+ * @param string $api_key The API key (Bearer token).
+ * @return array Associative array of HTTP headers.
+ */
+function ceros_get_api_headers( $api_key ) {
+	return [
+		'Authorization'       => 'Bearer ' . $api_key,
+		'Accept'              => 'application/json',
+		'X-Ceros-Api-Version' => CEROS_API_VERSION,
+		'X-Ceros-Plugin'      => CEROS_PLUGIN_IDENTIFIER,
+	];
 }
 
 /**
@@ -114,7 +132,7 @@ function ceros_enqueue_admin_assets() {
 
 	// Localize script with API data
 	wp_localize_script( 'ceros-admin', 'cerosAdmin', [
-		'apiUrl'      => rest_url( 'ceros/v1/' ),
+		'apiUrl'      => rest_url( CEROS_REST_NAMESPACE . '/' ),
 		'nonce'       => wp_create_nonce( 'wp_rest' ),
 		'isConfigured' => ceros_is_api_configured(),
 		'settingsUrl' => admin_url( 'options-general.php?page=ceros_settings' ),
@@ -165,6 +183,44 @@ function ceros_get_friendly_error_message( $error_message ) {
 }
 
 /**
+ * Format an error message based on the active environment.
+ *
+ * - Staging: returns the full technical message (useful for debugging).
+ * - Production: logs the technical message to error_log and returns a
+ *   user-friendly message instead.
+ *
+ * Both modes prefix the message with the environment name.
+ *
+ * @param string $technical_message The full technical error detail.
+ * @param string $friendly_message  Optional user-friendly message for production.
+ *                                  Falls back to $technical_message if empty.
+ * @return string The formatted message to display.
+ */
+function ceros_format_error( $technical_message, $friendly_message = '' ) {
+	$environment = get_option( 'ceros_api_environment', 'production' );
+	$env_label   = ucfirst( $environment );
+
+	if ( 'staging' === $environment ) {
+		/* translators: 1: environment label, 2: error message */
+		return sprintf( __( '[%1$s] %2$s', 'ceros' ), $env_label, $technical_message );
+	}
+
+	// Production: log the technical detail, but rate-limit to avoid filling the
+	// error log when a key is expired or Ceros is having an outage. We key the
+	// transient on a hash of the message so different errors still surface.
+	$log_key = 'ceros_err_' . md5( $technical_message );
+	if ( false === get_transient( $log_key ) ) {
+		error_log( sprintf( 'Ceros [%s]: %s', $env_label, $technical_message ) ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- intentional production logging.
+		set_transient( $log_key, 1, 5 * MINUTE_IN_SECONDS );
+	}
+
+	$display = ! empty( $friendly_message ) ? $friendly_message : $technical_message;
+
+	/* translators: 1: environment label, 2: error message */
+	return sprintf( __( '[%1$s] %2$s', 'ceros' ), $env_label, $display );
+}
+
+/**
  * Enqueue block editor assets and localize data for blocks
  */
 function ceros_enqueue_block_editor_assets() {
@@ -174,7 +230,7 @@ function ceros_enqueue_block_editor_assets() {
 		'cerosBlockData',
 		[
 			'settingsUrl' => admin_url( 'options-general.php?page=ceros_settings' ),
-			'apiUrl'      => rest_url( 'ceros/v1/' ),
+			'apiUrl'      => rest_url( CEROS_REST_NAMESPACE . '/' ),
 			'nonce'       => wp_create_nonce( 'wp_rest' ),
 		]
 	);

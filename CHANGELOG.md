@@ -5,10 +5,76 @@ All notable changes to the Ceros WordPress Plugin will be documented in this fil
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.27.0] - 2025-12-24
+## [0.30.0] - 2026-04-08
+
+### Security
+- **Request timeouts**: All outgoing Ceros API calls now set an explicit timeout (`CEROS_API_REQUEST_TIMEOUT`) instead of inheriting WordPress's 5-second default, preventing slow-loris stalls on block editor loads.
+- **SSRF guard on staging URL**: New `ceros_is_public_host()` helper rejects loopback, link-local, and RFC1918 private addresses. Applied to both the settings sanitizer and the REST `test-connection` endpoint so an admin cannot point the plugin at an internal service.
+- **Fail-closed encryption key derivation**: `Ceros_Encryption::get_encryption_key()` now throws a `RuntimeException` when `LOGGED_IN_KEY` / `LOGGED_IN_SALT` are missing instead of falling back to a predictable site-URL-derived salt.
+
+### Fixed
+- **Null-safe JSON response handling**: `Ceros_API::make_authenticated_request()` normalises non-array `json_decode()` results (invalid JSON, HTML error pages, scalar bodies) to an empty array so downstream `$body['message']` accesses do not trip undefined-index warnings.
+- **Strict `accountResourceId` extraction**: The editor no longer falls back to `id` / `accountId` / `resourceId` when reading the `current-account` response. Only the canonical `accountResourceId` is accepted — a shape change now fails loudly instead of silently sending malformed `/accounts/{id}/folder-tree` requests.
 
 ### Changed
-- Updated all relevant files to version 0.27.0
+- **REST error responses include a stable `error_code`**: `ceros_handle_api_response()` now passes the `WP_Error` code through to the client so JS can branch on stable identifiers instead of regexing translated error messages.
+- **Rate-limited production error logging**: `ceros_format_error()` now rate-limits each distinct technical message to one `error_log()` entry per 5 minutes via a transient, preventing log flood during outages or expired keys.
+
+### Removed
+- **Dead string-matching branch**: Removed a no-op `if` block in `edit.js` that matched API-key-related substrings but contained no action.
+
+## [0.29.1] - 2026-04-08
+
+### Fixed
+- **Folder experience loading**: Folders that contain both subfolders and direct-child experiences now load their experiences on first expand. Previously the editor guarded on `children.length > 0`, which was already true from the subfolder list, so the lazy experience fetch was skipped. Load state is now tracked via a dedicated `experiencesLoaded` flag.
+- **Upstream error messages preserved**: `Ceros_API::get_folder_tree()` only runs its list cleanup (`array_filter` / `array_values`) on successful list responses. Error payloads like `{"message": "..."}` are now preserved untouched so the downstream error handler can surface the real Ceros message instead of a generic "Unknown error".
+
+## [0.29.0] - 2026-04-08
+
+### Added
+- **REST endpoint for Test Connection**: New `POST /wp-json/ceros/v1/test-connection` endpoint (protected by `manage_options` + `wp_rest` nonce) that accepts optional `environment`, `staging_url`, and `api_key` parameters. The Settings page Test Connection button now calls this endpoint instead of `admin-ajax.php`.
+- **Test unsaved API keys**: Test Connection now tests whatever value is currently in the API Key input field, so users can validate a key before saving it. Falls back to the stored key only when the key is defined via the `CEROS_API_KEY` wp-config constant.
+
+### Changed
+- **Test Connection button gating**: The button now starts disabled with a "Enter an API key above to test the connection." hint, and is enabled only while the API Key input contains a value. With the wp-config constant in use it remains enabled immediately.
+- **Removed legacy AJAX handler**: `ceros_ajax_test_api_connection` and its `wp_ajax_ceros_test_api_connection` hook have been removed in favour of the REST endpoint.
+
+## [0.28.1] - 2026-04-08
+
+### Changed
+- **Changelog clarification**: Added a note to the historical 0.12.0 entry explaining that `API_BASE_URL_STAGING` was later removed in favour of the user-configurable `ceros_staging_api_url` option and `API_BASE_URL_PRODUCTION` was renamed to `CEROS_PRODUCTION_API_URL` in 0.28.0.
+
+## [0.28.0] - 2026-04-08
+
+### Added
+- **Plugin constants**: Centralized recurring magic strings/numbers (REST namespace, resource ID pattern, production API URL, request timeout, environment names, current-account endpoint, plugin identifier) into named constants in `ceros.php`, replacing duplicated literals across PHP files.
+- **Collapsible API Environment section**: The settings page now hides the API Environment and Staging API URL fields inside a collapsible "Advanced: API Environment" panel, collapsed by default and auto-expanded when staging is the active environment.
+
+### Changed
+- **README accuracy**: Corrected feature description — experiences are loaded lazily on folder expansion rather than pre-loaded.
+
+## [0.27.0] - 2025-12-24
+
+### Added
+- **Experience resource ID attribute**: Added `experienceResourceId` attribute to the Ceros block and wired it through `edit.js` and modal components so experiences can be reliably re-identified for future enhancements.
+- **Folder tree helpers**: Introduced helper functions for immutably updating folder tree nodes and for normalizing Ceros API response shapes, reducing fragile ad-hoc updates in the editor.
+
+### Changed
+- **Modal architecture**: Split the main modal into smaller, focused components and removed unused “Advanced” sidebar options for a simpler editing experience.
+- **Embed code selection**: Refined embed code selection logic in `edit.js` (including resetting internal refs on unmount) to avoid stale data and make switching experiences more reliable.
+- **API fetching**: Updated API requests in `edit.js` to use `async/await`, improving readability and centralizing error handling.
+- **Preview rendering**: Simplified and then enhanced the `CerosPreview` component so it can correctly handle embed HTML, including safe script execution when rendering previews.
+- **Server-side rendering**: Updated the PHP render callback to sanitize embed HTML on the server and return clearer error responses for failed renders.
+
+### Fixed
+- **Production folder loading**: Fixed an issue where folders were not loading correctly from the production Ceros API.
+- **Editor layout**: Adjusted button positioning, radio input margins, and input field widths in the block sidebar and modal to prevent layout glitches and overflow.
+- **Block copy**: Corrected the Ceros block description wording to use the proper plural form.
+
+### Enhanced
+- **Editor error handling**: Centralized error extraction in `edit.js`, improved error handling in the “handle node click” flow, and made it easier to distinguish user/input errors from network/API failures.
+- **API key error messaging**: Improved error handling so API key problems are surfaced with explicit, user-friendly messages instead of generic connection errors.
+- **Flex experiences display**: Updated the UI to ensure Flex experiences are displayed correctly alongside other experiences in the folder tree.
 
 ## [0.26.0] - 2025-12-24
 
@@ -111,7 +177,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **HTTP Error Handling**: Added proper handling for 404 and 500 responses from the Ceros API, returning appropriate HTTP status codes to the client
 
 ### Changed
-- **API Class Refactored**: Split single `API_BASE_URL` constant into `API_BASE_URL_PRODUCTION` and `API_BASE_URL_STAGING` with dynamic selection via `get_api_base_url()` method
+- **API Class Refactored**: Split single `API_BASE_URL` constant into `API_BASE_URL_PRODUCTION` and `API_BASE_URL_STAGING` with dynamic selection via `get_api_base_url()` method _(Note: superseded in later versions — `API_BASE_URL_STAGING` was removed in favour of a user-configurable `ceros_staging_api_url` option, and `API_BASE_URL_PRODUCTION` was renamed to `CEROS_PRODUCTION_API_URL` in 0.28.0.)_
 - **Default Environment**: Production API is now the default environment for new installations
 - **UI Improvements**: Moved embed type selection controls from preview area to sidebar and block toolbar for better accessibility and user experience
 - **Embed Type Controls**: Embed type options (Full height / Scrolling) are now available in both the sidebar settings panel and the block toolbar dropdown menu
@@ -326,7 +392,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - **Comprehensive API Key Validation**: Added upfront API key checking before making any external API calls
-- **New REST Endpoint**: Added `/ceros/v1/api-key-status` endpoint for efficient API key configuration checking
+  <!-- `/ceros/v1/api-key-status` endpoint removed; API key validation now happens via core endpoints like `/current-account`. -->
 - **403 Forbidden Error Handling**: Specific error detection and user-friendly messaging for invalid API keys
 - **Enhanced Error Display**: Prominent error UI in block editor with clear action steps
 - **Frontend Error Handling**: API key validation and error display on published pages
@@ -390,7 +456,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## Development Notes
 
 ### API Endpoints
-- `/ceros/v1/api-key-status` - Check API key configuration status
 - `/ceros/v1/current-account` - Get current Ceros account information  
 - `/ceros/v1/folder-tree/{accountResourceID}` - Retrieve folder structure
 - `/ceros/v1/folder/{resourceId}/experiences` - Get experiences in a folder

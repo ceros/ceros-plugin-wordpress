@@ -5,7 +5,7 @@ A WordPress block plugin that integrates with the Ceros API to embed interactive
 ## Features
 
 - **Browse Ceros Content**: Interactive tree view to browse your Ceros folder structure
-- **Automatic Experience Loading**: All experiences are pre-loaded for immediate browsing without folder expansion
+- **Lazy Experience Loading**: Experiences are fetched on demand when a folder is expanded, keeping initial load fast
 - **Experience Selection**: Click to expand folders and select individual Ceros experiences
 - **Parallel API Processing**: Efficient loading with parallel API calls for improved performance
 - **Smart Caching**: Intelligent data caching to avoid redundant API requests
@@ -33,7 +33,7 @@ A WordPress block plugin that integrates with the Ceros API to embed interactive
 3. Select your environment (Production or Staging)
 4. Enter your API key and save
 
-Your API key is stored securely using encryption (Sodium/libsodium).
+Your API key is stored securely using encryption. See [API Key Encryption](#api-key-encryption) for details.
 
 ### Alternative: Define API Key in wp-config.php
 
@@ -53,6 +53,30 @@ Add this line to your `wp-config.php` file (before the line that says "That's al
 
 **Note:** When using the constant, the API key field in Settings > Ceros will be disabled.
 
+### API Key Encryption
+
+API keys are encrypted at rest using PHP's Sodium extension (`sodium_crypto_secretbox`). The plugin will **not** save a key if encryption fails — plain text storage is never used.
+
+#### How it works
+
+1. **Key derivation** — A 32-byte encryption key is derived from the WordPress `LOGGED_IN_KEY` and `LOGGED_IN_SALT` constants (defined in `wp-config.php`) using `sodium_crypto_generichash`.
+2. **Encryption** — The API key is encrypted with `sodium_crypto_secretbox` using a random nonce (`SODIUM_CRYPTO_SECRETBOX_NONCEBYTES`). The nonce is prepended to the ciphertext.
+3. **Storage** — The nonce + ciphertext is Base64-encoded and stored in the `wp_options` table as `ceros_api_key_encrypted` (production) or `ceros_api_key_encrypted_staging` (staging).
+4. **Decryption** — On read, the process is reversed: Base64-decode, split nonce from ciphertext, decrypt with the same derived key.
+
+#### Per-environment keys
+
+Production and staging API keys are stored separately, each with their own encrypted option. Switching environments does not affect the other environment's stored key.
+
+#### Requirements
+
+- **PHP Sodium extension** — required (bundled with PHP 7.2+, enabled by default in most hosting environments). If Sodium is not available, the plugin will show an error and refuse to save the key.
+- **Stable WordPress salts** — The encryption key is derived from `LOGGED_IN_KEY` and `LOGGED_IN_SALT`. Changing these constants in `wp-config.php` will invalidate all stored encrypted keys (they will need to be re-entered).
+
+#### Legacy migration
+
+Older versions of the plugin stored the API key in plain text in the `ceros_api_key` option. On first access, the plugin deletes the plain text key immediately, then attempts to re-save it encrypted. If encryption fails (e.g. Sodium is unavailable), the plain text key is still removed — it is never left in the database. The user will need to re-enter the key once Sodium is available.
+
 ### API Environments
 
 The plugin supports two API environments:
@@ -60,7 +84,7 @@ The plugin supports two API environments:
 | Environment | Base URL |
 |-------------|----------|
 | Production  | `https://rest.ceros.com` |
-| Staging     | `https://api-wordpresspoc.dev.flex.cerosdev.com` |
+| Staging     | User-configured (entered in Settings > Ceros when staging is selected) |
 
 ### External API Endpoints
 
@@ -75,7 +99,6 @@ The plugin connects to the following Ceros API endpoints:
 
 The plugin registers the following WordPress REST API endpoints:
 
-- `GET /wp-json/ceros/v1/api-key-status` - Check API key configuration status
 - `GET /wp-json/ceros/v1/current-account` - Get current Ceros account information
 - `GET /wp-json/ceros/v1/folder-tree/{account_resource_id}` - Get folder tree structure
 - `GET /wp-json/ceros/v1/folder/{resource_id}/experiences` - Get experiences from a folder
@@ -90,7 +113,7 @@ The plugin registers the following WordPress REST API endpoints:
 3. **API Key Check**: The block automatically validates your API key configuration
    - If API key is missing: Clear error message with link to settings
    - If API key is invalid: Specific error message about forbidden access
-4. **Browse Content**: The block will display your Ceros folder tree with all experiences pre-loaded (once API key is valid)
+4. **Browse Content**: The block will display your Ceros folder tree and load experiences on demand when you expand a folder (once API key is valid)
 5. **Select Experience**: All experiences are immediately visible - simply click on any experience to select it
 6. **Choose Embed Type**: Select either "Full height" or "Scrollable"
 7. **Preview**: The embed code preview will appear in the editor
@@ -328,9 +351,51 @@ register_rest_route( 'ceros/v1', '/new-endpoint/(?P<param>[a-zA-Z0-9\-_]+)', arr
 
 ### Error Messages
 
-- **"Ceros API key is not set"**: Go to WordPress Admin > Settings > Ceros and add your API key
-- **"The API call was forbidden"**: Your API key may be invalid or expired - verify with Ceros support
-- **"Unknown error occurred"**: Check browser console for detailed error information
+Error messages are environment-aware. In **Production**, messages are user-friendly and technical details are written to `error_log()`. In **Staging**, the full technical detail is shown directly in the UI. All messages are prefixed with the active environment, e.g. `[Production]` or `[Staging]`.
+
+#### Settings Page — Save (Form Validation)
+
+| Message | Trigger |
+|---------|---------|
+| A staging API URL is required when using the staging environment. The key was not saved. | Save API key with staging environment selected but no staging URL provided |
+| Could not connect to the Ceros API. The key was not saved. | Network error (DNS failure, timeout, connection refused) during API key validation |
+| The API key could not be verified. Please check that the key is correct and try again. | Ceros API returns a non-2xx HTTP status during key validation |
+| The staging API URL is not a valid URL. | Staging URL fails format validation |
+| The staging API URL must use HTTPS. | Staging URL uses HTTP instead of HTTPS |
+
+#### Settings Page — Test Connection (AJAX)
+
+| Message | Trigger |
+|---------|---------|
+| You do not have permission to perform this action. | User lacks `manage_options` capability |
+| No API key is configured. Please save an API key first. | API key is empty for the current environment |
+| Staging URL is required. | Staging environment selected but no staging URL entered |
+| The staging URL must use HTTPS. | Staging URL does not use HTTPS |
+| Could not connect to the Ceros API. Please try again. | Network error during test connection (production-friendly) |
+| Connection test failed. Please check the URL and API key. | Ceros API returns a non-2xx HTTP status (production-friendly) |
+
+#### Block Editor — REST API
+
+| Message | Trigger |
+|---------|---------|
+| Ceros API key is not set. Please add it in the Ceros settings first. | No API key configured for the current environment |
+| Staging API URL is not configured. Please set it in the Ceros settings. | Staging environment selected but no URL set |
+| Your API key appears to be invalid. Please confirm that it is correct in the Ceros settings. | 403 Forbidden response from Ceros API (production-friendly) |
+| The Ceros API returned an error. Please try again or check the Ceros settings. | Any other 4xx/5xx response from Ceros API (production-friendly) |
+| Unable to connect to the Ceros API. Please check your internet connection and try again. | DNS resolution failure or generic cURL error |
+| Failed to connect to the Ceros API. Please check your internet connection and try again. | Connection refused (cURL error 7) |
+| The connection to the Ceros API timed out. Please try again in a moment. | Request timeout (cURL error 28) |
+| Account resource ID is missing or invalid. | Internal: malformed account resource ID |
+| Resource ID is missing or invalid. | Internal: malformed folder or experience resource ID |
+
+#### Block Editor — UI
+
+| Message | Trigger |
+|---------|---------|
+| Something went wrong | React Error Boundary caught an unhandled JavaScript error |
+| The Ceros block encountered an error. This might be a temporary issue. | Error Boundary detail message, shown with "Try Again" button |
+| No tree data available | Folder tree data is empty or failed to load |
+| No experiences found | A folder contains no experiences |
 
 ### Build Issues
 
@@ -344,7 +409,7 @@ register_rest_route( 'ceros/v1', '/new-endpoint/(?P<param>[a-zA-Z0-9\-_]+)', arr
 
 See [CHANGELOG.md](CHANGELOG.md) for detailed version history.
 
-**Current Version: 0.27.0**
+**Current Version: 0.30.0**
 
 ---
 
