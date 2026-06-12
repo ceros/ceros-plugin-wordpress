@@ -161,18 +161,78 @@ This section covers development workflows for building, testing, and packaging t
 ### Prerequisites
 
 - **Node.js** (v18+ recommended) and npm
-- **WordPress** development environment (Local, DDEV, Docker, etc.)
+- **WordPress** development environment (see [Local Development Environment](#local-development-environment-wp-env) below, or use Local, DDEV, etc.)
 - **Ceros API** access with valid API key
 
 ### Initial Setup
 
 ```bash
-# Navigate to the plugin directory
-cd wp-content/plugins/ceros
+# Clone the plugin repository and enter it
+cd ceros-plugin-wordpress
 
-# Install dependencies
+# Install dependencies (includes the local dev environment, wp-env)
 npm install
 ```
+
+### Local Development Environment (wp-env)
+
+The fastest way to test the plugin locally is with [`@wordpress/env`](https://developer.wordpress.org/block-editor/reference-guides/packages/packages-env/) (`wp-env`), the official WordPress tooling. It spins up a complete, throwaway WordPress site in Docker and **mounts this repository as a plugin automatically** — no manual copying into `wp-content/plugins/`.
+
+#### Requirements
+
+- [Docker](https://docs.docker.com/get-docker/) installed and running
+- Dependencies installed (`npm install`) — this pulls in `@wordpress/env`
+
+#### Start the environment
+
+```bash
+npm run env:start
+```
+
+This will:
+
+- Download and start WordPress + MySQL containers
+- Mount this repo into `wp-content/plugins/ceros` and **activate the plugin**
+- Serve the site at **http://localhost:8888**
+
+Log in to the admin at **http://localhost:8888/wp-admin** with:
+
+- **Username:** `admin`
+- **Password:** `password`
+
+Then go to **Settings > Ceros** to add your API key, and add a **Ceros** block to any post or page.
+
+#### How the local plugin is loaded
+
+The mapping lives in [`.wp-env.json`](.wp-env.json):
+
+```json
+{
+	"plugins": [ "." ]
+}
+```
+
+The `"."` entry mounts the current directory (this repo) into the container as a plugin. Any change you make to the PHP files is reflected **immediately** — no restart needed. For block JavaScript/CSS, run `npm run start` in a separate terminal so `build/` rebuilds on save, then refresh the browser.
+
+To test against an additional local plugin, add its path to the array, e.g.:
+
+```json
+{
+	"plugins": [ ".", "../some-other-plugin" ]
+}
+```
+
+#### Useful environment commands
+
+| Command | Description |
+|---------|-------------|
+| `npm run env:start` | Start (or restart) the WordPress environment |
+| `npm run env:stop` | Stop the containers (data is preserved) |
+| `npm run env:clean` | Reset the WordPress database to a clean state |
+| `npm run env:destroy` | Remove the environment and all its data |
+| `npm run env:cli -- plugin list` | Run WP-CLI inside the container (anything after `--`) |
+
+> **Tip:** Personal overrides (e.g. a different port or PHP version) can go in a `.wp-env.override.json` file, which is git-ignored.
 
 ### Building JavaScript/CSS Assets
 
@@ -212,6 +272,11 @@ This will:
 | `npm run lint:js` | Lint JavaScript files |
 | `npm run lint:css` | Lint CSS/SCSS files |
 | `npm run packages-update` | Update WordPress packages to latest versions |
+| `npm run env:start` | Start the local WordPress environment (wp-env) |
+| `npm run env:stop` | Stop the local WordPress environment |
+| `npm run env:clean` | Reset the local WordPress database |
+| `npm run env:destroy` | Remove the local environment and its data |
+| `npm run env:cli` | Run WP-CLI inside the environment |
 
 ### Creating a Plugin ZIP
 
