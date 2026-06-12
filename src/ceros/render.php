@@ -18,12 +18,20 @@ function ceros_render_block( $attributes ) {
 	$has_full   = ! empty( $attributes['fullHeightEmbedCode'] );
 	$has_scroll = ! empty( $attributes['scrollableEmbedCode'] );
 
+	$delivery_mode = $attributes['deliveryMode'] ?? 'iframe';
+
 	$missing_experience_markup = '<div class="ceros-missing-experience" style="font-family: sans-serif;background-color:#000;color:#fff;min-height:700px;display:flex;align-items:center;justify-content:center;text-align:center;padding:2rem;">
 			<div>
 				<h2 style="font-size:2.5rem;margin:0 0 1rem;font-weight:600;">' . esc_html__( 'Experience not found', 'ceros' ) . '</h2>
 				<p style="margin:0;max-width:640px;">' . esc_html__( "The folder / experience can't be found, possibly indicating that it's been deleted in Ceros admin.", 'ceros' ) . '</p>
 			</div>
 		</div>';
+
+	// Iframeless (Flex Inline) delivery: output the Ceros-provided inline snippet
+	// (the `<div data-flex-inline>` marker + flex-client.js runtime).
+	if ( 'inline' === $delivery_mode && ! empty( $attributes['inlineEmbedCode'] ) ) {
+		return ceros_sanitize_embed_code( $attributes['inlineEmbedCode'] );
+	}
 
 	// Show the "experience not found" message when there are no embed codes saved for this block.
 	if ( ! $has_full && ! $has_scroll ) {

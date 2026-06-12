@@ -21,7 +21,9 @@
 		"scrollableEmbedCode": { "type": "string", "default": "" },
 		"selectedOption": { "type": "string", "default": "full" },
 		"experienceName": { "type": "string", "default": "" },
-		"experienceResourceId": { "type": "string", "default": "" }
+		"experienceResourceId": { "type": "string", "default": "" },
+		"deliveryMode": { "type": "string", "default": "iframe" },
+		"inlineEmbedCode": { "type": "string", "default": "" }
 	},
 	"render": "file:./render.php",
 	"viewScript": "file:./view.js"

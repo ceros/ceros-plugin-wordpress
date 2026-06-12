@@ -36,6 +36,14 @@
     "experienceResourceId": {
       "type": "string",
       "default": ""
+    },
+    "deliveryMode": {
+      "type": "string",
+      "default": "iframe"
+    },
+    "inlineEmbedCode": {
+      "type": "string",
+      "default": ""
     }
   },
   "render": "file:./render.php",

@@ -9,7 +9,7 @@
 import { __ } from '@wordpress/i18n';
 import { InspectorControls } from '@wordpress/block-editor';
 import { PanelBody, BaseControl, Button } from '@wordpress/components';
-import { ACTION_TYPES, EMBED_OPTIONS } from '../constants';
+import { ACTION_TYPES, EMBED_OPTIONS, DELIVERY_MODES } from '../constants';
 
 /**
  * Sidebar Controls Component
@@ -20,6 +20,9 @@ import { ACTION_TYPES, EMBED_OPTIONS } from '../constants';
  * @param {string} props.selectedEmbedOption - Currently selected embed option ('full' or 'scroll')
  * @param {boolean} props.hasFullHeight - Whether full height embed code is available
  * @param {boolean} props.hasScrolling - Whether scrolling embed code is available
+ * @param {string} props.deliveryMode - Current delivery mode ('iframe' or 'inline')
+ * @param {boolean} props.hasInline - Whether the experience exposes a Flex Inline (iframeless) snippet
+ * @param {string} props.inlineEmbedCode - The Ceros-provided Flex Inline snippet
  * @param {Function} props.dispatch - Reducer dispatch function
  * @param {Function} props.setAttributes - WordPress setAttributes function
  */
@@ -29,9 +32,13 @@ export function SidebarControls( {
 	selectedEmbedOption,
 	hasFullHeight,
 	hasScrolling,
+	deliveryMode = DELIVERY_MODES.IFRAME,
+	hasInline = false,
+	inlineEmbedCode = '',
 	dispatch,
 	setAttributes,
 } ) {
+	const isInlineDelivery = deliveryMode === DELIVERY_MODES.INLINE;
 	return (
 		<InspectorControls>
 			<PanelBody
@@ -69,6 +76,74 @@ export function SidebarControls( {
 					</div>
 				</BaseControl>
 			</PanelBody>
+			{ hasInline && (
+				<PanelBody title={ __( 'Delivery mode', 'ceros' ) } initialOpen={ true }>
+					<BaseControl>
+						<div className="ceros-sidebar__radio-group">
+							<label className="ceros-sidebar__radio-label">
+								<input
+									className="ceros-sidebar__radio-input"
+									type="radio"
+									value={ DELIVERY_MODES.IFRAME }
+									checked={ deliveryMode === DELIVERY_MODES.IFRAME }
+									onChange={ () =>
+										setAttributes( { deliveryMode: DELIVERY_MODES.IFRAME } )
+									}
+								/>
+								<div className="ceros-sidebar__radio-content">
+									<span className="ceros-sidebar__radio-title">
+										{ __( 'Embed (iframe)', 'ceros' ) }
+									</span>
+									<span className="ceros-sidebar__radio-description">
+										{ __(
+											'Renders inside an isolated iframe. Works for every experience.',
+											'ceros'
+										) }
+									</span>
+								</div>
+							</label>
+							<label
+								className={ `ceros-sidebar__radio-label${
+									! hasInline
+										? ' ceros-sidebar__radio-label--disabled'
+										: ''
+								}` }
+							>
+								<input
+									className="ceros-sidebar__radio-input"
+									type="radio"
+									value={ DELIVERY_MODES.INLINE }
+									checked={ deliveryMode === DELIVERY_MODES.INLINE }
+									disabled={ ! hasInline }
+									onChange={ () => {
+										if ( hasInline ) {
+											// Persist the inline snippet alongside the mode so the
+											// saved block always has what render.php needs, even if
+											// it only existed in live API state until now.
+											setAttributes( {
+												deliveryMode: DELIVERY_MODES.INLINE,
+												inlineEmbedCode,
+											} );
+										}
+									} }
+								/>
+								<div className="ceros-sidebar__radio-content">
+									<span className="ceros-sidebar__radio-title">
+										{ __( 'Inline — iframeless (Beta)', 'ceros' ) }
+									</span>
+									<span className="ceros-sidebar__radio-description">
+										{ __(
+											'Renders inline via Shadow DOM, no iframe. Best for a native feel.',
+											'ceros'
+										) }
+									</span>
+								</div>
+							</label>
+						</div>
+					</BaseControl>
+				</PanelBody>
+			) }
+			{ ! isInlineDelivery && (
 			<PanelBody title={ __( 'Settings', 'ceros' ) } initialOpen={ true }>
 				<BaseControl>
 					<div className="ceros-sidebar__radio-group">
@@ -151,6 +226,7 @@ export function SidebarControls( {
 					</div>
 				</BaseControl>
 			</PanelBody>
+			) }
 		</InspectorControls>
 	);
 }

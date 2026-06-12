@@ -1,27 +1,27 @@
 import { useEffect, useRef } from '@wordpress/element';
-import { EMBED_OPTIONS } from '../constants';
+import { DELIVERY_MODES } from '../constants';
 
 /**
- * Preview component for showing the selected embed inside the block.
+ * Preview component for showing the selected experience inside the block.
  *
- * Uses a ref + effect so that any <script> tags inside the embed HTML
- * are re-created and executed in the editor (they don't run via innerHTML).
+ * The editor preview ALWAYS renders the full-height iframe embed (falling back
+ * to the scrollable variant), regardless of the chosen delivery mode. Rendering
+ * the iframeless Flex Inline snippet here would inject flex-client.js and a
+ * Shadow DOM straight into the editor DOM; the iframe keeps the preview isolated
+ * and side-effect-free. The published frontend still honours the real delivery
+ * mode — only the editor preview is forced to the iframe.
+ *
+ * A ref + effect is used so any <script> tags inside the embed HTML are
+ * re-created and executed in the editor (they don't run via innerHTML).
  */
-export const CerosPreview = ( { currentEmbedCodes, selectedEmbedOption } ) => {
-	if ( ! currentEmbedCodes ) {
-		return null;
-	}
-
+export const CerosPreview = ( {
+	currentEmbedCodes,
+	deliveryMode = DELIVERY_MODES.IFRAME,
+} ) => {
 	const embedHtml =
-		selectedEmbedOption === EMBED_OPTIONS.FULL
-			? currentEmbedCodes?.fullHeightEmbedCode
-			: selectedEmbedOption === EMBED_OPTIONS.SCROLL
-				? currentEmbedCodes?.scrollableEmbedCode
-				: null;
-
-	if ( ! embedHtml ) {
-		return null;
-	}
+		currentEmbedCodes?.fullHeightEmbedCode ||
+		currentEmbedCodes?.scrollableEmbedCode ||
+		null;
 
 	const containerRef = useRef( null );
 
@@ -70,12 +70,21 @@ export const CerosPreview = ( { currentEmbedCodes, selectedEmbedOption } ) => {
 		} );
 	}, [ embedHtml ] );
 
+	if ( ! embedHtml ) {
+		return null;
+	}
+
+	const isInline = deliveryMode === DELIVERY_MODES.INLINE;
+
 	return (
 		<div className="ceros-block__preview-section">
-			<div
-				ref={ containerRef }
-				className="ceros-block__preview"
-			/>
+			{ isInline && (
+				<p className="ceros-block__preview-note">
+					Published as Flex Inline (iframeless). Preview shown as an
+					iframe.
+				</p>
+			) }
+			<div ref={ containerRef } className="ceros-block__preview" />
 		</div>
 	);
 };

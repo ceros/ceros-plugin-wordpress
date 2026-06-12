@@ -39,6 +39,14 @@ return array(
 			'experienceResourceId' => array(
 				'type' => 'string',
 				'default' => ''
+			),
+			'deliveryMode' => array(
+				'type' => 'string',
+				'default' => 'iframe'
+			),
+			'inlineEmbedCode' => array(
+				'type' => 'string',
+				'default' => ''
 			)
 		),
 		'render' => 'file:./render.php',

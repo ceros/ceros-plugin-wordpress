@@ -260,6 +260,9 @@ function ceros_get_allowed_embed_html() {
 			'data-*'                  => true, // Allow all data attributes
 			'data-aspectratio'        => true,
 			'data-mobile-aspectratio' => true,
+			// Flex Inline (iframeless) marker attributes.
+			'data-flex-inline'        => true,
+			'data-flex-manifest-url'  => true,
 		],
 		'span'   => [
 			'id'    => true,
@@ -348,9 +351,14 @@ function ceros_sanitize_embed_code( $embed_code ) {
 }
 
 /**
- * Sanitize an array of embed codes (fullHeight and scrollable).
+ * Sanitize an array of embed codes (iframe full-height/scrollable + Flex Inline).
  *
- * @param array $embed_codes Array with 'fullHeightEmbedCode' and/or 'scrollableEmbedCode'.
+ * The Ceros embed-codes endpoint returns `inlineEmbedCode` (the iframeless Flex
+ * Inline snippet) only for Flex experiences, alongside the iframe variants. All
+ * three are HTML snippets and must be sanitized before reaching the editor or
+ * the frontend.
+ *
+ * @param array $embed_codes Array with 'fullHeightEmbedCode', 'scrollableEmbedCode', and/or 'inlineEmbedCode'.
  * @return array Sanitized embed codes array.
  */
 function ceros_sanitize_embed_codes_array( $embed_codes ) {
@@ -360,12 +368,11 @@ function ceros_sanitize_embed_codes_array( $embed_codes ) {
 
 	$sanitized = [];
 
-	if ( isset( $embed_codes['fullHeightEmbedCode'] ) ) {
-		$sanitized['fullHeightEmbedCode'] = ceros_sanitize_embed_code( $embed_codes['fullHeightEmbedCode'] );
-	}
-
-	if ( isset( $embed_codes['scrollableEmbedCode'] ) ) {
-		$sanitized['scrollableEmbedCode'] = ceros_sanitize_embed_code( $embed_codes['scrollableEmbedCode'] );
+	$html_keys = [ 'fullHeightEmbedCode', 'scrollableEmbedCode', 'inlineEmbedCode' ];
+	foreach ( $html_keys as $key ) {
+		if ( isset( $embed_codes[ $key ] ) ) {
+			$sanitized[ $key ] = ceros_sanitize_embed_code( $embed_codes[ $key ] );
+		}
 	}
 
 	// Pass through any other keys unchanged (like metadata).

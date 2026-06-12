@@ -1,9 +1,20 @@
 /**
- * Embed option values
+ * Embed option values (iframe embed sizing).
  */
 export const EMBED_OPTIONS = {
 	FULL: 'full',
 	SCROLL: 'scroll',
+};
+
+/**
+ * Delivery mode values.
+ *
+ * - IFRAME: the classic iframe embed (works for every experience).
+ * - INLINE: Flex Inline — iframeless, Shadow DOM (Flex experiences only, Beta).
+ */
+export const DELIVERY_MODES = {
+	IFRAME: 'iframe',
+	INLINE: 'inline',
 };
 
 /**
@@ -27,6 +38,7 @@ export const ACTION_TYPES = {
 	SELECT_EXPERIENCE: 'SELECT_EXPERIENCE',
 	SET_EMBED_CODES: 'SET_EMBED_CODES',
 	SET_EMBED_OPTION: 'SET_EMBED_OPTION',
+	SET_DELIVERY_MODE: 'SET_DELIVERY_MODE',
 
 	// Modal actions
 	OPEN_MODAL: 'OPEN_MODAL',
