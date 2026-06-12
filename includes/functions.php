@@ -19,7 +19,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 function ceros_get_version() {
 	$plugin_data = get_file_data( CEROS_PLUGIN_FILE, [ 'Version' => 'Version' ] );
-	return $plugin_data['Version'] ?? '0.30.0';
+	return $plugin_data['Version'] ?? '0.31.0';
 }
 
 /**

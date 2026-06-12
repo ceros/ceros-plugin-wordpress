@@ -5,7 +5,7 @@ return array(
 		'$schema' => 'https://schemas.wp.org/trunk/block.json',
 		'apiVersion' => 3,
 		'name' => 'create-block/ceros',
-		'version' => '0.30.0',
+		'version' => '0.31.0',
 		'title' => 'Ceros',
 		'category' => 'widgets',
 		'icon' => 'smiley',
