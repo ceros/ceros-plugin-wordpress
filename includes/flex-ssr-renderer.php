@@ -303,8 +303,22 @@ function ceros_flex_ssr_script_tag( $args ) {
 }
 
 /**
- * Emit the inline style reset (once per request) that keeps the SSR container
- * and the Ceros viewer from collapsing to zero height inside a host page.
+ * Emit the inline style reset (once per request) that isolates the SSR content
+ * from the host theme.
+ *
+ * Flex Inline renders inside a Shadow Root, so the host theme's author rules
+ * (anchor styling, `img { max-width: 100% }`, `* { box-sizing: border-box }`,
+ * margins, etc.) never match the experience — only inherited properties cross
+ * the boundary. The SSR path renders into the light DOM, so all of those theme
+ * rules apply and distort the experience. This reset re-creates the Shadow Root
+ * baseline in the light DOM:
+ *
+ * - The container resets the inherited typography that crosses even a Shadow
+ *   boundary (font, line-height, colour, text-align, …) so it matches Inline.
+ * - Descendant rules use `:where()` (specificity 0) to revert the theme's
+ *   box-model / spacing / anchor rules to a UA-like baseline WITHOUT
+ *   outranking the experience's own `components.css` or inline styles, which
+ *   always carry higher specificity and win.
  *
  * @return string A <style> block the first time it is called, '' afterwards.
  */
@@ -315,11 +329,29 @@ function ceros_flex_ssr_style_reset() {
 	}
 	$emitted = true;
 
-	return '<style>'
-		. '.ceros-block__flex-ssr,'
-		. '.ceros-block__flex-ssr .cml-experience-viewer,'
-		. '.ceros-block__flex-ssr .cml-experience-viewer--window,'
-		. '.ceros-block__flex-ssr #experience-canvas-container{'
-		. 'height:auto!important;min-height:0!important;max-height:none!important;overflow:visible!important;}'
-		. '</style>' . "\n";
+	$css = '.ceros-block__flex-ssr{'
+		. 'display:block;position:relative;'
+		// Inherited typography crosses even a Shadow boundary — reset it so the
+		// experience text is sized/styled by components.css, not the theme.
+		. 'font-family:initial;font-size:medium;font-weight:400;font-style:normal;'
+		. 'line-height:normal;letter-spacing:normal;word-spacing:normal;'
+		. 'text-align:start;text-transform:none;text-indent:0;white-space:normal;color:initial;'
+		. '}'
+		// Revert the theme's box-model / spacing rules on every descendant to a
+		// neutral baseline. `:where()` keeps specificity at 0 so components.css
+		// and inline styles always win.
+		. '.ceros-block__flex-ssr :where(*),'
+		. '.ceros-block__flex-ssr :where(*)::before,'
+		. '.ceros-block__flex-ssr :where(*)::after{'
+		. 'box-sizing:content-box;margin:0;padding:0;border:0;background:none;'
+		. 'float:none;min-width:0;min-height:0;max-width:none;max-height:none;}'
+		// Anchors: the experience controls link colour/decoration (hotspots are
+		// often positioned anchors the theme must not restyle).
+		. '.ceros-block__flex-ssr :where(a){color:inherit;text-decoration:none;}'
+		. '.ceros-block__flex-ssr :where(img,svg,video,canvas,picture){max-width:none;height:auto;}'
+		// Keep the Ceros viewer/canvas from collapsing inside the host page.
+		. '.ceros-block__flex-ssr :where(.cml-experience-viewer,.cml-experience-viewer--window,#experience-canvas-container){'
+		. 'height:auto;min-height:0;max-height:none;overflow:visible;}';
+
+	return '<style>' . $css . '</style>' . "\n";
 }
