@@ -23,7 +23,8 @@
 		"experienceName": { "type": "string", "default": "" },
 		"experienceResourceId": { "type": "string", "default": "" },
 		"deliveryMode": { "type": "string", "default": "iframe" },
-		"inlineEmbedCode": { "type": "string", "default": "" }
+		"inlineEmbedCode": { "type": "string", "default": "" },
+		"manifestUrl": { "type": "string", "default": "" }
 	},
 	"render": "file:./render.php",
 	"viewScript": "file:./view.js"

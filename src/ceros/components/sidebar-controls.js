@@ -9,7 +9,7 @@
 import { __ } from '@wordpress/i18n';
 import { InspectorControls } from '@wordpress/block-editor';
 import { PanelBody, BaseControl, Button } from '@wordpress/components';
-import { ACTION_TYPES, EMBED_OPTIONS, DELIVERY_MODES } from '../constants';
+import { ACTION_TYPES, EMBED_OPTIONS, DELIVERY_MODES, manifestUrlFromInline } from '../constants';
 
 /**
  * Sidebar Controls Component
@@ -41,7 +41,7 @@ export function SidebarControls( {
 } ) {
 	const handleEdit =
 		onEdit || ( () => dispatch( { type: ACTION_TYPES.OPEN_MODAL } ) );
-	const isInlineDelivery = deliveryMode === DELIVERY_MODES.INLINE;
+	const isIframeDelivery = deliveryMode === DELIVERY_MODES.IFRAME;
 	return (
 		<InspectorControls>
 			<PanelBody
@@ -140,11 +140,51 @@ export function SidebarControls( {
 									</span>
 								</div>
 							</label>
+							<label
+								className={ `ceros-sidebar__radio-label${
+									! hasInline
+										? ' ceros-sidebar__radio-label--disabled'
+										: ''
+								}` }
+							>
+								<input
+									className="ceros-sidebar__radio-input"
+									type="radio"
+									value={ DELIVERY_MODES.SSR }
+									checked={ deliveryMode === DELIVERY_MODES.SSR }
+									disabled={ ! hasInline }
+									onChange={ () => {
+										if ( hasInline ) {
+											// Persist the manifest URL so render.php
+											// can re-fetch it server-side.
+											setAttributes( {
+												deliveryMode: DELIVERY_MODES.SSR,
+												inlineEmbedCode,
+												manifestUrl:
+													manifestUrlFromInline(
+														inlineEmbedCode
+													),
+											} );
+										}
+									} }
+								/>
+								<div className="ceros-sidebar__radio-content">
+									<span className="ceros-sidebar__radio-title">
+										{ __( 'SSR — server-rendered (Beta)', 'ceros' ) }
+									</span>
+									<span className="ceros-sidebar__radio-description">
+										{ __(
+											'WordPress renders the experience HTML on the server. Best for SEO and first paint.',
+											'ceros'
+										) }
+									</span>
+								</div>
+							</label>
 						</div>
 					</BaseControl>
 				</PanelBody>
 			) }
-			{ ! isInlineDelivery && (
+			{ isIframeDelivery && (
 			<PanelBody title={ __( 'Settings', 'ceros' ) } initialOpen={ true }>
 				<BaseControl>
 					<div className="ceros-sidebar__radio-group">

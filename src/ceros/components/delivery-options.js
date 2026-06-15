@@ -43,6 +43,23 @@ export const DeliveryOptions = ( {
 					</span>
 				</span>
 			</label>
+			<label className="ceros-block__embed-options-label">
+				<input
+					type="radio"
+					value={ DELIVERY_MODES.SSR }
+					checked={ selectedDeliveryMode === DELIVERY_MODES.SSR }
+					onChange={ () =>
+						setSelectedDeliveryMode( DELIVERY_MODES.SSR )
+					}
+				/>
+				<span>
+					<span>SSR — server-rendered (Beta)</span>
+					<span className="ceros-block__embed-options-description">
+						WordPress fetches and renders the experience HTML on the
+						server. Best for SEO and first paint.
+					</span>
+				</span>
+			</label>
 		</div>
 	</div>
 );

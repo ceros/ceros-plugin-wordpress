@@ -33,6 +33,16 @@ function ceros_render_block( $attributes ) {
 		return ceros_sanitize_embed_code( $attributes['inlineEmbedCode'] );
 	}
 
+	// Flex SSR (Beta) delivery: fetch the manifest server-side and render the
+	// experience HTML inline (the browser only loads the hydration runtime). On
+	// any fetch failure we fall through to the iframe embed below.
+	if ( 'ssr' === $delivery_mode && ! empty( $attributes['manifestUrl'] ) && function_exists( 'ceros_render_flex_ssr' ) ) {
+		$ssr_html = ceros_render_flex_ssr( $attributes['manifestUrl'] );
+		if ( '' !== $ssr_html ) {
+			return $ssr_html;
+		}
+	}
+
 	// Show the "experience not found" message when there are no embed codes saved for this block.
 	if ( ! $has_full && ! $has_scroll ) {
 		return $missing_experience_markup;

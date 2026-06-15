@@ -38,6 +38,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  *     On success an array with:
  *     @type bool   $isFlex              Whether the experience is a Flex experience.
  *     @type string $viewUrl             The canonical experience (view) URL.
+ *     @type string $manifestUrl         The Ceros-TLD manifest URL (Flex), '' for Studio.
  *     @type string $fullHeightEmbedCode Iframe full-height snippet.
  *     @type string $scrollableEmbedCode Iframe scrollable snippet.
  *     @type string $inlineEmbedCode     Flex Inline (iframeless) snippet, '' for legacy.
@@ -118,8 +119,11 @@ function ceros_resolve_public_experience_url( $raw_url ) {
 		if ( ! is_wp_error( $manifest ) && is_array( $manifest ) ) {
 			return array_merge(
 				[
-					'isFlex'  => true,
-					'viewUrl' => $experience_url,
+					'isFlex'      => true,
+					'viewUrl'     => $experience_url,
+					// Persisted on the block so the SSR delivery mode can re-fetch
+					// the manifest server-side at render time.
+					'manifestUrl' => $manifest_url,
 				],
 				ceros_build_flex_embed_codes( $experience_url, $manifest_url, $manifest )
 			);
@@ -144,8 +148,10 @@ function ceros_resolve_public_experience_url( $raw_url ) {
 	if ( $pasted_is_ceros ) {
 		return array_merge(
 			[
-				'isFlex'  => false,
-				'viewUrl' => $experience_url,
+				'isFlex'      => false,
+				'viewUrl'     => $experience_url,
+				// Studio experiences have no Flex manifest to re-fetch for SSR.
+				'manifestUrl' => '',
 			],
 			ceros_build_legacy_embed_codes( $experience_url )
 		);
@@ -253,53 +259,6 @@ function ceros_build_manifest_url( $url ) {
 
 	$experience_url = ceros_derive_experience_url( $url );
 	return '' === $experience_url ? '' : $experience_url . '/' . CEROS_MANIFEST_FILENAME;
-}
-
-/**
- * Fetch and minimally validate a public Flex manifest.
- *
- * @param string $manifest_url The manifest URL.
- * @return array|WP_Error The decoded manifest on success, WP_Error otherwise.
- */
-function ceros_fetch_flex_manifest( $manifest_url ) {
-	$host = wp_parse_url( $manifest_url, PHP_URL_HOST );
-	if ( empty( $host ) || ! ceros_is_public_host( $host ) ) {
-		return new WP_Error( 'ceros_manifest_host', __( 'Manifest host is not publicly reachable.', 'ceros' ) );
-	}
-
-	$response = wp_remote_get(
-		$manifest_url,
-		[
-			'timeout'     => CEROS_API_REQUEST_TIMEOUT,
-			// Do not follow redirects: a redirect could bounce an allowed URL
-			// into an internal target (SSRF), and a published manifest is served
-			// directly with a 200.
-			'redirection' => 0,
-			'headers'     => [ 'Accept' => 'application/json' ],
-		]
-	);
-
-	if ( is_wp_error( $response ) ) {
-		return $response;
-	}
-
-	$code = wp_remote_retrieve_response_code( $response );
-	if ( $code < 200 || $code >= 300 ) {
-		return new WP_Error( 'ceros_manifest_http', sprintf( 'HTTP %d', $code ) );
-	}
-
-	$data = json_decode( wp_remote_retrieve_body( $response ), true );
-	if ( ! is_array( $data ) ) {
-		return new WP_Error( 'ceros_manifest_json', __( 'Manifest response was not valid JSON.', 'ceros' ) );
-	}
-
-	// Guard against treating arbitrary JSON as a Flex manifest: a real manifest
-	// carries at least one of these top-level markers.
-	if ( ! isset( $data['schemaVersion'] ) && ! isset( $data['deliveryModes'] ) && ! isset( $data['experience'] ) ) {
-		return new WP_Error( 'ceros_manifest_shape', __( 'Response is not a Ceros manifest.', 'ceros' ) );
-	}
-
-	return $data;
 }
 
 /**
