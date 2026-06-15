@@ -527,3 +527,117 @@
 	font-size: 0.75rem;
 	line-height: 1.4;
 }
+
+// Empty state (no experience selected / paste-a-URL flow).
+.ceros-block__empty {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 0.75rem;
+	text-align: center;
+	padding: 2rem 1rem;
+
+	h3 {
+		margin: 0;
+		font-size: 1.0625rem;
+		font-weight: 600;
+		color: rgb(2, 8, 23);
+	}
+
+	p {
+		margin: 0;
+		max-width: 460px;
+		color: #57606a;
+		font-size: 0.875rem;
+		line-height: 1.5;
+	}
+
+	.ceros-block__button {
+		color: white;
+		font-size: 0.875rem;
+		line-height: 1.25rem;
+		padding: 0.5rem 1rem;
+		border-radius: 0.375rem;
+		cursor: pointer;
+		border: 1px solid transparent;
+		transition: background-color 0.2s ease-in-out;
+
+		&--primary {
+			background-color: rgb(37, 99, 235);
+			border-color: rgb(37, 99, 235);
+
+			&:hover {
+				background-color: rgb(29, 78, 216);
+			}
+
+			&:disabled {
+				opacity: 0.5;
+				cursor: not-allowed;
+			}
+		}
+	}
+}
+
+// Paste-a-public-URL controls inside the empty state.
+.ceros-block__paste {
+	width: 100%;
+	max-width: 520px;
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+	margin-top: 0.5rem;
+	text-align: left;
+
+	&-label {
+		font-size: 0.8125rem;
+		font-weight: 500;
+		color: rgb(2, 8, 23);
+	}
+
+	&-row {
+		display: flex;
+		gap: 0.5rem;
+		align-items: stretch;
+
+		.ceros-block__button {
+			white-space: nowrap;
+		}
+	}
+
+	&-input {
+		flex: 1;
+		min-width: 0;
+		padding: 0.5rem 0.625rem;
+		border: 1px solid #949494;
+		border-radius: 0.375rem;
+		font-size: 0.875rem;
+	}
+
+	&-error {
+		margin: 0;
+		color: #b91c1c;
+		font-size: 0.8125rem;
+	}
+
+	&-result {
+		display: flex;
+		flex-direction: column;
+		gap: 0.75rem;
+		padding: 0.75rem;
+		margin-top: 0.25rem;
+		border: 1px solid rgb(229, 231, 235);
+		border-radius: 0.5rem;
+		background: #f8fafc;
+	}
+
+	&-type {
+		margin: 0;
+		font-size: 0.8125rem;
+		font-weight: 500;
+		color: rgb(2, 8, 23);
+	}
+
+	&-hint {
+		font-size: 0.75rem;
+	}
+}
