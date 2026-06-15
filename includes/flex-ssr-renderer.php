@@ -349,6 +349,14 @@ function ceros_flex_ssr_style_reset() {
 		// often positioned anchors the theme must not restyle).
 		. '.ceros-block__flex-ssr :where(a){color:inherit;text-decoration:none;}'
 		. '.ceros-block__flex-ssr :where(img,svg,video,canvas,picture){max-width:none;height:auto;}'
+		// Pin the font-size base on the experience root itself. Ceros experiences
+		// size text in `em`, which otherwise inherits the theme's `body`
+		// font-size (e.g. a `clamp()` / `--wp--preset--font-size--large`) and
+		// scales the whole experience wrong. `medium` is the UA default a
+		// standalone Ceros page renders against; it beats the inherited theme
+		// value while staying responsive to the user's browser font-size.
+		. '.ceros-block__flex-ssr ceros-experience-viewer,'
+		. '.ceros-block__flex-ssr .cml-experience-viewer{font-size:medium;}'
 		// Keep the Ceros viewer/canvas from collapsing inside the host page.
 		. '.ceros-block__flex-ssr :where(.cml-experience-viewer,.cml-experience-viewer--window,#experience-canvas-container){'
 		. 'height:auto;min-height:0;max-height:none;overflow:visible;}';
