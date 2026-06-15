@@ -110,6 +110,22 @@ function ceros_register_rest_routes() {
 
 	register_rest_route(
 		CEROS_REST_NAMESPACE,
+		'/resolve-public-url',
+		[
+			'methods'             => 'POST',
+			'callback'            => 'ceros_rest_resolve_public_url',
+			'permission_callback' => 'ceros_rest_permission_check',
+			'args'                => [
+				'url' => [
+					'required' => true,
+					'type'     => 'string',
+				],
+			],
+		]
+	);
+
+	register_rest_route(
+		CEROS_REST_NAMESPACE,
 		'/experiences/(?P<resource_id>' . CEROS_RESOURCE_ID_PATTERN . ')/embed-codes',
 		[
 			'methods'             => 'GET',
@@ -247,6 +263,38 @@ function ceros_rest_get_embed_codes( WP_REST_Request $request ) {
 	}
 
 	return ceros_handle_api_response( $result );
+}
+
+/**
+ * REST callback: Resolve a pasted public experience URL into embed codes.
+ *
+ * Powers the API-key-less flow: detects whether the URL is a Flex or a legacy
+ * Studio experience and returns the matching, sanitized embed codes. Requires
+ * no Ceros API key — only that the caller can edit posts.
+ *
+ * @param WP_REST_Request $request The REST request instance.
+ * @return WP_REST_Response
+ */
+function ceros_rest_resolve_public_url( WP_REST_Request $request ) {
+	$result = ceros_resolve_public_experience_url( (string) $request->get_param( 'url' ) );
+
+	if ( is_wp_error( $result ) ) {
+		return new WP_REST_Response(
+			[
+				'error'      => $result->get_error_message(),
+				'error_code' => $result->get_error_code(),
+			],
+			400
+		);
+	}
+
+	// Sanitize the generated snippets before they reach the editor (they are
+	// sanitized again on the frontend by render.php).
+	foreach ( [ 'fullHeightEmbedCode', 'scrollableEmbedCode', 'inlineEmbedCode' ] as $key ) {
+		$result[ $key ] = ceros_sanitize_embed_code( isset( $result[ $key ] ) ? $result[ $key ] : '' );
+	}
+
+	return new WP_REST_Response( $result, 200 );
 }
 
 /**
