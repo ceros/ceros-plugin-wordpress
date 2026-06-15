@@ -56,7 +56,7 @@ function ceros_render_flex_ssr( $manifest_url ) {
 		. $html_body
 		. '</div>';
 
-	return ceros_flex_ssr_style_reset() . $styles . $head_scripts . $content . $body_scripts;
+	return $styles . $head_scripts . $content . $body_scripts;
 }
 
 /**
@@ -300,26 +300,4 @@ function ceros_flex_ssr_script_tag( $args ) {
 		$tag .= ' id="' . esc_attr( $args['id'] ) . '"';
 	}
 	return $tag . '></script>' . "\n";
-}
-
-/**
- * Emit the inline style reset (once per request) that keeps the SSR container
- * and the Ceros viewer from collapsing to zero height inside a host page.
- *
- * @return string A <style> block the first time it is called, '' afterwards.
- */
-function ceros_flex_ssr_style_reset() {
-	static $emitted = false;
-	if ( $emitted ) {
-		return '';
-	}
-	$emitted = true;
-
-	return '<style>'
-		. '.ceros-block__flex-ssr,'
-		. '.ceros-block__flex-ssr .cml-experience-viewer,'
-		. '.ceros-block__flex-ssr .cml-experience-viewer--window,'
-		. '.ceros-block__flex-ssr #experience-canvas-container{'
-		. 'height:auto!important;min-height:0!important;max-height:none!important;overflow:visible!important;}'
-		. '</style>' . "\n";
 }
