@@ -51,6 +51,18 @@ return array(
 			'manifestUrl' => array(
 				'type' => 'string',
 				'default' => ''
+			),
+			'storedIndexPath' => array(
+				'type' => 'string',
+				'default' => ''
+			),
+			'storedAt' => array(
+				'type' => 'string',
+				'default' => ''
+			),
+			'storedVersion' => array(
+				'type' => 'string',
+				'default' => ''
 			)
 		),
 		'render' => 'file:./render.php',

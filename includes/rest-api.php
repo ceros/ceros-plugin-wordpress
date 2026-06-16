@@ -126,6 +126,26 @@ function ceros_register_rest_routes() {
 
 	register_rest_route(
 		CEROS_REST_NAMESPACE,
+		'/store-manifest',
+		[
+			'methods'             => 'POST',
+			'callback'            => 'ceros_rest_store_manifest',
+			'permission_callback' => 'ceros_rest_permission_check',
+			'args'                => [
+				'url'     => [
+					'required' => true,
+					'type'     => 'string',
+				],
+				'post_id' => [
+					'required' => true,
+					'type'     => 'integer',
+				],
+			],
+		]
+	);
+
+	register_rest_route(
+		CEROS_REST_NAMESPACE,
 		'/experiences/(?P<resource_id>' . CEROS_RESOURCE_ID_PATTERN . ')/embed-codes',
 		[
 			'methods'             => 'GET',
@@ -296,6 +316,41 @@ function ceros_rest_resolve_public_url( WP_REST_Request $request ) {
 
 	if ( isset( $result['manifestUrl'] ) ) {
 		$result['manifestUrl'] = esc_url_raw( $result['manifestUrl'] );
+	}
+
+	return new WP_REST_Response( $result, 200 );
+}
+
+/**
+ * REST callback: Store a Flex experience locally (Store mode).
+ *
+ * Downloads the experience manifest bundle + all referenced assets into the
+ * uploads directory and returns the stored index path so the block can render
+ * it offline. Requires the user to be able to edit the target post.
+ *
+ * @param WP_REST_Request $request The REST request instance.
+ * @return WP_REST_Response
+ */
+function ceros_rest_store_manifest( WP_REST_Request $request ) {
+	$post_id = absint( $request->get_param( 'post_id' ) );
+
+	if ( $post_id && ! current_user_can( 'edit_post', $post_id ) ) {
+		return new WP_REST_Response(
+			[ 'error' => __( 'You are not allowed to edit this post.', 'ceros' ) ],
+			403
+		);
+	}
+
+	$result = ceros_store_flex_manifest( (string) $request->get_param( 'url' ), $post_id );
+
+	if ( is_wp_error( $result ) ) {
+		return new WP_REST_Response(
+			[
+				'error'      => $result->get_error_message(),
+				'error_code' => $result->get_error_code(),
+			],
+			400
+		);
 	}
 
 	return new WP_REST_Response( $result, 200 );

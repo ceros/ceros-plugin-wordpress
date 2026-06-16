@@ -538,6 +538,32 @@ $ceros-border-muted: rgb(226, 232, 240); // button & divider borders
 	}
 }
 
+// Store-mode controls in the sidebar.
+.ceros-sidebar__store {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+
+	&-status {
+		margin: 0;
+		font-size: 12px;
+		color: #757575;
+	}
+
+	&-actions {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		flex-wrap: wrap;
+	}
+
+	&-error {
+		margin: 0;
+		font-size: 12px;
+		color: #cc1818;
+	}
+}
+
 // Caption shown above the editor preview when a block is published as Flex
 // Inline — the editor preview itself is always the isolated iframe.
 .ceros-block__preview-note {
