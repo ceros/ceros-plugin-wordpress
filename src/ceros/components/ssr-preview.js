@@ -131,14 +131,8 @@ export function SsrPreview( { attributes, postId } ) {
 
 	const isStored = Boolean( attributes.storedIndexPath );
 	const note = isStored
-		? __(
-				'Server-rendered preview from the stored copy (matches the published page).',
-				'ceros'
-		  )
-		: __(
-				'Server-rendered preview (matches the published page).',
-				'ceros'
-		  );
+		? __( 'Server-rendered preview from the stored copy.', 'ceros' )
+		: __( 'Server-rendered preview.', 'ceros' );
 
 	const srcDoc =
 		'<!DOCTYPE html><html><head><meta charset="utf-8">' +
