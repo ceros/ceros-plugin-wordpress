@@ -213,21 +213,70 @@ function ceros_store_localize_manifest( $manifest, $abs_base, $url_base, &$url_m
 		}
 	}
 
-	// Rewrite any of the localized URLs that also appear inline in the html-body
-	// or inline scripts (e.g. <img src> in the rendered markup).
-	if ( ! empty( $url_map ) ) {
-		foreach ( ( isset( $manifest['assets'] ) ? $manifest['assets'] : [] ) as $i => $asset ) {
-			if ( ! is_array( $asset ) || empty( $asset['src']['content'] ) || ! is_string( $asset['src']['content'] ) ) {
-				continue;
-			}
-			$type = isset( $asset['type'] ) ? $asset['type'] : '';
-			if ( 'html-body' === $type || 'script' === $type ) {
-				$manifest['assets'][ $i ]['src']['content'] = strtr( $asset['src']['content'], $url_map );
-			}
+	// Localize URLs embedded directly in the html-body / inline scripts: both the
+	// already-downloaded assets (via the URL map) and any other Ceros CDN/media
+	// URLs referenced inline — e.g. transformed <img src>/srcset variants
+	// (?crop=…&width=1024, 1x/2x) that the media[] catalog doesn't list verbatim.
+	foreach ( ( isset( $manifest['assets'] ) ? $manifest['assets'] : [] ) as $i => $asset ) {
+		if ( ! is_array( $asset ) || empty( $asset['src']['content'] ) || ! is_string( $asset['src']['content'] ) ) {
+			continue;
+		}
+		$type = isset( $asset['type'] ) ? $asset['type'] : '';
+		if ( 'html-body' === $type || 'script' === $type ) {
+			$manifest['assets'][ $i ]['src']['content'] = ceros_store_localize_inline_urls(
+				$asset['src']['content'],
+				$abs_base,
+				$url_base,
+				$url_map
+			);
 		}
 	}
 
 	return $manifest;
+}
+
+/**
+ * Localize Ceros URLs embedded directly in markup (html-body / inline scripts).
+ *
+ * First applies already-known mappings, then scans for Ceros CDN/media URLs the
+ * manifest didn't declare (transformed image variants, srcset entries) and
+ * downloads + rewrites them. URLs in markup are HTML-entity-encoded (`&amp;`),
+ * so each match is decoded before fetching.
+ *
+ * @param string $content  The markup.
+ * @param string $abs_base Absolute version directory.
+ * @param string $url_base Public URL of the version directory.
+ * @param array  $url_map  Shared remote->local map (by reference).
+ * @return string The rewritten markup.
+ */
+function ceros_store_localize_inline_urls( $content, $abs_base, $url_base, &$url_map ) {
+	if ( '' === $content ) {
+		return $content;
+	}
+
+	// Apply already-downloaded asset/media/font mappings.
+	if ( ! empty( $url_map ) ) {
+		$content = strtr( $content, $url_map );
+	}
+
+	// Scan for remaining Ceros CDN/media URLs (scoped to *.cdn / media hosts so
+	// we don't pull in experience page URLs or canonical links).
+	$pattern = '#https?://(?:[a-z0-9-]+\.)*(?:cdn|media)\.ceros(?:dev|stage)?\.site/[^"\'\s),\\\\]+#i';
+
+	$result = preg_replace_callback(
+		$pattern,
+		function ( $m ) use ( $abs_base, $url_base, &$url_map ) {
+			$raw   = $m[0];
+			$fetch = html_entity_decode( $raw, ENT_QUOTES | ENT_HTML5 );
+			$local = ceros_store_is_hls_url( $fetch )
+				? ceros_store_download_hls( $fetch, $abs_base, $url_base, $url_map )
+				: ceros_store_download( $fetch, $abs_base, $url_base, 'media', $url_map );
+			return '' !== $local ? $local : $raw;
+		},
+		$content
+	);
+
+	return null === $result ? $content : $result;
 }
 
 /**
