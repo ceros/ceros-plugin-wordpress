@@ -2,24 +2,20 @@
 /**
  * Flex SSR "Store" mode — local asset persistence.
  *
- * Downloads a Flex experience's manifest bundle (the entered page plus every
- * linked page) and all referenced assets — SSR delivery scripts/styles,
- * webfonts (and the font files they reference), and media — into the WordPress
- * uploads directory, rewrites every URL in the manifests to the local copies,
- * and writes a per-page manifest plus an `index.json` sidecar that tags the
- * stored files to the experience + published version for cleanup.
- *
- * The published page then renders fully from local storage with no runtime
- * Ceros CDN dependency. Mirrors the Ceros AEM connector's "Store" mode
- * (CerosAssetStorageService), adapted to the WP filesystem.
+ * Persists a Flex experience locally so the published page renders with no
+ * runtime Ceros-CDN dependency. The URL-rewriting is done server-side by
+ * flex-shield: requesting `…/manifest.v1.json?baseUrl=<public root>` returns a
+ * manifest whose Ceros-asset URLs already point under `<baseUrl>`, plus an
+ * additive `assetRewrites` map (`{ baseUrl, assets: [{ from, path, to }] }`).
+ * This module just mirrors that map — download each `from` and write it at
+ * `<localRoot>/<path>` — and stores the returned manifest verbatim. No
+ * client-side manifest scanning / URL rewriting any more.
  *
  * Layout (under wp-content/uploads):
  *   ceros-flex/<postId>/<account>--<experience>/<version>/
  *     index.json            sidecar tag + slug -> page-manifest map
- *     pages/<slug>.json      rewritten per-page manifests
- *     assets/<hash>-<file>   css / js
- *     fonts/<hash>-<file>    webfont css + font files
- *     media/<hash>-<file>    images / video
+ *     pages/<slug>.json      server-rewritten per-page manifests (URLs already local)
+ *     <path…>               assets mirrored at the exact `path` the rewrite returns
  *
  * @package ceros
  */
@@ -29,7 +25,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Top-level entry: fetch + store a Flex experience bundle locally.
+ * Top-level entry: fetch + store a Flex experience bundle locally via the
+ * server-side `?baseUrl=` rewrite.
  *
  * @param string $manifest_url The experience manifest URL.
  * @param int    $post_id      The post the block belongs to (scopes storage + cleanup).
@@ -41,14 +38,17 @@ function ceros_store_flex_manifest( $manifest_url, $post_id ) {
 		return new WP_Error( 'ceros_store_post', __( 'A post ID is required to store an experience.', 'ceros' ) );
 	}
 
-	$primary = ceros_fetch_flex_manifest( $manifest_url );
-	if ( is_wp_error( $primary ) ) {
-		return $primary;
+	// Metadata fetch (no baseUrl) to learn the experience, version, and page list
+	// before we can build the storage paths that become the baseUrl.
+	$primary_meta = ceros_fetch_flex_manifest( $manifest_url );
+	if ( is_wp_error( $primary_meta ) ) {
+		return $primary_meta;
 	}
 
-	$experience = isset( $primary['experience'] ) ? $primary['experience'] : [];
-	$exp_key    = ceros_store_experience_key( $experience );
-	$version    = ceros_store_version( $primary );
+	$experience   = isset( $primary_meta['experience'] ) ? $primary_meta['experience'] : [];
+	$exp_key      = ceros_store_experience_key( $experience );
+	$version      = ceros_store_version( $primary_meta );
+	$primary_slug = ceros_store_primary_slug( $primary_meta );
 
 	$upload = wp_upload_dir();
 	if ( ! empty( $upload['error'] ) ) {
@@ -63,71 +63,88 @@ function ceros_store_flex_manifest( $manifest_url, $post_id ) {
 		return new WP_Error( 'ceros_store_mkdir', __( 'Could not create the local storage directory.', 'ceros' ) );
 	}
 
-	// Build the page bundle: primary + every linked page (deduped by slug).
-	$primary_slug = ceros_store_primary_slug( $primary );
-	$pages        = [ $primary_slug => $primary ];
-
-	foreach ( ( isset( $primary['pages'] ) ? $primary['pages'] : [] ) as $page ) {
+	// Pages to store: primary + every linked page (deduped by slug).
+	$page_urls = [ $primary_slug => $manifest_url ];
+	foreach ( ( isset( $primary_meta['pages'] ) ? $primary_meta['pages'] : [] ) as $page ) {
 		if ( ! is_array( $page ) ) {
 			continue;
 		}
 		$slug = isset( $page['slug'] ) ? $page['slug'] : '';
-		if ( '' === $slug || isset( $pages[ $slug ] ) || ! empty( $page['current'] ) ) {
-			continue;
-		}
-		$page_url = isset( $page['manifestUrl'] ) ? $page['manifestUrl'] : '';
-		if ( '' === $page_url ) {
-			continue;
-		}
-		$page_manifest = ceros_fetch_flex_manifest( $page_url );
-		if ( ! is_wp_error( $page_manifest ) && is_array( $page_manifest ) ) {
-			$pages[ $slug ] = $page_manifest;
+		$purl = isset( $page['manifestUrl'] ) ? $page['manifestUrl'] : '';
+		if ( '' !== $slug && '' !== $purl && ! isset( $page_urls[ $slug ] ) ) {
+			$page_urls[ $slug ] = $purl;
 		}
 	}
 
-	// Download + rewrite assets for every page (URL map deduped across the bundle
-	// so shared bundles like flex-ssr.js / components.css are fetched once).
-	$url_map = [];
-	foreach ( $pages as $slug => $manifest ) {
-		$pages[ $slug ] = ceros_store_localize_manifest( $manifest, $abs_base, $url_base, $url_map );
-	}
-
-	// Rewrite cross-page navigation (pages[].manifestUrl) to the local per-page
-	// manifest URLs so the client SPA router stays offline too.
+	// Local URL each stored page manifest will live at (for offline SPA nav).
 	$local_manifest_urls = [];
-	foreach ( $pages as $slug => $manifest ) {
+	foreach ( $page_urls as $slug => $purl ) {
 		$local_manifest_urls[ $slug ] = $url_base . '/pages/' . ceros_store_slug_filename( $slug ) . '.json';
 	}
-	foreach ( $pages as $slug => $manifest ) {
-		if ( ! empty( $manifest['pages'] ) && is_array( $manifest['pages'] ) ) {
-			foreach ( $manifest['pages'] as $i => $pref ) {
+
+	$seen       = [];
+	$page_index = [];
+	foreach ( $page_urls as $slug => $purl ) {
+		$rewritten = ceros_store_fetch_rewritten( $purl, $url_base );
+
+		// The primary page must succeed; secondary pages are best-effort.
+		if ( is_wp_error( $rewritten ) ) {
+			if ( $slug === $primary_slug ) {
+				return $rewritten;
+			}
+			continue;
+		}
+		if ( ! isset( $rewritten['assetRewrites'] ) || ! is_array( $rewritten['assetRewrites'] ) ) {
+			if ( $slug === $primary_slug ) {
+				return new WP_Error(
+					'ceros_store_unsupported',
+					__( 'The Ceros experience host did not return rewrite data. It must support the ?baseUrl manifest rewrite to use Store mode.', 'ceros' )
+				);
+			}
+			continue;
+		}
+
+		// Mirror each rewritten asset: download `from`, write it at `path`.
+		$assets = isset( $rewritten['assetRewrites']['assets'] ) && is_array( $rewritten['assetRewrites']['assets'] )
+			? $rewritten['assetRewrites']['assets']
+			: [];
+		foreach ( $assets as $asset ) {
+			if ( is_array( $asset ) && ! empty( $asset['from'] ) && ! empty( $asset['path'] ) ) {
+				ceros_store_download_asset( $asset['from'], $abs_base, $asset['path'], $seen );
+			}
+		}
+
+		// Point cross-page navigation at the local stored manifests, and drop the
+		// rewrite map (not needed once the assets are mirrored).
+		if ( ! empty( $rewritten['pages'] ) && is_array( $rewritten['pages'] ) ) {
+			foreach ( $rewritten['pages'] as $i => $pref ) {
 				$ps = is_array( $pref ) && isset( $pref['slug'] ) ? $pref['slug'] : '';
 				if ( isset( $local_manifest_urls[ $ps ] ) ) {
-					$pages[ $slug ]['pages'][ $i ]['manifestUrl'] = $local_manifest_urls[ $ps ];
+					$rewritten['pages'][ $i ]['manifestUrl'] = $local_manifest_urls[ $ps ];
 				}
 			}
 		}
-	}
+		unset( $rewritten['assetRewrites'] );
 
-	// Write each page manifest.
-	$pages_dir = $abs_base . '/pages';
-	wp_mkdir_p( $pages_dir );
-	$page_index = [];
-	foreach ( $pages as $slug => $manifest ) {
 		$rel = 'pages/' . ceros_store_slug_filename( $slug ) . '.json';
-		ceros_store_write_file( $abs_base . '/' . $rel, wp_json_encode( $manifest ) );
-		$page_index[ $slug ] = $rel;
+		if ( ceros_store_write_file( $abs_base . '/' . $rel, wp_json_encode( $rewritten ) ) ) {
+			$page_index[ $slug ] = $rel;
+		}
 	}
 
-	// Sidecar tag + page map.
+	if ( empty( $page_index ) ) {
+		return new WP_Error( 'ceros_store_failed', __( 'Could not store the experience.', 'ceros' ) );
+	}
+
 	$index = [
-		'schema'            => 'ceros-flex-store/1',
+		'schema'            => 'ceros-flex-store/2',
 		'postId'            => $post_id,
 		'accountSlug'       => isset( $experience['accountSlug'] ) ? $experience['accountSlug'] : '',
 		'experienceSlug'    => isset( $experience['slug'] ) ? $experience['slug'] : '',
 		'version'           => $version,
 		'sourceManifestUrl' => $manifest_url,
 		'primarySlug'       => $primary_slug,
+		'baseUrl'           => $url_base,
 		'storedAt'          => gmdate( 'c' ),
 		'pages'             => $page_index,
 	];
@@ -144,390 +161,120 @@ function ceros_store_flex_manifest( $manifest_url, $post_id ) {
 }
 
 /**
- * Download + rewrite every external asset a single manifest references.
+ * Fetch the server-rewritten manifest for a page (`<manifestUrl>?baseUrl=<…>`).
  *
- * @param array  $manifest The manifest (modified copy returned).
- * @param string $abs_base  Absolute version directory.
- * @param string $url_base  Public URL of the version directory.
- * @param array  $url_map   Shared remote-URL -> local-URL map (by reference).
- * @return array The manifest with local URLs.
+ * @param string $manifest_url The page's manifest URL (no baseUrl).
+ * @param string $base_url     The public root the assets will be served under.
+ * @return array|WP_Error The decoded rewritten manifest, or WP_Error.
  */
-function ceros_store_localize_manifest( $manifest, $abs_base, $url_base, &$url_map ) {
-	// SSR delivery-mode styles + scripts (components.css, reset.css, flex-ssr.js …).
-	if ( isset( $manifest['deliveryModes']['ssr'] ) && is_array( $manifest['deliveryModes']['ssr'] ) ) {
-		$ssr = &$manifest['deliveryModes']['ssr'];
-		foreach ( [ 'styles', 'scripts' ] as $kind ) {
-			if ( empty( $ssr[ $kind ] ) || ! is_array( $ssr[ $kind ] ) ) {
-				continue;
-			}
-			foreach ( $ssr[ $kind ] as $i => $entry ) {
-				$url = is_array( $entry ) && ! empty( $entry['url'] ) ? $entry['url'] : '';
-				$local = '' !== $url ? ceros_store_download( $url, $abs_base, $url_base, 'assets', $url_map ) : '';
-				if ( '' !== $local ) {
-					$ssr[ $kind ][ $i ]['url'] = $local;
-					// A local file can't honour a remote SRI hash; drop it.
-					unset( $ssr[ $kind ][ $i ]['integrity'] );
-				}
-			}
-		}
-		unset( $ssr );
+function ceros_store_fetch_rewritten( $manifest_url, $base_url ) {
+	$manifest_url = trim( (string) $manifest_url );
+
+	if ( 'https' !== strtolower( (string) wp_parse_url( $manifest_url, PHP_URL_SCHEME ) ) ) {
+		return new WP_Error( 'ceros_store_manifest_scheme', __( 'Manifest URL must use https.', 'ceros' ) );
+	}
+	$host = wp_parse_url( $manifest_url, PHP_URL_HOST );
+	if ( empty( $host ) || ! ceros_is_public_host( $host ) ) {
+		return new WP_Error( 'ceros_store_manifest_host', __( 'Manifest host is not publicly reachable.', 'ceros' ) );
 	}
 
-	// Assets: webfonts (with nested font files) + per-experience styles.
-	if ( ! empty( $manifest['assets'] ) && is_array( $manifest['assets'] ) ) {
-		foreach ( $manifest['assets'] as $i => $asset ) {
-			if ( ! is_array( $asset ) || empty( $asset['src']['url'] ) ) {
-				continue;
-			}
-			$type = isset( $asset['type'] ) ? $asset['type'] : '';
-			$url  = $asset['src']['url'];
+	$separator   = ( false === strpos( $manifest_url, '?' ) ) ? '?' : '&';
+	$request_url = $manifest_url . $separator . 'baseUrl=' . rawurlencode( $base_url );
 
-			if ( 'webfont' === $type ) {
-				$local = ceros_store_download_webfont_css( $url, $abs_base, $url_base, $url_map );
-			} elseif ( 'style' === $type ) {
-				$local = ceros_store_download( $url, $abs_base, $url_base, 'assets', $url_map );
-			} else {
-				$local = '';
-			}
-
-			if ( '' !== $local ) {
-				$manifest['assets'][ $i ]['src']['url'] = $local;
-				unset( $manifest['assets'][ $i ]['src']['integrity'] );
-			}
-		}
-	}
-
-	// Media (images / video referenced by the experience body).
-	if ( ! empty( $manifest['media'] ) && is_array( $manifest['media'] ) ) {
-		foreach ( $manifest['media'] as $i => $entry ) {
-			$url = is_array( $entry ) && ! empty( $entry['url'] ) ? $entry['url'] : '';
-			if ( '' === $url ) {
-				continue;
-			}
-			$local = ceros_store_is_hls_url( $url )
-				? ceros_store_download_hls( $url, $abs_base, $url_base, $url_map )
-				: ceros_store_download( $url, $abs_base, $url_base, 'media', $url_map );
-			if ( '' !== $local ) {
-				$manifest['media'][ $i ]['url'] = $local;
-			}
-		}
-	}
-
-	// Localize URLs embedded directly in the html-body / inline scripts: both the
-	// already-downloaded assets (via the URL map) and any other Ceros CDN/media
-	// URLs referenced inline — e.g. transformed <img src>/srcset variants
-	// (?crop=…&width=1024, 1x/2x) that the media[] catalog doesn't list verbatim.
-	foreach ( ( isset( $manifest['assets'] ) ? $manifest['assets'] : [] ) as $i => $asset ) {
-		if ( ! is_array( $asset ) || empty( $asset['src']['content'] ) || ! is_string( $asset['src']['content'] ) ) {
-			continue;
-		}
-		$type = isset( $asset['type'] ) ? $asset['type'] : '';
-		if ( 'html-body' === $type || 'script' === $type ) {
-			$manifest['assets'][ $i ]['src']['content'] = ceros_store_localize_inline_urls(
-				$asset['src']['content'],
-				$abs_base,
-				$url_base,
-				$url_map
-			);
-		}
-	}
-
-	return $manifest;
-}
-
-/**
- * Localize Ceros URLs embedded directly in markup (html-body / inline scripts).
- *
- * First applies already-known mappings, then scans for Ceros CDN/media URLs the
- * manifest didn't declare (transformed image variants, srcset entries) and
- * downloads + rewrites them. URLs in markup are HTML-entity-encoded (`&amp;`),
- * so each match is decoded before fetching.
- *
- * @param string $content  The markup.
- * @param string $abs_base Absolute version directory.
- * @param string $url_base Public URL of the version directory.
- * @param array  $url_map  Shared remote->local map (by reference).
- * @return string The rewritten markup.
- */
-function ceros_store_localize_inline_urls( $content, $abs_base, $url_base, &$url_map ) {
-	if ( '' === $content ) {
-		return $content;
-	}
-
-	// Apply already-downloaded asset/media/font mappings.
-	if ( ! empty( $url_map ) ) {
-		$content = strtr( $content, $url_map );
-	}
-
-	// Scan for remaining Ceros CDN/media URLs (scoped to *.cdn / media hosts so
-	// we don't pull in experience page URLs or canonical links).
-	$pattern = '#https?://(?:[a-z0-9-]+\.)*(?:cdn|media)\.ceros(?:dev|stage)?\.site/[^"\'\s),\\\\]+#i';
-
-	$result = preg_replace_callback(
-		$pattern,
-		function ( $m ) use ( $abs_base, $url_base, &$url_map ) {
-			$raw   = $m[0];
-			$fetch = html_entity_decode( $raw, ENT_QUOTES | ENT_HTML5 );
-			$local = ceros_store_is_hls_url( $fetch )
-				? ceros_store_download_hls( $fetch, $abs_base, $url_base, $url_map )
-				: ceros_store_download( $fetch, $abs_base, $url_base, 'media', $url_map );
-			return '' !== $local ? $local : $raw;
-		},
-		$content
+	$response = wp_remote_get(
+		$request_url,
+		[
+			'timeout'     => CEROS_API_REQUEST_TIMEOUT,
+			'redirection' => 0,
+			'headers'     => [ 'Accept' => 'application/json' ],
+		]
 	);
-
-	return null === $result ? $content : $result;
+	if ( is_wp_error( $response ) ) {
+		return $response;
+	}
+	$code = wp_remote_retrieve_response_code( $response );
+	if ( $code < 200 || $code >= 300 ) {
+		return new WP_Error( 'ceros_store_manifest_http', sprintf( 'HTTP %d', $code ) );
+	}
+	$data = json_decode( wp_remote_retrieve_body( $response ), true );
+	if ( ! is_array( $data ) ) {
+		return new WP_Error( 'ceros_store_manifest_json', __( 'Manifest response was not valid JSON.', 'ceros' ) );
+	}
+	return $data;
 }
 
 /**
- * Download a single asset, returning its local URL ('' on failure).
+ * Download one rewritten asset and write it at the server-supplied relative
+ * path. Deduped across pages via `$seen` (shared bundles map to the same path).
  *
- * @param string $url      Remote URL.
+ * @param string $from     The original Ceros asset URL to download.
  * @param string $abs_base Absolute version directory.
- * @param string $url_base Public URL of the version directory.
- * @param string $subdir   Category subdir (assets|fonts|media).
- * @param array  $url_map  Shared remote->local map (by reference).
- * @return string Local URL, or ''.
+ * @param string $path     Path relative to baseUrl (from the rewrite map).
+ * @param array  $seen     Relative paths already written this run (by reference).
+ * @return bool Whether the asset is present locally after the call.
  */
-function ceros_store_download( $url, $abs_base, $url_base, $subdir, &$url_map ) {
-	if ( isset( $url_map[ $url ] ) ) {
-		return $url_map[ $url ];
+function ceros_store_download_asset( $from, $abs_base, $path, &$seen ) {
+	$rel = ceros_store_safe_rel_path( $path );
+	if ( '' === $rel ) {
+		return false;
 	}
-	if ( ! ceros_store_is_allowed_asset_url( $url ) ) {
-		return '';
+	if ( isset( $seen[ $rel ] ) ) {
+		return true;
+	}
+	if ( ! ceros_store_is_allowed_asset_url( $from ) ) {
+		return false;
 	}
 
 	$response = wp_remote_get(
-		$url,
+		$from,
 		[
 			'timeout'     => CEROS_API_REQUEST_TIMEOUT,
 			'redirection' => 2,
 		]
 	);
 	if ( is_wp_error( $response ) ) {
-		return '';
+		return false;
 	}
 	$code = wp_remote_retrieve_response_code( $response );
 	if ( $code < 200 || $code >= 300 ) {
-		return '';
+		return false;
 	}
 	$body = wp_remote_retrieve_body( $response );
 	if ( '' === $body ) {
-		return '';
+		return false;
 	}
 
-	$filename = ceros_store_filename( $url );
-	$rel      = $subdir . '/' . $filename;
 	if ( ! ceros_store_write_file( $abs_base . '/' . $rel, $body ) ) {
-		return '';
+		return false;
 	}
-
-	$local           = $url_base . '/' . $rel;
-	$url_map[ $url ] = $local;
-	return $local;
+	$seen[ $rel ] = true;
+	return true;
 }
 
 /**
- * Whether a URL points at an HLS playlist (`.m3u8`).
+ * Validate a server-supplied relative asset path before writing it: strip the
+ * leading slash, reject `.`/`..` traversal and any segment with characters
+ * outside the rewrite's `[A-Za-z0-9._-]` alphabet. Returns '' if unsafe.
  *
- * @param string $url The URL.
- * @return bool
+ * @param string $path The relative path from the rewrite map.
+ * @return string The safe relative path, or '' when rejected.
  */
-function ceros_store_is_hls_url( $url ) {
-	$path = strtolower( (string) wp_parse_url( $url, PHP_URL_PATH ) );
-	return ceros_str_ends_with( $path, '.m3u8' );
-}
-
-/**
- * Download an HLS playlist, localize everything it references — media segments,
- * variant playlists (recursively), and tag URIs (EXT-X-KEY / EXT-X-MAP / …) —
- * and store a rewritten playlist whose URIs are all absolute local URLs.
- *
- * This is stronger than co-locating segments under their original names: it
- * works for relative AND absolute segment URIs and for master→variant
- * playlists, because every URI in the stored playlist is rewritten in place.
- *
- * @param string $url      Playlist URL.
- * @param string $abs_base Absolute version directory.
- * @param string $url_base Public URL of the version directory.
- * @param array  $url_map  Shared remote->local map (by reference).
- * @param int    $depth    Recursion guard for master->variant nesting.
- * @return string Local playlist URL, or ''.
- */
-function ceros_store_download_hls( $url, $abs_base, $url_base, &$url_map, $depth = 0 ) {
-	if ( isset( $url_map[ $url ] ) ) {
-		return $url_map[ $url ];
-	}
-	if ( $depth > 3 || ! ceros_store_is_allowed_asset_url( $url ) ) {
+function ceros_store_safe_rel_path( $path ) {
+	$path = ltrim( (string) $path, '/' );
+	if ( '' === $path ) {
 		return '';
 	}
-
-	$response = wp_remote_get( $url, [ 'timeout' => CEROS_API_REQUEST_TIMEOUT, 'redirection' => 2 ] );
-	if ( is_wp_error( $response ) ) {
-		return '';
-	}
-	$code = wp_remote_retrieve_response_code( $response );
-	if ( $code < 200 || $code >= 300 ) {
-		return '';
-	}
-	$playlist = wp_remote_retrieve_body( $response );
-	if ( '' === $playlist ) {
-		return '';
-	}
-
-	$rel   = 'media/' . ceros_store_filename( $url, 'm3u8' );
-	$local = $url_base . '/' . $rel;
-	// Reserve the mapping before recursing so a self/circular reference can't loop.
-	$url_map[ $url ] = $local;
-
-	$lines = preg_split( '/\r\n|\r|\n/', $playlist );
-	foreach ( $lines as $idx => $line ) {
-		$trimmed = trim( $line );
-		if ( '' === $trimmed ) {
-			continue;
+	$out = [];
+	foreach ( explode( '/', $path ) as $segment ) {
+		if ( '' === $segment || '.' === $segment || '..' === $segment ) {
+			return '';
 		}
-
-		// Tag lines: rewrite any URI="..." attribute (EXT-X-KEY, EXT-X-MAP, …).
-		if ( '#' === $trimmed[0] ) {
-			$lines[ $idx ] = preg_replace_callback(
-				'/URI="([^"]+)"/i',
-				function ( $m ) use ( $url, $abs_base, $url_base, &$url_map, $depth ) {
-					$local_uri = ceros_store_localize_hls_ref( $m[1], $url, $abs_base, $url_base, $url_map, $depth );
-					return '' !== $local_uri ? 'URI="' . $local_uri . '"' : $m[0];
-				},
-				$line
-			);
-			continue;
+		if ( preg_match( '/[^A-Za-z0-9._-]/', $segment ) ) {
+			return '';
 		}
-
-		// Bare lines are media segments or variant playlists.
-		$local_ref = ceros_store_localize_hls_ref( $trimmed, $url, $abs_base, $url_base, $url_map, $depth );
-		if ( '' !== $local_ref ) {
-			$lines[ $idx ] = $local_ref;
-		}
+		$out[] = $segment;
 	}
-
-	if ( ! ceros_store_write_file( $abs_base . '/' . $rel, implode( "\n", $lines ) ) ) {
-		unset( $url_map[ $url ] );
-		return '';
-	}
-	return $local;
-}
-
-/**
- * Resolve + download a single reference from an HLS playlist, recursing into
- * nested playlists. Returns the local URL ('' on failure).
- *
- * @param string $ref          The (possibly relative) reference.
- * @param string $playlist_url  The playlist URL the ref is relative to.
- * @param string $abs_base      Absolute version directory.
- * @param string $url_base      Public URL of the version directory.
- * @param array  $url_map       Shared remote->local map (by reference).
- * @param int    $depth         Current recursion depth.
- * @return string Local URL, or ''.
- */
-function ceros_store_localize_hls_ref( $ref, $playlist_url, $abs_base, $url_base, &$url_map, $depth ) {
-	$abs = ceros_store_absolute_url( trim( $ref ), $playlist_url );
-	if ( '' === $abs ) {
-		return '';
-	}
-	return ceros_store_is_hls_url( $abs )
-		? ceros_store_download_hls( $abs, $abs_base, $url_base, $url_map, $depth + 1 )
-		: ceros_store_download( $abs, $abs_base, $url_base, 'media', $url_map );
-}
-
-/**
- * Download a webfont stylesheet, localize the font files it references, and
- * store the rewritten CSS locally.
- *
- * @param string $css_url  Webfont CSS URL.
- * @param string $abs_base Absolute version directory.
- * @param string $url_base Public URL of the version directory.
- * @param array  $url_map  Shared remote->local map (by reference).
- * @return string Local CSS URL, or ''.
- */
-function ceros_store_download_webfont_css( $css_url, $abs_base, $url_base, &$url_map ) {
-	if ( isset( $url_map[ $css_url ] ) ) {
-		return $url_map[ $css_url ];
-	}
-	if ( ! ceros_store_is_allowed_asset_url( $css_url ) ) {
-		return '';
-	}
-
-	$response = wp_remote_get( $css_url, [ 'timeout' => CEROS_API_REQUEST_TIMEOUT, 'redirection' => 2 ] );
-	if ( is_wp_error( $response ) || wp_remote_retrieve_response_code( $response ) < 200 || wp_remote_retrieve_response_code( $response ) >= 300 ) {
-		return '';
-	}
-	$css = wp_remote_retrieve_body( $response );
-
-	// Localize each url(...) font reference, resolving relative URLs against the CSS URL.
-	if ( preg_match_all( '/url\(\s*([\'"]?)([^\'")]+)\1\s*\)/i', $css, $matches ) ) {
-		foreach ( array_unique( $matches[2] ) as $font_ref ) {
-			$abs_font = ceros_store_absolute_url( trim( $font_ref ), $css_url );
-			if ( '' === $abs_font ) {
-				continue;
-			}
-			$local_font = ceros_store_download( $abs_font, $abs_base, $url_base, 'fonts', $url_map );
-			if ( '' !== $local_font ) {
-				$css = str_replace( $font_ref, $local_font, $css );
-			}
-		}
-	}
-
-	$filename = ceros_store_filename( $css_url, 'css' );
-	$rel      = 'fonts/' . $filename;
-	if ( ! ceros_store_write_file( $abs_base . '/' . $rel, $css ) ) {
-		return '';
-	}
-	$local             = $url_base . '/' . $rel;
-	$url_map[ $css_url ] = $local;
-	return $local;
-}
-
-/**
- * Build a collision-free local filename for a remote URL: an 8-char hash of the
- * full URL prefixed to the sanitized basename.
- *
- * @param string $url           Remote URL.
- * @param string $force_ext     Optional extension to force (e.g. 'css').
- * @return string Filename.
- */
-function ceros_store_filename( $url, $force_ext = '' ) {
-	$path     = (string) wp_parse_url( $url, PHP_URL_PATH );
-	$basename = sanitize_file_name( wp_basename( $path ) );
-	if ( '' === $basename ) {
-		$basename = 'asset';
-	}
-	if ( '' !== $force_ext && ! preg_match( '/\.' . preg_quote( $force_ext, '/' ) . '$/i', $basename ) ) {
-		$basename .= '.' . $force_ext;
-	}
-	return substr( md5( $url ), 0, 8 ) . '-' . $basename;
-}
-
-/**
- * Resolve a possibly-relative URL against a base URL.
- *
- * @param string $ref  The (possibly relative) reference.
- * @param string $base The base URL.
- * @return string Absolute URL, or '' for data: URIs and unresolvable inputs.
- */
-function ceros_store_absolute_url( $ref, $base ) {
-	if ( '' === $ref || 0 === stripos( $ref, 'data:' ) ) {
-		return '';
-	}
-	if ( preg_match( '#^https?://#i', $ref ) ) {
-		return $ref;
-	}
-	$parts = wp_parse_url( $base );
-	if ( empty( $parts['scheme'] ) || empty( $parts['host'] ) ) {
-		return '';
-	}
-	$origin = $parts['scheme'] . '://' . $parts['host'] . ( ! empty( $parts['port'] ) ? ':' . $parts['port'] : '' );
-	if ( 0 === strpos( $ref, '/' ) ) {
-		return $origin . $ref;
-	}
-	$dir = isset( $parts['path'] ) ? preg_replace( '#/[^/]*$#', '/', $parts['path'] ) : '/';
-	return $origin . $dir . $ref;
+	return implode( '/', $out );
 }
 
 /**
@@ -693,7 +440,7 @@ function ceros_render_flex_ssr_stored( $index_rel_path ) {
 		return '';
 	}
 
-	$upload   = wp_upload_dir();
+	$upload    = wp_upload_dir();
 	$abs_index = trailingslashit( $upload['basedir'] ) . $index_rel_path;
 	if ( ! is_file( $abs_index ) ) {
 		return '';
@@ -704,12 +451,12 @@ function ceros_render_flex_ssr_stored( $index_rel_path ) {
 		return '';
 	}
 
-	$dir      = dirname( $abs_index );
-	$url_dir  = trailingslashit( $upload['baseurl'] ) . dirname( $index_rel_path );
-	$primary  = isset( $index['primarySlug'] ) ? $index['primarySlug'] : '';
+	$dir     = dirname( $abs_index );
+	$url_dir = trailingslashit( $upload['baseurl'] ) . dirname( $index_rel_path );
+	$primary = isset( $index['primarySlug'] ) ? $index['primarySlug'] : '';
 
 	// Resolve the deep-linked page using the primary manifest's experience slug.
-	$primary_rel = isset( $index['pages'][ $primary ] ) ? $index['pages'][ $primary ] : reset( $index['pages'] );
+	$primary_rel      = isset( $index['pages'][ $primary ] ) ? $index['pages'][ $primary ] : reset( $index['pages'] );
 	$primary_manifest = json_decode( ceros_store_read_file( $dir . '/' . $primary_rel ), true );
 
 	$requested = is_array( $primary_manifest ) ? ceros_flex_ssr_requested_slug( $primary_manifest ) : null;
