@@ -48,6 +48,18 @@
     "manifestUrl": {
       "type": "string",
       "default": ""
+    },
+    "storedIndexPath": {
+      "type": "string",
+      "default": ""
+    },
+    "storedAt": {
+      "type": "string",
+      "default": ""
+    },
+    "storedVersion": {
+      "type": "string",
+      "default": ""
     }
   },
   "render": "file:./render.php",

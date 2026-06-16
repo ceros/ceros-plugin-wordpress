@@ -34,9 +34,26 @@ function ceros_render_flex_ssr( $manifest_url ) {
 	}
 
 	// Follow a deep link (?cer_<slug>=<page>) to the requested page when present.
-	$resolved     = ceros_flex_ssr_resolve_page( $manifest, $manifest_url );
-	$manifest     = $resolved['manifest'];
-	$served_url   = $resolved['url'];
+	$resolved = ceros_flex_ssr_resolve_page( $manifest, $manifest_url );
+
+	return ceros_flex_ssr_render_manifest( $resolved['manifest'], $resolved['url'] );
+}
+
+/**
+ * Render a parsed manifest to SSR HTML.
+ *
+ * Shared by the live path (after fetching) and the Store path (after reading a
+ * locally-persisted, URL-rewritten manifest), so both emit identical markup.
+ *
+ * @param array  $manifest   The parsed manifest (URLs may be remote or local).
+ * @param string $served_url The manifest URL to advertise on the wrapper for
+ *                           the SPA router (deep-link nav). May be ''.
+ * @return string Rendered HTML, or '' when there is nothing renderable.
+ */
+function ceros_flex_ssr_render_manifest( $manifest, $served_url ) {
+	if ( ! is_array( $manifest ) ) {
+		return '';
+	}
 
 	$html_body = ceros_flex_ssr_html_body( $manifest );
 	$ssr       = isset( $manifest['deliveryModes']['ssr'] ) && is_array( $manifest['deliveryModes']['ssr'] )
@@ -52,7 +69,12 @@ function ceros_render_flex_ssr( $manifest_url ) {
 	$head_scripts = ceros_flex_ssr_head_scripts( $manifest );
 	$body_scripts = ceros_flex_ssr_body_scripts( $ssr );
 
-	$content = '<div class="ceros-block__flex-ssr" data-flex-manifest-url="' . esc_url( $served_url ) . '">'
+	$wrapper_attrs = '';
+	if ( '' !== (string) $served_url ) {
+		$wrapper_attrs = ' data-flex-manifest-url="' . esc_url( $served_url ) . '"';
+	}
+
+	$content = '<div class="ceros-block__flex-ssr"' . $wrapper_attrs . '>'
 		. $html_body
 		. '</div>';
 

@@ -33,13 +33,23 @@ function ceros_render_block( $attributes ) {
 		return ceros_sanitize_embed_code( $attributes['inlineEmbedCode'] );
 	}
 
-	// Flex SSR (Beta) delivery: fetch the manifest server-side and render the
-	// experience HTML inline (the browser only loads the hydration runtime). On
-	// any fetch failure we fall through to the iframe embed below.
-	if ( 'ssr' === $delivery_mode && ! empty( $attributes['manifestUrl'] ) && function_exists( 'ceros_render_flex_ssr' ) ) {
-		$ssr_html = ceros_render_flex_ssr( $attributes['manifestUrl'] );
-		if ( '' !== $ssr_html ) {
-			return $ssr_html;
+	// Flex SSR (Beta) delivery. On any failure we fall through to the iframe
+	// embed below.
+	if ( 'ssr' === $delivery_mode ) {
+		// Store mode: render fully from the locally-persisted bundle (no CDN).
+		if ( ! empty( $attributes['storedIndexPath'] ) && function_exists( 'ceros_render_flex_ssr_stored' ) ) {
+			$stored_html = ceros_render_flex_ssr_stored( $attributes['storedIndexPath'] );
+			if ( '' !== $stored_html ) {
+				return $stored_html;
+			}
+		}
+
+		// Live mode: fetch the manifest server-side and render inline.
+		if ( ! empty( $attributes['manifestUrl'] ) && function_exists( 'ceros_render_flex_ssr' ) ) {
+			$ssr_html = ceros_render_flex_ssr( $attributes['manifestUrl'] );
+			if ( '' !== $ssr_html ) {
+				return $ssr_html;
+			}
 		}
 	}
 

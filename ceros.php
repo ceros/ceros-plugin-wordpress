@@ -83,6 +83,10 @@ require_once plugin_dir_path( __FILE__ ) . 'includes/public-url-resolver.php';
 // experience's pre-rendered HTML body, with deep-link support.
 require_once plugin_dir_path( __FILE__ ) . 'includes/flex-ssr-renderer.php';
 
+// Flex SSR "Store" mode — downloads manifest + assets into uploads for fully
+// local, zero-CDN rendering.
+require_once plugin_dir_path( __FILE__ ) . 'includes/flex-store.php';
+
 // Settings page, sanitization, and admin menu.
 require_once plugin_dir_path( __FILE__ ) . 'includes/settings.php';
 
