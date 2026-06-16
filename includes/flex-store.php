@@ -204,7 +204,9 @@ function ceros_store_localize_manifest( $manifest, $abs_base, $url_base, &$url_m
 			if ( '' === $url ) {
 				continue;
 			}
-			$local = ceros_store_download( $url, $abs_base, $url_base, 'media', $url_map );
+			$local = ceros_store_is_hls_url( $url )
+				? ceros_store_download_hls( $url, $abs_base, $url_base, $url_map )
+				: ceros_store_download( $url, $abs_base, $url_base, 'media', $url_map );
 			if ( '' !== $local ) {
 				$manifest['media'][ $i ]['url'] = $local;
 			}
@@ -274,6 +276,115 @@ function ceros_store_download( $url, $abs_base, $url_base, $subdir, &$url_map ) 
 	$local           = $url_base . '/' . $rel;
 	$url_map[ $url ] = $local;
 	return $local;
+}
+
+/**
+ * Whether a URL points at an HLS playlist (`.m3u8`).
+ *
+ * @param string $url The URL.
+ * @return bool
+ */
+function ceros_store_is_hls_url( $url ) {
+	$path = strtolower( (string) wp_parse_url( $url, PHP_URL_PATH ) );
+	return ceros_str_ends_with( $path, '.m3u8' );
+}
+
+/**
+ * Download an HLS playlist, localize everything it references — media segments,
+ * variant playlists (recursively), and tag URIs (EXT-X-KEY / EXT-X-MAP / …) —
+ * and store a rewritten playlist whose URIs are all absolute local URLs.
+ *
+ * This is stronger than co-locating segments under their original names: it
+ * works for relative AND absolute segment URIs and for master→variant
+ * playlists, because every URI in the stored playlist is rewritten in place.
+ *
+ * @param string $url      Playlist URL.
+ * @param string $abs_base Absolute version directory.
+ * @param string $url_base Public URL of the version directory.
+ * @param array  $url_map  Shared remote->local map (by reference).
+ * @param int    $depth    Recursion guard for master->variant nesting.
+ * @return string Local playlist URL, or ''.
+ */
+function ceros_store_download_hls( $url, $abs_base, $url_base, &$url_map, $depth = 0 ) {
+	if ( isset( $url_map[ $url ] ) ) {
+		return $url_map[ $url ];
+	}
+	if ( $depth > 3 || ! ceros_store_is_allowed_asset_url( $url ) ) {
+		return '';
+	}
+
+	$response = wp_remote_get( $url, [ 'timeout' => CEROS_API_REQUEST_TIMEOUT, 'redirection' => 2 ] );
+	if ( is_wp_error( $response ) ) {
+		return '';
+	}
+	$code = wp_remote_retrieve_response_code( $response );
+	if ( $code < 200 || $code >= 300 ) {
+		return '';
+	}
+	$playlist = wp_remote_retrieve_body( $response );
+	if ( '' === $playlist ) {
+		return '';
+	}
+
+	$rel   = 'media/' . ceros_store_filename( $url, 'm3u8' );
+	$local = $url_base . '/' . $rel;
+	// Reserve the mapping before recursing so a self/circular reference can't loop.
+	$url_map[ $url ] = $local;
+
+	$lines = preg_split( '/\r\n|\r|\n/', $playlist );
+	foreach ( $lines as $idx => $line ) {
+		$trimmed = trim( $line );
+		if ( '' === $trimmed ) {
+			continue;
+		}
+
+		// Tag lines: rewrite any URI="..." attribute (EXT-X-KEY, EXT-X-MAP, …).
+		if ( '#' === $trimmed[0] ) {
+			$lines[ $idx ] = preg_replace_callback(
+				'/URI="([^"]+)"/i',
+				function ( $m ) use ( $url, $abs_base, $url_base, &$url_map, $depth ) {
+					$local_uri = ceros_store_localize_hls_ref( $m[1], $url, $abs_base, $url_base, $url_map, $depth );
+					return '' !== $local_uri ? 'URI="' . $local_uri . '"' : $m[0];
+				},
+				$line
+			);
+			continue;
+		}
+
+		// Bare lines are media segments or variant playlists.
+		$local_ref = ceros_store_localize_hls_ref( $trimmed, $url, $abs_base, $url_base, $url_map, $depth );
+		if ( '' !== $local_ref ) {
+			$lines[ $idx ] = $local_ref;
+		}
+	}
+
+	if ( ! ceros_store_write_file( $abs_base . '/' . $rel, implode( "\n", $lines ) ) ) {
+		unset( $url_map[ $url ] );
+		return '';
+	}
+	return $local;
+}
+
+/**
+ * Resolve + download a single reference from an HLS playlist, recursing into
+ * nested playlists. Returns the local URL ('' on failure).
+ *
+ * @param string $ref          The (possibly relative) reference.
+ * @param string $playlist_url  The playlist URL the ref is relative to.
+ * @param string $abs_base      Absolute version directory.
+ * @param string $url_base      Public URL of the version directory.
+ * @param array  $url_map       Shared remote->local map (by reference).
+ * @param int    $depth         Current recursion depth.
+ * @return string Local URL, or ''.
+ */
+function ceros_store_localize_hls_ref( $ref, $playlist_url, $abs_base, $url_base, &$url_map, $depth ) {
+	$abs = ceros_store_absolute_url( trim( $ref ), $playlist_url );
+	if ( '' === $abs ) {
+		return '';
+	}
+	return ceros_store_is_hls_url( $abs )
+		? ceros_store_download_hls( $abs, $abs_base, $url_base, $url_map, $depth + 1 )
+		: ceros_store_download( $abs, $abs_base, $url_base, 'media', $url_map );
 }
 
 /**
