@@ -171,23 +171,50 @@ function ceros_flex_ssr_html_body( $manifest ) {
  * @return string Concatenated <link> tags.
  */
 function ceros_flex_ssr_styles( $manifest, $ssr ) {
-	$out = '';
+	$assets = isset( $manifest['assets'] ) ? $manifest['assets'] : [];
 
-	foreach ( ( isset( $manifest['assets'] ) ? $manifest['assets'] : [] ) as $asset ) {
-		if ( is_array( $asset ) && ( isset( $asset['type'] ) ? $asset['type'] : '' ) === 'webfont' ) {
-			$src = isset( $asset['src'] ) ? $asset['src'] : [];
-			if ( ! empty( $src['url'] ) ) {
-				$out .= ceros_flex_ssr_style_tag( $src['url'], isset( $src['integrity'] ) ? $src['integrity'] : '' );
-			}
-		}
-	}
+	// Webfonts first, so faces are registered before the content renders. A
+	// webfont asset is either an external stylesheet (Google Fonts → <link>) or
+	// an inline @font-face block for a custom font (→ <style>); emit both.
+	$out = ceros_flex_ssr_asset_styles( $assets, 'webfont' );
 
+	// Shared SSR delivery styles (components.css, reset.css …).
 	foreach ( ( isset( $ssr['styles'] ) ? $ssr['styles'] : [] ) as $style ) {
 		if ( is_array( $style ) && ! empty( $style['url'] ) ) {
 			$out .= ceros_flex_ssr_style_tag( $style['url'], isset( $style['integrity'] ) ? $style['integrity'] : '' );
 		}
 	}
 
+	// Per-experience style assets (brand-kit overrides) after the shared styles
+	// so they win the cascade.
+	$out .= ceros_flex_ssr_asset_styles( $assets, 'style' );
+
+	return $out;
+}
+
+/**
+ * Emit the styles for every asset of a given type: an external `src.url` as a
+ * <link>, an inline `src.content` as a verbatim <style> block.
+ *
+ * @param array  $assets The manifest `assets[]`.
+ * @param string $type   The asset type to emit (`webfont` or `style`).
+ * @return string Concatenated <link>/<style> tags.
+ */
+function ceros_flex_ssr_asset_styles( $assets, $type ) {
+	$out = '';
+	foreach ( $assets as $asset ) {
+		if ( ! is_array( $asset ) || ( isset( $asset['type'] ) ? $asset['type'] : '' ) !== $type ) {
+			continue;
+		}
+		$src = isset( $asset['src'] ) ? $asset['src'] : [];
+		if ( ! empty( $src['url'] ) ) {
+			$out .= ceros_flex_ssr_style_tag( $src['url'], isset( $src['integrity'] ) ? $src['integrity'] : '' );
+		} elseif ( ! empty( $src['content'] ) && is_string( $src['content'] ) ) {
+			// Inline @font-face / style block — output verbatim (trusted, from
+			// the SSRF-validated manifest host, same posture as the html-body).
+			$out .= '<style>' . $src['content'] . '</style>' . "\n";
+		}
+	}
 	return $out;
 }
 
