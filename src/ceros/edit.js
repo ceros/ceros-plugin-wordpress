@@ -27,6 +27,7 @@ import { useSelect } from '@wordpress/data';
 import apiFetch from '@wordpress/api-fetch';
 import { CerosModal } from './components/modal';
 import { CerosPreview } from './components/preview';
+import { SsrPreview } from './components/ssr-preview';
 import { SidebarControls } from './components/sidebar-controls';
 import { PasteUrlPanel } from './components/paste-url-panel';
 import { ACTION_TYPES, DELIVERY_MODES } from './constants';
@@ -487,6 +488,12 @@ export default function Edit( { attributes, setAttributes, clientId } ) {
 		const selectedId = select( 'core/block-editor' ).getSelectedBlockClientId?.();
 		return selectedId === clientId;
 	}, [ clientId ] );
+
+	// Current post ID — passed to the server-rendered SSR preview for context.
+	const postId = useSelect(
+		( select ) => select( 'core/editor' )?.getCurrentPostId?.() || 0,
+		[]
+	);
 
 	// Track previous modal state to detect when modal first opens
 	const prevModalOpenRef = useRef(false);
@@ -1219,11 +1226,18 @@ export default function Edit( { attributes, setAttributes, clientId } ) {
 
 				{(selectedExperienceName || attributes.experienceName || attributes.fullHeightEmbedCode || attributes.scrollableEmbedCode) ? (
 					<div className="ceros-block__selected">
-						<CerosPreview
-							currentEmbedCodes={ previewEmbedCodes }
-							deliveryMode={ attributes.deliveryMode || DELIVERY_MODES.IFRAME }
-							selectedEmbedOption={ attributes.selectedOption }
-						/>
+						{ attributes.deliveryMode === DELIVERY_MODES.SSR ? (
+							<SsrPreview
+								attributes={ attributes }
+								postId={ postId }
+							/>
+						) : (
+							<CerosPreview
+								currentEmbedCodes={ previewEmbedCodes }
+								deliveryMode={ attributes.deliveryMode || DELIVERY_MODES.IFRAME }
+								selectedEmbedOption={ attributes.selectedOption }
+							/>
+						) }
 					</div>
 				) : !isModalOpen && !currentAccountError && (
 					IS_API_KEY_CONFIGURED ? (

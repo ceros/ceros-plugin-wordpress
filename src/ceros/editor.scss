@@ -564,6 +564,14 @@ $ceros-border-muted: rgb(226, 232, 240); // button & divider borders
 	}
 }
 
+// Server-rendered SSR preview iframe (isolated; auto-sized to its content).
+.ceros-block__ssr-preview-frame {
+	width: 100%;
+	border: 0;
+	min-height: 300px;
+	display: block;
+}
+
 // Caption shown above the editor preview when a block is published as Flex
 // Inline — the editor preview itself is always the isolated iframe.
 .ceros-block__preview-note {
