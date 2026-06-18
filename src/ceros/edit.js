@@ -1150,7 +1150,7 @@ export default function Edit( { attributes, setAttributes, clientId } ) {
 					<div className="ceros-block__selected">
 						<CerosPreview
 							currentEmbedCodes={ previewEmbedCodes }
-							deliveryMode={ attributes.deliveryMode || 'iframe' }
+							deliveryMode={ attributes.deliveryMode || DELIVERY_MODES.IFRAME }
 						/>
 					</div>
 				) : !isModalOpen && !currentAccountError && (

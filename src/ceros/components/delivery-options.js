@@ -23,8 +23,7 @@ export const DeliveryOptions = ( {
 				<span>
 					<span>Embed (iframe)</span>
 					<span className="ceros-block__embed-options-description">
-						Renders inside an isolated iframe. Works for every
-						experience.
+						Renders inside an isolated iframe.
 					</span>
 				</span>
 			</label>
@@ -40,8 +39,7 @@ export const DeliveryOptions = ( {
 				<span>
 					<span>Inline — iframeless (Beta)</span>
 					<span className="ceros-block__embed-options-description">
-						Renders inline via Shadow DOM, no iframe. Best for a
-						native feel.
+						Renders inline with no iframe. Best for a native feel.
 					</span>
 				</span>
 			</label>

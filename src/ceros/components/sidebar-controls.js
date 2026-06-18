@@ -96,7 +96,7 @@ export function SidebarControls( {
 									</span>
 									<span className="ceros-sidebar__radio-description">
 										{ __(
-											'Renders inside an isolated iframe. Works for every experience.',
+											'Renders inside an isolated iframe.',
 											'ceros'
 										) }
 									</span>
@@ -133,7 +133,7 @@ export function SidebarControls( {
 									</span>
 									<span className="ceros-sidebar__radio-description">
 										{ __(
-											'Renders inline via Shadow DOM, no iframe. Best for a native feel.',
+											'Renders inline with no iframe. Best for a native feel.',
 											'ceros'
 										) }
 									</span>
