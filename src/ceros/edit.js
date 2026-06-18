@@ -1151,6 +1151,7 @@ export default function Edit( { attributes, setAttributes, clientId } ) {
 						<CerosPreview
 							currentEmbedCodes={ previewEmbedCodes }
 							deliveryMode={ attributes.deliveryMode || DELIVERY_MODES.IFRAME }
+							selectedEmbedOption={ attributes.selectedOption }
 						/>
 					</div>
 				) : !isModalOpen && !currentAccountError && (

@@ -1,15 +1,15 @@
 import { useEffect, useRef } from '@wordpress/element';
-import { DELIVERY_MODES } from '../constants';
+import { DELIVERY_MODES, EMBED_OPTIONS } from '../constants';
 
 /**
  * Preview component for showing the selected experience inside the block.
  *
- * The editor preview ALWAYS renders the full-height iframe embed (falling back
- * to the scrollable variant), regardless of the chosen delivery mode. Rendering
- * the iframeless Flex Inline snippet here would inject flex-client.js and a
- * Shadow DOM straight into the editor DOM; the iframe keeps the preview isolated
- * and side-effect-free. The published frontend still honours the real delivery
- * mode — only the editor preview is forced to the iframe.
+ * The editor preview renders the iframe embed for the selected size option —
+ * the scrollable (fixed-height) variant when "Scrolling" is picked, otherwise
+ * the full-height variant — so the in-editor layout matches what publishes.
+ * Inline (iframeless) delivery still previews as the iframe: rendering the
+ * inline snippet here would inject flex-client.js and a Shadow DOM into the
+ * editor DOM. The published frontend always honours the real delivery mode.
  *
  * A ref + effect is used so any <script> tags inside the embed HTML are
  * re-created and executed in the editor (they don't run via innerHTML).
@@ -17,8 +17,11 @@ import { DELIVERY_MODES } from '../constants';
 export const CerosPreview = ( {
 	currentEmbedCodes,
 	deliveryMode = DELIVERY_MODES.IFRAME,
+	selectedEmbedOption = EMBED_OPTIONS.FULL,
 } ) => {
 	const embedHtml =
+		( EMBED_OPTIONS.SCROLL === selectedEmbedOption &&
+			currentEmbedCodes?.scrollableEmbedCode ) ||
 		currentEmbedCodes?.fullHeightEmbedCode ||
 		currentEmbedCodes?.scrollableEmbedCode ||
 		null;
