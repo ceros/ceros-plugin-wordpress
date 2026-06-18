@@ -167,6 +167,13 @@
 			gap: 0.875rem;
 		}
 
+		// Divider between the delivery-mode group and the iframe-size group
+		// (only drawn when both are shown, i.e. iframe delivery).
+		& + & {
+			border-top: 1px solid rgb(226, 232, 240);
+			padding-top: 0.875rem;
+		}
+
 		&-label {
 			display: flex;
 			gap: 0.375rem;
