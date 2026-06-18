@@ -194,11 +194,11 @@ export function PasteUrlPanel( {
 						<p className="ceros-block__paste-type">
 							{ resolved.isFlex
 								? __(
-										'Detected a Flex experience. Choose how to deliver it:',
+										'Detected a Ceros Flex experience. Choose how to deliver it:',
 										'ceros'
 								  )
 								: __(
-										'Detected a legacy Ceros experience.',
+										'Detected a Ceros Studio experience.',
 										'ceros'
 								  ) }
 						</p>

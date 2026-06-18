@@ -55,11 +55,37 @@ function ceros_resolve_public_experience_url( $raw_url ) {
 	}
 
 	$experience_url = ceros_derive_experience_url( $raw_url );
-	$manifest_url   = ceros_build_manifest_url( $raw_url );
 
-	// Try the public Flex manifest first — its presence is what distinguishes a
-	// Flex experience from a legacy Studio one.
-	$manifest = ceros_fetch_flex_manifest( $manifest_url );
+	// Verify this is a genuine Ceros experience via its oEmbed endpoint BEFORE we
+	// trust (and inject) anything it serves. Both Flex and Studio experiences
+	// expose a Ceros-branded oEmbed; a 3rd-party page that merely mimics the Flex
+	// manifest format will not — so we never key "it's a Ceros experience" off
+	// the mere presence/absence of a manifest.
+	$oembed = ceros_fetch_ceros_oembed( $experience_url );
+	if ( is_wp_error( $oembed ) ) {
+		// A transport failure (TLS/DNS/timeout) means we couldn't verify — surface
+		// the real reason rather than guessing what the experience is.
+		if ( 'ceros_oembed_unreachable' === $oembed->get_error_code() ) {
+			return new WP_Error(
+				'ceros_detect_failed',
+				sprintf(
+					/* translators: %s: underlying fetch error message. */
+					__( 'Could not reach the experience to verify it: %s', 'ceros' ),
+					$oembed->get_error_message()
+				)
+			);
+		}
+		// Reached the host, but it isn't a recognised Ceros experience.
+		return new WP_Error(
+			'ceros_not_ceros',
+			__( 'This URL doesn’t appear to be a published Ceros experience. Please paste the public link to a Ceros experience.', 'ceros' )
+		);
+	}
+
+	// Confirmed Ceros. A published Flex experience exposes the inline manifest; a
+	// Studio experience does not — now a safe Flex-vs-Studio signal.
+	$manifest_url = ceros_build_manifest_url( $raw_url );
+	$manifest     = ceros_fetch_flex_manifest( $manifest_url );
 
 	if ( ! is_wp_error( $manifest ) && is_array( $manifest ) ) {
 		return array_merge(
@@ -71,14 +97,79 @@ function ceros_resolve_public_experience_url( $raw_url ) {
 		);
 	}
 
-	// No manifest → treat as a legacy Studio experience.
+	// Ceros Studio experience. Prefer the canonical embed the oEmbed endpoint
+	// returns; fall back to the constructed scroll-proxy snippet.
+	$studio = ceros_build_legacy_embed_codes( $experience_url );
+	if ( ! empty( $oembed['html'] ) && is_string( $oembed['html'] ) ) {
+		$studio['fullHeightEmbedCode'] = $oembed['html'];
+	}
 	return array_merge(
 		[
 			'isFlex'  => false,
 			'viewUrl' => $experience_url,
 		],
-		ceros_build_legacy_embed_codes( $experience_url )
+		$studio
 	);
+}
+
+/**
+ * Fetch and validate the Ceros oEmbed for an experience URL.
+ *
+ * Hits the experience host's `/oembed` endpoint — served by Ceros for both Flex
+ * and Studio experiences — and confirms the response is Ceros-branded
+ * (`provider_name` "Ceros" / a ceros.com `provider_url`). This is the
+ * authenticity gate: a page that merely mimics the Flex manifest format will not
+ * return a Ceros oEmbed. (Not cryptographic proof against a host that fully
+ * impersonates Ceros, but it stops manifest-shape look-alikes and accidental
+ * non-Ceros matches.)
+ *
+ * @param string $experience_url The canonical experience URL.
+ * @return array|WP_Error Decoded oEmbed on success; WP_Error otherwise — code
+ *                        `ceros_oembed_unreachable` for transport failures, other
+ *                        codes when the host responded but isn't a Ceros oEmbed.
+ */
+function ceros_fetch_ceros_oembed( $experience_url ) {
+	$parts = wp_parse_url( $experience_url );
+	if ( empty( $parts['scheme'] ) || empty( $parts['host'] ) ) {
+		return new WP_Error( 'ceros_oembed_url', __( 'Invalid experience URL.', 'ceros' ) );
+	}
+
+	$origin     = $parts['scheme'] . '://' . $parts['host'] . ( ! empty( $parts['port'] ) ? ':' . $parts['port'] : '' );
+	$oembed_url = $origin . '/oembed?url=' . rawurlencode( $experience_url ) . '&format=json';
+
+	$response = wp_remote_get(
+		$oembed_url,
+		[
+			'timeout'     => CEROS_API_REQUEST_TIMEOUT,
+			'redirection' => 0,
+			'headers'     => [ 'Accept' => 'application/json' ],
+		]
+	);
+	if ( is_wp_error( $response ) ) {
+		return new WP_Error( 'ceros_oembed_unreachable', $response->get_error_message() );
+	}
+
+	$code = wp_remote_retrieve_response_code( $response );
+	if ( $code < 200 || $code >= 300 ) {
+		return new WP_Error( 'ceros_oembed_http', sprintf( 'HTTP %d', $code ) );
+	}
+
+	$data = json_decode( wp_remote_retrieve_body( $response ), true );
+	if ( ! is_array( $data ) ) {
+		return new WP_Error( 'ceros_oembed_invalid', __( 'oEmbed response was not valid JSON.', 'ceros' ) );
+	}
+
+	$provider_name = isset( $data['provider_name'] ) ? strtolower( trim( (string) $data['provider_name'] ) ) : '';
+	$provider_host = isset( $data['provider_url'] ) ? strtolower( (string) wp_parse_url( $data['provider_url'], PHP_URL_HOST ) ) : '';
+	$is_ceros      = 'ceros' === $provider_name
+		|| 'ceros.com' === $provider_host
+		|| ( strlen( $provider_host ) > 10 && '.ceros.com' === substr( $provider_host, -10 ) );
+
+	if ( ! $is_ceros ) {
+		return new WP_Error( 'ceros_oembed_provider', __( 'Response is not a Ceros oEmbed.', 'ceros' ) );
+	}
+
+	return $data;
 }
 
 /**
