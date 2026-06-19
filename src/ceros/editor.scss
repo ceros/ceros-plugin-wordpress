@@ -518,3 +518,12 @@
 		}
 	}
 }
+
+// Caption shown above the editor preview when a block is published as Flex
+// Inline — the editor preview itself is always the isolated iframe.
+.ceros-block__preview-note {
+	margin: 0 0 0.5rem;
+	color: #757575;
+	font-size: 0.75rem;
+	line-height: 1.4;
+}

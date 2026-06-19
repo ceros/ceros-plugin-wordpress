@@ -28,7 +28,7 @@ import apiFetch from '@wordpress/api-fetch';
 import { CerosModal } from './components/modal';
 import { CerosPreview } from './components/preview';
 import { SidebarControls } from './components/sidebar-controls';
-import { ACTION_TYPES } from './constants';
+import { ACTION_TYPES, DELIVERY_MODES } from './constants';
 
 /**
  * Get the Ceros settings URL, handling various WordPress admin URL configurations
@@ -113,8 +113,10 @@ const initialState = ( attributes ) => ( {
 		currentEmbedCodes: {
 			fullHeightEmbedCode: attributes.fullHeightEmbedCode || '',
 			scrollableEmbedCode: attributes.scrollableEmbedCode || '',
+			inlineEmbedCode: attributes.inlineEmbedCode || '',
 		},
 		selectedEmbedOption: attributes.selectedOption || 'full',
+		selectedDeliveryMode: attributes.deliveryMode || DELIVERY_MODES.IFRAME,
 	},
 	modal: {
 		isOpen: false,
@@ -369,6 +371,15 @@ function cerosReducer( state, action ) {
 				},
 			};
 
+		case ACTION_TYPES.SET_DELIVERY_MODE:
+			return {
+				...state,
+				selection: {
+					...state.selection,
+					selectedDeliveryMode: action.payload,
+				},
+			};
+
 		case ACTION_TYPES.SET_EMBED_OPTION:
 			return {
 				...state,
@@ -430,6 +441,7 @@ export default function Edit( { attributes, setAttributes, clientId } ) {
 			selectedExperienceName,
 			currentEmbedCodes,
 			selectedEmbedOption,
+			selectedDeliveryMode,
 		},
 		modal: {
 			isOpen: isModalOpen,
@@ -551,11 +563,12 @@ export default function Edit( { attributes, setAttributes, clientId } ) {
 				type: ACTION_TYPES.SET_EMBED_CODES,
 				payload: {
 					fullHeightEmbedCode: attributes.fullHeightEmbedCode || '',
-					scrollableEmbedCode: attributes.scrollableEmbedCode || ''
+					scrollableEmbedCode: attributes.scrollableEmbedCode || '',
+					inlineEmbedCode: attributes.inlineEmbedCode || ''
 				}
 			});
 		}
-	}, [attributes.fullHeightEmbedCode, attributes.scrollableEmbedCode]);
+	}, [attributes.fullHeightEmbedCode, attributes.scrollableEmbedCode, attributes.inlineEmbedCode]);
 
 	// Auto-select available embed option when codes change
 	useEffect( () => {
@@ -925,13 +938,20 @@ export default function Edit( { attributes, setAttributes, clientId } ) {
 	const hasFullHeight = hasEmbedCode(attributes.fullHeightEmbedCode) || hasEmbedCode(currentEmbedCodes?.fullHeightEmbedCode);
 	const hasScrolling = hasEmbedCode(attributes.scrollableEmbedCode) || hasEmbedCode(currentEmbedCodes?.scrollableEmbedCode);
 
+	// Delivery mode (iframe vs iframeless). Iframeless is only offered for Flex
+	// experiences, detected server-side via the manifest probe.
+	const deliveryMode = attributes.deliveryMode || DELIVERY_MODES.IFRAME;
+	const inlineEmbedCode =
+		attributes.inlineEmbedCode || currentEmbedCodes?.inlineEmbedCode || '';
+	const hasInline = hasEmbedCode( inlineEmbedCode );
+	const isInlineDelivery = deliveryMode === DELIVERY_MODES.INLINE;
+
 	// Always use saved attributes for block preview to ensure it doesn't change until confirmed
 	// This ensures the preview stays visible and unchanged when modal opens or new item is selected
 	const previewEmbedCodes = {
 		fullHeightEmbedCode: attributes.fullHeightEmbedCode || '',
 		scrollableEmbedCode: attributes.scrollableEmbedCode || ''
 	};
-	const previewEmbedOption = attributes.selectedOption || 'full';
 
 	// Determine if toolbar should be shown
 	// Always show toolbar if there's any saved experience data, even when modal is open
@@ -993,6 +1013,7 @@ export default function Edit( { attributes, setAttributes, clientId } ) {
 			{/* Toolbar Controls */}
 			{showToolbar && (
 				<BlockControls>
+					{!isInlineDelivery && (
 					<ToolbarGroup>
 						<DropdownMenu
 							icon={getCurrentIcon()}
@@ -1058,6 +1079,7 @@ export default function Edit( { attributes, setAttributes, clientId } ) {
 							}}
 						</DropdownMenu>
 					</ToolbarGroup>
+					)}
 					<ToolbarGroup>
 						<ToolbarButton
 							onClick={() => dispatch({ type: ACTION_TYPES.OPEN_MODAL })}
@@ -1077,6 +1099,9 @@ export default function Edit( { attributes, setAttributes, clientId } ) {
 					selectedEmbedOption={selectedEmbedOption}
 					hasFullHeight={hasFullHeight}
 					hasScrolling={hasScrolling}
+					deliveryMode={deliveryMode}
+					hasInline={hasInline}
+					inlineEmbedCode={inlineEmbedCode}
 					dispatch={dispatch}
 					setAttributes={setAttributes}
 				/>
@@ -1125,7 +1150,8 @@ export default function Edit( { attributes, setAttributes, clientId } ) {
 					<div className="ceros-block__selected">
 						<CerosPreview
 							currentEmbedCodes={ previewEmbedCodes }
-							selectedEmbedOption={ previewEmbedOption }
+							deliveryMode={ attributes.deliveryMode || DELIVERY_MODES.IFRAME }
+							selectedEmbedOption={ attributes.selectedOption }
 						/>
 					</div>
 				) : !isModalOpen && !currentAccountError && (
@@ -1157,6 +1183,8 @@ export default function Edit( { attributes, setAttributes, clientId } ) {
 				currentEmbedCodes,
 				selectedEmbedOption,
 				setSelectedEmbedOption: ( option ) => dispatch({ type: ACTION_TYPES.SET_EMBED_OPTION, payload: option }),
+				selectedDeliveryMode,
+				setSelectedDeliveryMode: ( mode ) => dispatch({ type: ACTION_TYPES.SET_DELIVERY_MODE, payload: mode }),
 				setAttributes,
 				selectedExperienceName,
 			} }

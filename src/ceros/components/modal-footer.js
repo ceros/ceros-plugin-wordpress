@@ -1,10 +1,14 @@
 import { EmbedOptions } from './embed-options';
+import { DeliveryOptions } from './delivery-options';
+import { DELIVERY_MODES } from '../constants';
 
 export const CerosModalFooter = ( {
 	onClose,
 	currentEmbedCodes,
 	selectedEmbedOption,
 	setSelectedEmbedOption,
+	selectedDeliveryMode,
+	setSelectedDeliveryMode,
 	selectedNodeId,
 	setAttributes,
 	selectedExperienceName,
@@ -13,13 +17,33 @@ export const CerosModalFooter = ( {
 		return null;
 	}
 
+	// The API only returns an inline snippet for Flex experiences. When present,
+	// offer the iframe vs iframeless choice right here in the picker.
+	const hasInline = Boolean(
+		currentEmbedCodes.inlineEmbedCode &&
+			String( currentEmbedCodes.inlineEmbedCode ).trim()
+	);
+	const effectiveDeliveryMode = hasInline
+		? selectedDeliveryMode
+		: DELIVERY_MODES.IFRAME;
+	const isInline = effectiveDeliveryMode === DELIVERY_MODES.INLINE;
+
 	return (
 		<div className="ceros-block__modal-footer">
-			<EmbedOptions
-				currentEmbedCodes={ currentEmbedCodes }
-				selectedEmbedOption={ selectedEmbedOption }
-				setSelectedEmbedOption={ setSelectedEmbedOption }
-			/>
+			{ hasInline && (
+				<DeliveryOptions
+					selectedDeliveryMode={ effectiveDeliveryMode }
+					setSelectedDeliveryMode={ setSelectedDeliveryMode }
+				/>
+			) }
+			{ /* The iframe sizing options only apply to the iframe delivery mode. */ }
+			{ ! isInline && (
+				<EmbedOptions
+					currentEmbedCodes={ currentEmbedCodes }
+					selectedEmbedOption={ selectedEmbedOption }
+					setSelectedEmbedOption={ setSelectedEmbedOption }
+				/>
+			) }
 			<div className="ceros-block__modal-actions">
 				<button
 					className="ceros-block__button ceros-block__button--secondary"
@@ -33,12 +57,22 @@ export const CerosModalFooter = ( {
 					onClick={ () => {
 						if ( currentEmbedCodes ) {
 							setAttributes( {
-								fullHeightEmbedCode: currentEmbedCodes.fullHeightEmbedCode,
+								fullHeightEmbedCode:
+									currentEmbedCodes.fullHeightEmbedCode,
 								scrollableEmbedCode:
 									currentEmbedCodes.scrollableEmbedCode,
 								selectedOption: selectedEmbedOption,
 								experienceName: selectedExperienceName,
-								experienceResourceId: selectedNodeId ? String( selectedNodeId ) : '',
+								experienceResourceId: selectedNodeId
+									? String( selectedNodeId )
+									: '',
+								// inlineEmbedCode is present only for Flex
+								// experiences; it carries the iframeless snippet.
+								inlineEmbedCode:
+									currentEmbedCodes.inlineEmbedCode || '',
+								// Commit the delivery mode chosen in the picker
+								// (forced back to iframe for non-Flex experiences).
+								deliveryMode: effectiveDeliveryMode,
 							} );
 							onClose();
 						}
@@ -50,4 +84,3 @@ export const CerosModalFooter = ( {
 		</div>
 	);
 };
-

@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       Ceros
  * Description:       Ceros API integration plugin
- * Version: 		  0.30.0
+ * Version: 		  0.31.0
  * Requires at least: 6.7
  * Requires PHP:      7.4
  * Author:            CopiaDigital.com

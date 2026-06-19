@@ -238,7 +238,10 @@ function ceros_rest_get_experiences( WP_REST_Request $request ) {
 function ceros_rest_get_embed_codes( WP_REST_Request $request ) {
 	$result = Ceros_API::instance()->get_embed_codes( $request->get_param( 'resource_id' ) );
 
-	// Sanitize embed codes in the response body before returning.
+	// Sanitize embed codes in the response body before returning. The Ceros API
+	// includes `inlineEmbedCode` (the iframeless Flex Inline snippet) only for
+	// Flex experiences, so its presence is what tells the editor that the
+	// iframeless delivery mode is available.
 	if ( ! is_wp_error( $result ) && isset( $result['body'] ) && is_array( $result['body'] ) ) {
 		$result['body'] = ceros_sanitize_embed_codes_array( $result['body'] );
 	}

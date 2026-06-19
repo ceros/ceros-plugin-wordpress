@@ -1,27 +1,30 @@
 import { useEffect, useRef } from '@wordpress/element';
-import { EMBED_OPTIONS } from '../constants';
+import { DELIVERY_MODES, EMBED_OPTIONS } from '../constants';
 
 /**
- * Preview component for showing the selected embed inside the block.
+ * Preview component for showing the selected experience inside the block.
  *
- * Uses a ref + effect so that any <script> tags inside the embed HTML
- * are re-created and executed in the editor (they don't run via innerHTML).
+ * The editor preview renders the iframe embed for the selected size option —
+ * the scrollable (fixed-height) variant when "Scrolling" is picked, otherwise
+ * the full-height variant — so the in-editor layout matches what publishes.
+ * Inline (iframeless) delivery still previews as the iframe: rendering the
+ * inline snippet here would inject flex-client.js and a Shadow DOM into the
+ * editor DOM. The published frontend always honours the real delivery mode.
+ *
+ * A ref + effect is used so any <script> tags inside the embed HTML are
+ * re-created and executed in the editor (they don't run via innerHTML).
  */
-export const CerosPreview = ( { currentEmbedCodes, selectedEmbedOption } ) => {
-	if ( ! currentEmbedCodes ) {
-		return null;
-	}
-
+export const CerosPreview = ( {
+	currentEmbedCodes,
+	deliveryMode = DELIVERY_MODES.IFRAME,
+	selectedEmbedOption = EMBED_OPTIONS.FULL,
+} ) => {
 	const embedHtml =
-		selectedEmbedOption === EMBED_OPTIONS.FULL
-			? currentEmbedCodes?.fullHeightEmbedCode
-			: selectedEmbedOption === EMBED_OPTIONS.SCROLL
-				? currentEmbedCodes?.scrollableEmbedCode
-				: null;
-
-	if ( ! embedHtml ) {
-		return null;
-	}
+		( EMBED_OPTIONS.SCROLL === selectedEmbedOption &&
+			currentEmbedCodes?.scrollableEmbedCode ) ||
+		currentEmbedCodes?.fullHeightEmbedCode ||
+		currentEmbedCodes?.scrollableEmbedCode ||
+		null;
 
 	const containerRef = useRef( null );
 
@@ -70,12 +73,21 @@ export const CerosPreview = ( { currentEmbedCodes, selectedEmbedOption } ) => {
 		} );
 	}, [ embedHtml ] );
 
+	if ( ! embedHtml ) {
+		return null;
+	}
+
+	const isInline = deliveryMode === DELIVERY_MODES.INLINE;
+
 	return (
 		<div className="ceros-block__preview-section">
-			<div
-				ref={ containerRef }
-				className="ceros-block__preview"
-			/>
+			{ isInline && (
+				<p className="ceros-block__preview-note">
+					Published as Flex Inline (iframeless). Preview shown as an
+					iframe.
+				</p>
+			) }
+			<div ref={ containerRef } className="ceros-block__preview" />
 		</div>
 	);
 };
