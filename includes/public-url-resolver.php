@@ -124,13 +124,23 @@ function ceros_resolve_public_experience_url( $raw_url ) {
 				ceros_build_flex_embed_codes( $experience_url, $manifest_url, $manifest )
 			);
 		}
+
+		// The manifest URL was advertised via the header — the experience
+		// positively identified itself as Flex — but the manifest didn't load.
+		// Surface that failure rather than misclassifying it below as "not a Ceros
+		// experience". (A *constructed* Ceros-host URL failing is the normal Studio
+		// case, so it falls through to the Studio embed instead.)
+		if ( '' !== $header_manifest ) {
+			return new WP_Error(
+				'ceros_manifest_unavailable',
+				__( 'This is a Ceros Flex experience, but its manifest couldn’t be loaded. Please try again in a moment.', 'ceros' )
+			);
+		}
 	}
 
-	// No trusted Flex manifest. Fall back to a legacy Studio embed — but only for a
+	// No Flex manifest. Fall back to a legacy Studio embed — but only for a
 	// Ceros-owned host, so the scroll-proxy <script> we inject is always served from
-	// a Ceros TLD. A non-Ceros host (e.g. a vanity Studio domain) has no trustworthy
-	// injection origin via this keyless flow, so we send the editor to the API-key
-	// Browse path instead.
+	// a Ceros TLD.
 	if ( $pasted_is_ceros ) {
 		return array_merge(
 			[
@@ -141,9 +151,12 @@ function ceros_resolve_public_experience_url( $raw_url ) {
 		);
 	}
 
+	// A non-Ceros host that gave no Flex signal. Vanity-domain Flex experiences
+	// resolve above (via the x-flex-manifest header); reaching here means we can't
+	// safely identify or embed this URL without authenticated API access.
 	return new WP_Error(
 		'ceros_not_ceros',
-		__( 'This doesn’t look like a Ceros experience. For vanity-domain or Studio experiences, add a Ceros API key and use Browse.', 'ceros' )
+		__( 'This URL isn’t on a recognized Ceros domain and didn’t identify itself as a Ceros experience. To embed it, add a Ceros API key and use Browse.', 'ceros' )
 	);
 }
 
