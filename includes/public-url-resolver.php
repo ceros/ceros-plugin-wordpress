@@ -209,14 +209,15 @@ function ceros_is_ceros_owned_url( $url ) {
  * string / fragment so the result is a clean experience root URL.
  *
  * @param string $url The pasted URL.
- * @return string The canonical experience URL.
+ * @return string The canonical experience URL, or '' when the input has no
+ *                scheme/host (an invalid URL no experience can be derived from).
  */
 function ceros_derive_experience_url( $url ) {
 	$url   = trim( (string) $url );
 	$parts = wp_parse_url( $url );
 
 	if ( empty( $parts['scheme'] ) || empty( $parts['host'] ) ) {
-		return $url;
+		return '';
 	}
 
 	$path = isset( $parts['path'] ) ? $parts['path'] : '';
@@ -236,11 +237,11 @@ function ceros_derive_experience_url( $url ) {
  * Build the manifest URL to probe for a pasted experience URL.
  *
  * If the pasted URL already points at a manifest file, that URL is used
- * (minus query/fragment); otherwise `manifest.v0.json` is appended to the
- * derived experience URL.
+ * (minus query/fragment); otherwise the configured manifest filename
+ * (`CEROS_MANIFEST_FILENAME`) is appended to the derived experience URL.
  *
  * @param string $url The pasted URL.
- * @return string The manifest URL.
+ * @return string The manifest URL, or '' when no experience URL can be derived.
  */
 function ceros_build_manifest_url( $url ) {
 	$url = trim( (string) $url );
@@ -250,7 +251,8 @@ function ceros_build_manifest_url( $url ) {
 		return false === $cut ? $url : substr( $url, 0, strlen( $url ) - strlen( $cut ) );
 	}
 
-	return ceros_derive_experience_url( $url ) . '/' . CEROS_MANIFEST_FILENAME;
+	$experience_url = ceros_derive_experience_url( $url );
+	return '' === $experience_url ? '' : $experience_url . '/' . CEROS_MANIFEST_FILENAME;
 }
 
 /**

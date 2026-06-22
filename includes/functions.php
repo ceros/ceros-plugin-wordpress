@@ -132,10 +132,10 @@ function ceros_enqueue_admin_assets() {
 
 	// Localize script with API data
 	wp_localize_script( 'ceros-admin', 'cerosAdmin', [
-		'apiUrl'      => rest_url( CEROS_REST_NAMESPACE . '/' ),
-		'nonce'       => wp_create_nonce( 'wp_rest' ),
-		'isConfigured' => ceros_is_api_configured(),
-		'settingsUrl' => admin_url( 'options-general.php?page=ceros_settings' ),
+		'apiUrl'          => rest_url( CEROS_REST_NAMESPACE . '/' ),
+		'nonce'           => wp_create_nonce( 'wp_rest' ),
+		'isApiConfigured' => ceros_is_api_configured(),
+		'settingsUrl'     => admin_url( 'options-general.php?page=ceros_settings' ),
 	] );
 }
 
@@ -229,12 +229,12 @@ function ceros_enqueue_block_editor_assets() {
 		'create-block-ceros-editor-script',
 		'cerosBlockData',
 		[
-			'settingsUrl'  => admin_url( 'options-general.php?page=ceros_settings' ),
-			'apiUrl'       => rest_url( CEROS_REST_NAMESPACE . '/' ),
-			'nonce'        => wp_create_nonce( 'wp_rest' ),
+			'settingsUrl'     => admin_url( 'options-general.php?page=ceros_settings' ),
+			'apiUrl'          => rest_url( CEROS_REST_NAMESPACE . '/' ),
+			'nonce'           => wp_create_nonce( 'wp_rest' ),
 			// When false, the editor disables "Browse Experiences" and offers the
 			// paste-a-public-URL flow instead.
-			'isConfigured' => ceros_is_api_configured(),
+			'isApiConfigured' => ceros_is_api_configured(),
 		]
 	);
 }

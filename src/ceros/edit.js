@@ -32,39 +32,50 @@ import { PasteUrlPanel } from './components/paste-url-panel';
 import { ACTION_TYPES, DELIVERY_MODES } from './constants';
 
 /**
+ * Read a localized setting from either the block-editor (`cerosBlockData`) or
+ * the legacy admin (`cerosAdmin`) global, preferring the former.
+ *
+ * @param {string} key The setting key to read.
+ * @return {*} The value, or undefined when neither global provides it.
+ */
+function getCerosData( key ) {
+	if ( typeof window === 'undefined' ) {
+		return undefined;
+	}
+	if (
+		window.cerosBlockData &&
+		typeof window.cerosBlockData[ key ] !== 'undefined'
+	) {
+		return window.cerosBlockData[ key ];
+	}
+	if ( window.cerosAdmin && typeof window.cerosAdmin[ key ] !== 'undefined' ) {
+		return window.cerosAdmin[ key ];
+	}
+	return undefined;
+}
+
+/**
  * Whether a Ceros API key is configured. When false, experience browsing is
  * disabled and the editor offers the paste-a-public-URL flow instead.
  *
- * @return {boolean} True if an API key is configured.
+ * Read once at module load: the flag is injected by PHP (`wp_localize_script`)
+ * at page load and cannot change during an editor session, so it is a plain
+ * module constant rather than reactive state — which is why the effects that
+ * read it intentionally omit it from their dependency arrays.
+ *
+ * @type {boolean}
  */
-function getIsApiKeyConfigured() {
-	if (
-		window.cerosBlockData &&
-		typeof window.cerosBlockData.isConfigured !== 'undefined'
-	) {
-		return Boolean( window.cerosBlockData.isConfigured );
-	}
-	if (
-		window.cerosAdmin &&
-		typeof window.cerosAdmin.isConfigured !== 'undefined'
-	) {
-		return Boolean( window.cerosAdmin.isConfigured );
-	}
-	return false;
-}
+const IS_API_KEY_CONFIGURED = Boolean( getCerosData( 'isApiConfigured' ) );
 
 /**
  * Get the Ceros settings URL, handling various WordPress admin URL configurations
  */
 function getCerosSettingsUrl() {
-	// Method 1: Use server-provided settings URL (most reliable)
-	if (window.cerosBlockData && window.cerosBlockData.settingsUrl) {
-		return window.cerosBlockData.settingsUrl;
-	}
-
-	// Method 2: Check legacy cerosAdmin data
-	if (window.cerosAdmin && window.cerosAdmin.settingsUrl) {
-		return window.cerosAdmin.settingsUrl;
+	// Method 1/2: Use the server-provided settings URL from either global
+	// (most reliable).
+	const providedUrl = getCerosData( 'settingsUrl' );
+	if ( providedUrl ) {
+		return providedUrl;
 	}
 
 	// Fallback methods for when server data isn't available
@@ -471,10 +482,6 @@ export default function Edit( { attributes, setAttributes, clientId } ) {
 		},
 	} = state;
 
-	// Whether a Ceros API key is configured. Gates the "Browse Experiences"
-	// affordances and switches the empty state to the paste-a-URL flow.
-	const isApiKeyConfigured = getIsApiKeyConfigured();
-
 	// Determine if this block is currently selected (used to detect insertion)
 	const isSelected = useSelect( ( select ) => {
 		const selectedId = select( 'core/block-editor' ).getSelectedBlockClientId?.();
@@ -638,7 +645,7 @@ export default function Edit( { attributes, setAttributes, clientId } ) {
 	useEffect( () => {
 		// Without an API key the tree endpoints will fail; skip the fetch so the
 		// editor shows the paste-a-URL flow instead of an API-key error.
-		if ( ! isApiKeyConfigured ) {
+		if ( ! IS_API_KEY_CONFIGURED ) {
 			dispatch( { type: ACTION_TYPES.SET_LOADING_TREE, payload: false } );
 			return;
 		}
@@ -1045,7 +1052,7 @@ export default function Edit( { attributes, setAttributes, clientId } ) {
 	// Opening the experience picker requires an API key. Without one, reset the
 	// block back to the empty state so the author can paste a different URL.
 	const handleOpenPicker = () => {
-		if ( isApiKeyConfigured ) {
+		if ( IS_API_KEY_CONFIGURED ) {
 			dispatch( { type: ACTION_TYPES.OPEN_MODAL } );
 			return;
 		}
@@ -1216,7 +1223,7 @@ export default function Edit( { attributes, setAttributes, clientId } ) {
 						/>
 					</div>
 				) : !isModalOpen && !currentAccountError && (
-					isApiKeyConfigured ? (
+					IS_API_KEY_CONFIGURED ? (
 						<div className="ceros-block__empty">
 							<h3>No Experience Selected</h3>
 							<p>Click the button below to browse and select a Ceros experience.</p>
