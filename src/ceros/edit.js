@@ -28,20 +28,54 @@ import apiFetch from '@wordpress/api-fetch';
 import { CerosModal } from './components/modal';
 import { CerosPreview } from './components/preview';
 import { SidebarControls } from './components/sidebar-controls';
+import { PasteUrlPanel } from './components/paste-url-panel';
 import { ACTION_TYPES, DELIVERY_MODES } from './constants';
+
+/**
+ * Read a localized setting from either the block-editor (`cerosBlockData`) or
+ * the legacy admin (`cerosAdmin`) global, preferring the former.
+ *
+ * @param {string} key The setting key to read.
+ * @return {*} The value, or undefined when neither global provides it.
+ */
+function getCerosData( key ) {
+	if ( typeof window === 'undefined' ) {
+		return undefined;
+	}
+	if (
+		window.cerosBlockData &&
+		typeof window.cerosBlockData[ key ] !== 'undefined'
+	) {
+		return window.cerosBlockData[ key ];
+	}
+	if ( window.cerosAdmin && typeof window.cerosAdmin[ key ] !== 'undefined' ) {
+		return window.cerosAdmin[ key ];
+	}
+	return undefined;
+}
+
+/**
+ * Whether a Ceros API key is configured. When false, experience browsing is
+ * disabled and the editor offers the paste-a-public-URL flow instead.
+ *
+ * Read once at module load: the flag is injected by PHP (`wp_localize_script`)
+ * at page load and cannot change during an editor session, so it is a plain
+ * module constant rather than reactive state — which is why the effects that
+ * read it intentionally omit it from their dependency arrays.
+ *
+ * @type {boolean}
+ */
+const IS_API_KEY_CONFIGURED = Boolean( getCerosData( 'isApiConfigured' ) );
 
 /**
  * Get the Ceros settings URL, handling various WordPress admin URL configurations
  */
 function getCerosSettingsUrl() {
-	// Method 1: Use server-provided settings URL (most reliable)
-	if (window.cerosBlockData && window.cerosBlockData.settingsUrl) {
-		return window.cerosBlockData.settingsUrl;
-	}
-
-	// Method 2: Check legacy cerosAdmin data
-	if (window.cerosAdmin && window.cerosAdmin.settingsUrl) {
-		return window.cerosAdmin.settingsUrl;
+	// Method 1/2: Use the server-provided settings URL from either global
+	// (most reliable).
+	const providedUrl = getCerosData( 'settingsUrl' );
+	if ( providedUrl ) {
+		return providedUrl;
 	}
 
 	// Fallback methods for when server data isn't available
@@ -609,6 +643,13 @@ export default function Edit( { attributes, setAttributes, clientId } ) {
 	}, [] );
 
 	useEffect( () => {
+		// Without an API key the tree endpoints will fail; skip the fetch so the
+		// editor shows the paste-a-URL flow instead of an API-key error.
+		if ( ! IS_API_KEY_CONFIGURED ) {
+			dispatch( { type: ACTION_TYPES.SET_LOADING_TREE, payload: false } );
+			return;
+		}
+
 		const fetchAccountAndTree = async () => {
 			try {
 				// Fetch current account directly. If the API key is missing or invalid,
@@ -793,7 +834,7 @@ export default function Edit( { attributes, setAttributes, clientId } ) {
 		) {
 			nodesToAdd = [
 				{
-					name: 'No experiences found',
+					name: 'No published experiences found',
 					resourceId: `empty-${ node.resourceId }`,
 					children: [],
 					isExperience: false,
@@ -1008,6 +1049,32 @@ export default function Edit( { attributes, setAttributes, clientId } ) {
 			)
 		);
 
+	// Opening the experience picker requires an API key. Without one, reset the
+	// block back to the empty state so the author can paste a different URL.
+	const handleOpenPicker = () => {
+		if ( IS_API_KEY_CONFIGURED ) {
+			dispatch( { type: ACTION_TYPES.OPEN_MODAL } );
+			return;
+		}
+		dispatch( {
+			type: ACTION_TYPES.SET_EMBED_CODES,
+			payload: {
+				fullHeightEmbedCode: '',
+				scrollableEmbedCode: '',
+				inlineEmbedCode: '',
+			},
+		} );
+		setAttributes( {
+			fullHeightEmbedCode: '',
+			scrollableEmbedCode: '',
+			inlineEmbedCode: '',
+			experienceName: '',
+			experienceResourceId: '',
+			deliveryMode: DELIVERY_MODES.IFRAME,
+			selectedOption: 'full',
+		} );
+	};
+
 	return (
 		<>
 			{/* Toolbar Controls */}
@@ -1082,7 +1149,7 @@ export default function Edit( { attributes, setAttributes, clientId } ) {
 					)}
 					<ToolbarGroup>
 						<ToolbarButton
-							onClick={() => dispatch({ type: ACTION_TYPES.OPEN_MODAL })}
+							onClick={handleOpenPicker}
 							label={__('Change experience', 'ceros')}
 						>
 							{__('Replace', 'ceros')}
@@ -1102,6 +1169,7 @@ export default function Edit( { attributes, setAttributes, clientId } ) {
 					deliveryMode={deliveryMode}
 					hasInline={hasInline}
 					inlineEmbedCode={inlineEmbedCode}
+					onEdit={handleOpenPicker}
 					dispatch={dispatch}
 					setAttributes={setAttributes}
 				/>
@@ -1155,16 +1223,27 @@ export default function Edit( { attributes, setAttributes, clientId } ) {
 						/>
 					</div>
 				) : !isModalOpen && !currentAccountError && (
-					<div className="ceros-block__empty">
-						<h3>No Experience Selected</h3>
-						<p>Click the button below to browse and select a Ceros experience.</p>
-						<button
-							className="ceros-block__button ceros-block__button--primary"
-							onClick={() => dispatch({ type: ACTION_TYPES.OPEN_MODAL })}
-						>
-							Browse Experiences
-						</button>
-					</div>
+					IS_API_KEY_CONFIGURED ? (
+						<div className="ceros-block__empty">
+							<h3>No Experience Selected</h3>
+							<p>Click the button below to browse and select a Ceros experience.</p>
+							<button
+								className="ceros-block__button ceros-block__button--primary"
+								onClick={() => dispatch({ type: ACTION_TYPES.OPEN_MODAL })}
+							>
+								Browse Experiences
+							</button>
+						</div>
+					) : (
+						<PasteUrlPanel
+							dispatch={dispatch}
+							setAttributes={setAttributes}
+							settingsUrl={getCerosSettingsUrl()}
+							currentEmbedCodes={currentEmbedCodes}
+							selectedDeliveryMode={selectedDeliveryMode}
+							selectedEmbedOption={selectedEmbedOption}
+						/>
+					)
 				)}
 			</div>
 		</div>

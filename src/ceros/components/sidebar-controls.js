@@ -35,9 +35,12 @@ export function SidebarControls( {
 	deliveryMode = DELIVERY_MODES.IFRAME,
 	hasInline = false,
 	inlineEmbedCode = '',
+	onEdit,
 	dispatch,
 	setAttributes,
 } ) {
+	const handleEdit =
+		onEdit || ( () => dispatch( { type: ACTION_TYPES.OPEN_MODAL } ) );
 	const isInlineDelivery = deliveryMode === DELIVERY_MODES.INLINE;
 	return (
 		<InspectorControls>
@@ -56,9 +59,7 @@ export function SidebarControls( {
 						</div>
 						<Button
 							className="ceros-sidebar__file-edit-btn"
-							onClick={ () =>
-								dispatch( { type: ACTION_TYPES.OPEN_MODAL } )
-							}
+							onClick={ handleEdit }
 							icon={
 								<svg
 									xmlns="http://www.w3.org/2000/svg"

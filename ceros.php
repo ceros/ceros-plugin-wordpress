@@ -49,6 +49,20 @@ if ( ! defined( 'CEROS_ENDPOINT_CURRENT_ACCOUNT' ) ) {
 if ( ! defined( 'CEROS_PLUGIN_IDENTIFIER' ) ) {
 	define( 'CEROS_PLUGIN_IDENTIFIER', 'wordpress' );
 }
+// Public (API-key-less) experience resolution.
+if ( ! defined( 'CEROS_FLEX_ASSETS_BASE' ) ) {
+	// CDN that serves the Flex host-page runtime scripts (embed.v1.js, flex-client.js).
+	define( 'CEROS_FLEX_ASSETS_BASE', 'https://assets.ceros.site' );
+}
+if ( ! defined( 'CEROS_LEGACY_VIEW_HOST' ) ) {
+	// Default host for legacy Studio experiences / the scroll-proxy script.
+	define( 'CEROS_LEGACY_VIEW_HOST', 'view.ceros.com' );
+}
+if ( ! defined( 'CEROS_MANIFEST_FILENAME' ) ) {
+	// Public, unauthenticated Flex Inline manifest filename. The major version in
+	// the filename tracks the manifest schema major: v1 as of Early Access.
+	define( 'CEROS_MANIFEST_FILENAME', 'manifest.v1.json' );
+}
 
 // Core classes.
 require_once plugin_dir_path( __FILE__ ) . 'includes/class-ceros-encryption.php';
@@ -56,6 +70,11 @@ require_once plugin_dir_path( __FILE__ ) . 'includes/class-ceros-api.php';
 
 // Helper functions (must load before settings/rest/ajax which depend on them).
 require_once plugin_dir_path( __FILE__ ) . 'includes/functions.php';
+
+// Public (API-key-less) experience URL resolver — detects Flex vs legacy and
+// builds embed codes from a pasted public experience URL. Relies on
+// ceros_is_public_host() (settings.php) at request time.
+require_once plugin_dir_path( __FILE__ ) . 'includes/public-url-resolver.php';
 
 // Settings page, sanitization, and admin menu.
 require_once plugin_dir_path( __FILE__ ) . 'includes/settings.php';

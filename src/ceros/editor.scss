@@ -4,13 +4,21 @@
  * Replace them with your own styles or remove the file completely.
  */
 
+// Shared color tokens. Named so the near-identical grays below are
+// unambiguous: $ceros-border (gray-200) is the container/list border, while
+// $ceros-border-muted (slate-200) is the lighter button/divider border.
+$ceros-text: rgb(2, 8, 23); // near-black headings / icons
+$ceros-text-muted: rgb(107, 114, 128); // secondary / helper text
+$ceros-border: rgb(229, 231, 235); // container & list borders
+$ceros-border-muted: rgb(226, 232, 240); // button & divider borders
+
 .ceros-block {
 	padding: 1.5rem;
 	cursor: pointer;
-	border: 1px solid rgb(229, 231, 235);
+	border: 1px solid $ceros-border;
 
 	h2 {
-		color: rgb(2, 8, 23);
+		color: $ceros-text;
 		font-size: 1.125rem;
 		line-height: 1;
 		letter-spacing: -0.025em;
@@ -73,7 +81,7 @@
 		height: 300px;
 		max-height: 300px;
 		overflow-y: auto;
-		border: 1px solid rgb(229, 231, 235);
+		border: 1px solid $ceros-border;
 		border-radius: 8px;
 		padding: 0.5rem;
 	}
@@ -141,7 +149,7 @@
 			height: 1rem;
 
 			&.-arrow {
-				stroke: rgb(107, 114, 128);
+				stroke: $ceros-text-muted;
 			}
 
 			&.-folder {
@@ -160,29 +168,40 @@
 		margin-top: 2rem;
 		max-width: 406px;
 
+		// Stack the option rows with consistent breathing room between each.
+		> div {
+			display: flex;
+			flex-direction: column;
+			gap: 0.875rem;
+		}
+
+		// Divider between the delivery-mode group and the iframe-size group
+		// (only drawn when both are shown, i.e. iframe delivery).
+		& + & {
+			border-top: 1px solid $ceros-border-muted;
+			padding-top: 0.875rem;
+		}
+
 		&-label {
 			display: flex;
 			gap: 0.375rem;
-			color: rgb(2, 8, 23);
+			color: $ceros-text;
 			font-size: 0.75rem;
 			font-weight: 500;
-    		line-height: 1rem;
-
-			&:first-child {
-				margin-bottom: 0.5rem;
-			}
+			line-height: 1.45;
 
 			span {
 				display: flex;
-				gap: 0.375rem;
+				gap: 0.25rem;
 				font-weight: 400;
 				flex-direction: column;
 			}
 		}
 
 		&-description {
-			color: rgb(107, 114, 128);
+			color: $ceros-text-muted;
 			font-size: 0.75rem;
+			line-height: 1.45;
 		}
 
 		input[type="radio"] {
@@ -272,7 +291,7 @@
 			svg {
 				width: 1rem;
 				height: 1rem;
-				stroke: rgb(2, 8, 23);
+				stroke: $ceros-text;
 			}
 		}
 
@@ -295,7 +314,7 @@
 			align-items: flex-start;
 
 			h2 {
-				color: rgb(2, 8, 23);
+				color: $ceros-text;
 				font-size: 1.125rem;
 				line-height: 1;
 				letter-spacing: -0.025em;
@@ -354,13 +373,13 @@
 		}
 
 		&--secondary {
-			color: rgb(2, 8, 23);
+			color: $ceros-text;
 			background-color: transparent;
-			border-color: rgb(226, 232, 240);
+			border-color: $ceros-border-muted;
 
 			&:hover {
 				background-color: rgb(241, 245, 249);
-				border-color: rgb(226, 232, 240);
+				border-color: $ceros-border-muted;
 			}
 		}
 	}
@@ -526,4 +545,124 @@
 	color: #757575;
 	font-size: 0.75rem;
 	line-height: 1.4;
+}
+
+// Empty state (no experience selected / paste-a-URL flow).
+.ceros-block__empty {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 0.75rem;
+	text-align: center;
+	padding: 2rem 1rem;
+
+	h3 {
+		margin: 0;
+		font-size: 1.0625rem;
+		font-weight: 600;
+		color: $ceros-text;
+	}
+
+	p {
+		margin: 0;
+		max-width: 460px;
+		color: #57606a;
+		font-size: 0.875rem;
+		line-height: 1.5;
+	}
+
+	.ceros-block__button {
+		color: white;
+		font-size: 0.875rem;
+		line-height: 1.25rem;
+		padding: 0.5rem 1rem;
+		border-radius: 0.375rem;
+		cursor: pointer;
+		border: 1px solid transparent;
+		transition: background-color 0.2s ease-in-out;
+
+		&--primary {
+			background-color: rgb(37, 99, 235);
+			border-color: rgb(37, 99, 235);
+
+			&:hover {
+				background-color: rgb(29, 78, 216);
+			}
+
+			&:disabled {
+				opacity: 0.5;
+				cursor: not-allowed;
+			}
+		}
+	}
+}
+
+// Paste-a-public-URL controls inside the empty state.
+.ceros-block__paste {
+	width: 100%;
+	max-width: 520px;
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+	margin-top: 0.5rem;
+	text-align: left;
+
+	&-label {
+		font-size: 0.8125rem;
+		font-weight: 500;
+		color: $ceros-text;
+	}
+
+	&-row {
+		display: flex;
+		gap: 0.5rem;
+		align-items: stretch;
+
+		.ceros-block__button {
+			white-space: nowrap;
+		}
+	}
+
+	&-input {
+		flex: 1;
+		min-width: 0;
+		padding: 0.5rem 0.625rem;
+		border: 1px solid #949494;
+		border-radius: 0.375rem;
+		font-size: 0.875rem;
+	}
+
+	&-error {
+		margin: 0;
+		color: #b91c1c;
+		font-size: 0.8125rem;
+	}
+
+	&-result {
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+		padding: 0.75rem;
+		margin-top: 0.25rem;
+		border: 1px solid $ceros-border;
+		border-radius: 0.5rem;
+		background: #f8fafc;
+
+		// The options block carries a 2rem top margin for the modal footer; in
+		// the paste panel the heading sits right above it, so collapse that gap.
+		.ceros-block__embed-options {
+			margin-top: 0;
+		}
+	}
+
+	&-type {
+		margin: 0;
+		font-size: 0.8125rem;
+		font-weight: 500;
+		color: $ceros-text;
+	}
+
+	&-hint {
+		font-size: 0.75rem;
+	}
 }

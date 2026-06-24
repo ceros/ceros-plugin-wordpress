@@ -1,6 +1,6 @@
 export const CerosModalHeader = ( { onClose } ) => (
 	<div className="ceros-block__modal-header">
-		<h2>Browse Ceros Content</h2>
+		<h2>Browse Published Ceros Content</h2>
 		<button className="ceros-block__modal-close" onClick={ onClose }>
 			<svg
 				xmlns="http://www.w3.org/2000/svg"

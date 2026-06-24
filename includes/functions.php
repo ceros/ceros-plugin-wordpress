@@ -132,10 +132,10 @@ function ceros_enqueue_admin_assets() {
 
 	// Localize script with API data
 	wp_localize_script( 'ceros-admin', 'cerosAdmin', [
-		'apiUrl'      => rest_url( CEROS_REST_NAMESPACE . '/' ),
-		'nonce'       => wp_create_nonce( 'wp_rest' ),
-		'isConfigured' => ceros_is_api_configured(),
-		'settingsUrl' => admin_url( 'options-general.php?page=ceros_settings' ),
+		'apiUrl'          => rest_url( CEROS_REST_NAMESPACE . '/' ),
+		'nonce'           => wp_create_nonce( 'wp_rest' ),
+		'isApiConfigured' => ceros_is_api_configured(),
+		'settingsUrl'     => admin_url( 'options-general.php?page=ceros_settings' ),
 	] );
 }
 
@@ -229,9 +229,12 @@ function ceros_enqueue_block_editor_assets() {
 		'create-block-ceros-editor-script',
 		'cerosBlockData',
 		[
-			'settingsUrl' => admin_url( 'options-general.php?page=ceros_settings' ),
-			'apiUrl'      => rest_url( CEROS_REST_NAMESPACE . '/' ),
-			'nonce'       => wp_create_nonce( 'wp_rest' ),
+			'settingsUrl'     => admin_url( 'options-general.php?page=ceros_settings' ),
+			'apiUrl'          => rest_url( CEROS_REST_NAMESPACE . '/' ),
+			'nonce'           => wp_create_nonce( 'wp_rest' ),
+			// When false, the editor disables "Browse Experiences" and offers the
+			// paste-a-public-URL flow instead.
+			'isApiConfigured' => ceros_is_api_configured(),
 		]
 	);
 }
@@ -281,13 +284,17 @@ function ceros_get_allowed_embed_html() {
 			'allow'           => true,
 			'loading'         => true,
 			'title'           => true,
+			// Legacy Studio (scroll-proxy) embeds set scrolling="no" on the iframe.
+			'scrolling'       => true,
 		],
 		'script' => [
-			'id'    => true,
-			'src'   => true,
-			'async' => true,
-			'defer' => true,
-			'type'  => true,
+			'id'      => true,
+			'src'     => true,
+			'async'   => true,
+			'defer'   => true,
+			'type'    => true,
+			// The legacy scroll-proxy script carries data-ceros-origin-domains.
+			'data-*'  => true,
 		],
 		'style'  => [
 			'type' => true,
