@@ -11,11 +11,32 @@ export const EMBED_OPTIONS = {
  *
  * - IFRAME: the classic iframe embed (works for every experience).
  * - INLINE: Flex Inline — iframeless, Shadow DOM (Flex experiences only, Beta).
+ * - SSR: Flex SSR — the WP server fetches the manifest and renders the
+ *   experience HTML inline; the browser only loads a hydration script
+ *   (Flex experiences only, Beta).
  */
 export const DELIVERY_MODES = {
 	IFRAME: 'iframe',
 	INLINE: 'inline',
+	SSR: 'ssr',
 };
+
+/**
+ * Extract the manifest URL from a Flex Inline snippet's
+ * `data-flex-manifest-url` attribute. Returns '' when not present.
+ *
+ * @param {string} inlineEmbedCode The Flex Inline snippet.
+ * @return {string} The manifest URL, or ''.
+ */
+export function manifestUrlFromInline( inlineEmbedCode ) {
+	if ( ! inlineEmbedCode || typeof inlineEmbedCode !== 'string' ) {
+		return '';
+	}
+	const match = inlineEmbedCode.match(
+		/data-flex-manifest-url="([^"]+)"/i
+	);
+	return match ? match[ 1 ] : '';
+}
 
 /**
  * Action types for the reducer

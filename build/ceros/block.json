@@ -44,6 +44,10 @@
     "inlineEmbedCode": {
       "type": "string",
       "default": ""
+    },
+    "manifestUrl": {
+      "type": "string",
+      "default": ""
     }
   },
   "render": "file:./render.php",

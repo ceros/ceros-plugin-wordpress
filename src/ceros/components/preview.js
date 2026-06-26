@@ -77,15 +77,19 @@ export const CerosPreview = ( {
 		return null;
 	}
 
-	const isInline = deliveryMode === DELIVERY_MODES.INLINE;
+	// Inline and SSR both publish without an iframe, but the editor preview is
+	// always the isolated iframe — surface a short note explaining that.
+	let note = '';
+	if ( deliveryMode === DELIVERY_MODES.INLINE ) {
+		note = 'Published as Flex Inline (iframeless). Preview shown as an iframe.';
+	} else if ( deliveryMode === DELIVERY_MODES.SSR ) {
+		note = 'Published as Flex SSR (server-rendered). Preview shown as an iframe.';
+	}
 
 	return (
 		<div className="ceros-block__preview-section">
-			{ isInline && (
-				<p className="ceros-block__preview-note">
-					Published as Flex Inline (iframeless). Preview shown as an
-					iframe.
-				</p>
+			{ note && (
+				<p className="ceros-block__preview-note">{ note }</p>
 			) }
 			<div ref={ containerRef } className="ceros-block__preview" />
 		</div>

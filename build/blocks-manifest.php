@@ -47,6 +47,10 @@ return array(
 			'inlineEmbedCode' => array(
 				'type' => 'string',
 				'default' => ''
+			),
+			'manifestUrl' => array(
+				'type' => 'string',
+				'default' => ''
 			)
 		),
 		'render' => 'file:./render.php',

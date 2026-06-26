@@ -71,10 +71,17 @@ require_once plugin_dir_path( __FILE__ ) . 'includes/class-ceros-api.php';
 // Helper functions (must load before settings/rest/ajax which depend on them).
 require_once plugin_dir_path( __FILE__ ) . 'includes/functions.php';
 
+// Flex manifest fetching (shared by the public-URL resolver and SSR renderer).
+require_once plugin_dir_path( __FILE__ ) . 'includes/flex-manifest.php';
+
 // Public (API-key-less) experience URL resolver — detects Flex vs legacy and
 // builds embed codes from a pasted public experience URL. Relies on
 // ceros_is_public_host() (settings.php) at request time.
 require_once plugin_dir_path( __FILE__ ) . 'includes/public-url-resolver.php';
+
+// Flex SSR (Beta) renderer — server-side fetches the manifest and renders the
+// experience's pre-rendered HTML body, with deep-link support.
+require_once plugin_dir_path( __FILE__ ) . 'includes/flex-ssr-renderer.php';
 
 // Settings page, sanitization, and admin menu.
 require_once plugin_dir_path( __FILE__ ) . 'includes/settings.php';

@@ -1,6 +1,6 @@
 import { EmbedOptions } from './embed-options';
 import { DeliveryOptions } from './delivery-options';
-import { DELIVERY_MODES } from '../constants';
+import { DELIVERY_MODES, manifestUrlFromInline } from '../constants';
 
 export const CerosModalFooter = ( {
 	onClose,
@@ -26,7 +26,9 @@ export const CerosModalFooter = ( {
 	const effectiveDeliveryMode = hasInline
 		? selectedDeliveryMode
 		: DELIVERY_MODES.IFRAME;
-	const isInline = effectiveDeliveryMode === DELIVERY_MODES.INLINE;
+	// The iframe sizing options only apply to the iframe delivery mode (the
+	// inline and SSR modes have no full-vs-scroll choice).
+	const isIframe = effectiveDeliveryMode === DELIVERY_MODES.IFRAME;
 
 	return (
 		<div className="ceros-block__modal-footer">
@@ -36,8 +38,7 @@ export const CerosModalFooter = ( {
 					setSelectedDeliveryMode={ setSelectedDeliveryMode }
 				/>
 			) }
-			{ /* The iframe sizing options only apply to the iframe delivery mode. */ }
-			{ ! isInline && (
+			{ isIframe && (
 				<EmbedOptions
 					currentEmbedCodes={ currentEmbedCodes }
 					selectedEmbedOption={ selectedEmbedOption }
@@ -73,6 +74,11 @@ export const CerosModalFooter = ( {
 								// Commit the delivery mode chosen in the picker
 								// (forced back to iframe for non-Flex experiences).
 								deliveryMode: effectiveDeliveryMode,
+								// Manifest URL drives the SSR delivery mode's
+								// server-side fetch; derived from the inline snippet.
+								manifestUrl: manifestUrlFromInline(
+									currentEmbedCodes.inlineEmbedCode || ''
+								),
 							} );
 							onClose();
 						}

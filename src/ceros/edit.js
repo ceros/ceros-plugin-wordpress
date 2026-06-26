@@ -985,7 +985,9 @@ export default function Edit( { attributes, setAttributes, clientId } ) {
 	const inlineEmbedCode =
 		attributes.inlineEmbedCode || currentEmbedCodes?.inlineEmbedCode || '';
 	const hasInline = hasEmbedCode( inlineEmbedCode );
-	const isInlineDelivery = deliveryMode === DELIVERY_MODES.INLINE;
+	// The iframe embed-size dropdown only applies to the iframe delivery mode
+	// (inline and SSR have no full-vs-scroll choice).
+	const isIframeDelivery = deliveryMode === DELIVERY_MODES.IFRAME;
 
 	// Always use saved attributes for block preview to ensure it doesn't change until confirmed
 	// This ensures the preview stays visible and unchanged when modal opens or new item is selected
@@ -1068,6 +1070,7 @@ export default function Edit( { attributes, setAttributes, clientId } ) {
 			fullHeightEmbedCode: '',
 			scrollableEmbedCode: '',
 			inlineEmbedCode: '',
+			manifestUrl: '',
 			experienceName: '',
 			experienceResourceId: '',
 			deliveryMode: DELIVERY_MODES.IFRAME,
@@ -1080,7 +1083,7 @@ export default function Edit( { attributes, setAttributes, clientId } ) {
 			{/* Toolbar Controls */}
 			{showToolbar && (
 				<BlockControls>
-					{!isInlineDelivery && (
+					{isIframeDelivery && (
 					<ToolbarGroup>
 						<DropdownMenu
 							icon={getCurrentIcon()}

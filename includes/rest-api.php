@@ -294,6 +294,10 @@ function ceros_rest_resolve_public_url( WP_REST_Request $request ) {
 		$result[ $key ] = ceros_sanitize_embed_code( isset( $result[ $key ] ) ? $result[ $key ] : '' );
 	}
 
+	if ( isset( $result['manifestUrl'] ) ) {
+		$result['manifestUrl'] = esc_url_raw( $result['manifestUrl'] );
+	}
+
 	return new WP_REST_Response( $result, 200 );
 }
 

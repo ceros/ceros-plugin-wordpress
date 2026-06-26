@@ -59,7 +59,8 @@ export function PasteUrlPanel( {
 			String( currentEmbedCodes.inlineEmbedCode ).trim()
 	);
 	const deliveryMode = hasInline ? selectedDeliveryMode : DELIVERY_MODES.IFRAME;
-	const isInline = deliveryMode === DELIVERY_MODES.INLINE;
+	// Full-vs-scroll sizing only applies to the iframe delivery mode.
+	const isIframe = deliveryMode === DELIVERY_MODES.IFRAME;
 
 	async function handleLoad() {
 		const trimmed = url.trim();
@@ -100,6 +101,7 @@ export function PasteUrlPanel( {
 			setResolved( {
 				isFlex: Boolean( res.isFlex ),
 				viewUrl: res.viewUrl || trimmed,
+				manifestUrl: res.manifestUrl || '',
 			} );
 		} catch ( err ) {
 			setError(
@@ -125,6 +127,8 @@ export function PasteUrlPanel( {
 			inlineEmbedCode: currentEmbedCodes.inlineEmbedCode || '',
 			selectedOption: selectedEmbedOption,
 			deliveryMode: hasInline ? selectedDeliveryMode : DELIVERY_MODES.IFRAME,
+			// Manifest URL drives the SSR delivery mode's server-side fetch.
+			manifestUrl: resolved?.manifestUrl || '',
 			experienceName: experienceNameFromUrl( resolved?.viewUrl || url ),
 			// No resource id is available via the public URL flow.
 			experienceResourceId: '',
@@ -215,7 +219,7 @@ export function PasteUrlPanel( {
 							/>
 						) }
 
-						{ ! isInline && (
+						{ isIframe && (
 							<EmbedOptions
 								currentEmbedCodes={ currentEmbedCodes }
 								selectedEmbedOption={ selectedEmbedOption }
