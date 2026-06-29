@@ -252,11 +252,17 @@ function ceros_store_download_asset( $from, $abs_base, $path, &$seen ) {
 }
 
 /**
- * Validate a server-supplied relative asset path before writing it: strip the
- * leading slash, reject `.`/`..` traversal and any segment with characters
- * outside the rewrite's `[A-Za-z0-9._-]` alphabet. Returns '' if unsafe.
+ * Validate a server-supplied relative asset path before writing it.
  *
- * @param string $path The relative path from the rewrite map.
+ * `path` is the decoded filesystem path the asset must live at (its `to` URL is
+ * that path percent-encoded under baseUrl, so the web server decodes the request
+ * back to this name). Real Ceros keys contain spaces, commas, parentheses, etc.,
+ * so we cannot restrict to a narrow alphabet — instead we strip the leading
+ * slash and reject only what is actually dangerous: empty / `.` / `..` segments
+ * (directory traversal) and control characters or backslashes (NUL injection,
+ * Windows-style traversal). Returns '' if unsafe.
+ *
+ * @param string $path The decoded relative path from the rewrite map.
  * @return string The safe relative path, or '' when rejected.
  */
 function ceros_store_safe_rel_path( $path ) {
@@ -269,7 +275,9 @@ function ceros_store_safe_rel_path( $path ) {
 		if ( '' === $segment || '.' === $segment || '..' === $segment ) {
 			return '';
 		}
-		if ( preg_match( '/[^A-Za-z0-9._-]/', $segment ) ) {
+		// Block control chars / NUL and backslashes; everything else (spaces,
+		// commas, parens, unicode) is a legitimate filename character.
+		if ( preg_match( '/[\x00-\x1f\x7f\\\\]/', $segment ) ) {
 			return '';
 		}
 		$out[] = $segment;
