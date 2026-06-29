@@ -192,7 +192,16 @@ function ceros_is_ceros_owned_url( $url ) {
 		return false;
 	}
 
-	$domains = [ 'ceros.com', 'ceros.site', 'cerosdev.site', 'cerosstage.site' ];
+	// Studio/view lives on the `.com` family (prod `ceros.com`, dev `cerosdev.com`,
+	// stage `cerosstage.com`); Flex assets/players on the `.site` family.
+	$domains = [
+		'ceros.com',
+		'cerosdev.com',
+		'cerosstage.com',
+		'ceros.site',
+		'cerosdev.site',
+		'cerosstage.site',
+	];
 	foreach ( $domains as $domain ) {
 		if ( $host === $domain ) {
 			return true;
