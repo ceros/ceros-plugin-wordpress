@@ -35,7 +35,9 @@ export function StoreControls( {
 } ) {
 	const [ isBusy, setIsBusy ] = useState( false );
 	const [ error, setError ] = useState( '' );
-	const [ updateAvailable, setUpdateAvailable ] = useState( false );
+	// '' = up to date; 'experience' = republished (publishedAt changed);
+	// 'flex' = Flex runtime rebuilt (flexVersion changed, content unchanged).
+	const [ updateReason, setUpdateReason ] = useState( '' );
 
 	const postId = useSelect(
 		( select ) => select( 'core/editor' )?.getCurrentPostId?.() || 0,
@@ -47,7 +49,7 @@ export function StoreControls( {
 	// against, so experiences stored before this field existed don't false-positive.
 	useEffect( () => {
 		if ( ! storedAt || ! manifestUrl ) {
-			setUpdateAvailable( false );
+			setUpdateReason( '' );
 			return;
 		}
 		if ( ! storedPublishedAt && ! storedFlexVersion ) {
@@ -64,19 +66,28 @@ export function StoreControls( {
 				if ( cancelled ) {
 					return;
 				}
-				const changed =
-					( storedPublishedAt &&
-						meta?.publishedAt &&
-						meta.publishedAt !== storedPublishedAt ) ||
-					( storedFlexVersion &&
-						meta?.flexVersion &&
-						meta.flexVersion !== storedFlexVersion );
-				setUpdateAvailable( Boolean( changed ) );
+				const publishedChanged =
+					storedPublishedAt &&
+					meta?.publishedAt &&
+					meta.publishedAt !== storedPublishedAt;
+				const flexChanged =
+					storedFlexVersion &&
+					meta?.flexVersion &&
+					meta.flexVersion !== storedFlexVersion;
+				// A content republish takes precedence; only attribute it to Flex
+				// when the experience itself is unchanged.
+				let reason = '';
+				if ( publishedChanged ) {
+					reason = 'experience';
+				} else if ( flexChanged ) {
+					reason = 'flex';
+				}
+				setUpdateReason( reason );
 			} )
 			.catch( () => {
 				// Best-effort: a failed check just means we don't show the hint.
 				if ( ! cancelled ) {
-					setUpdateAvailable( false );
+					setUpdateReason( '' );
 				}
 			} );
 
@@ -112,7 +123,7 @@ export function StoreControls( {
 				storedPublishedAt: res.storedPublishedAt || '',
 				storedFlexVersion: res.storedFlexVersion || '',
 			} );
-			setUpdateAvailable( false );
+			setUpdateReason( '' );
 		} catch ( err ) {
 			setError(
 				err?.error ||
@@ -134,7 +145,7 @@ export function StoreControls( {
 			storedPublishedAt: '',
 			storedFlexVersion: '',
 		} );
-		setUpdateAvailable( false );
+		setUpdateReason( '' );
 	}
 
 	let storedLabel = __( 'Not stored — rendering live.', 'ceros' );
@@ -173,12 +184,17 @@ export function StoreControls( {
 						</Button>
 					) }
 				</div>
-				{ updateAvailable && ! isBusy && (
+				{ updateReason && ! isBusy && (
 					<p className="ceros-sidebar__store-update">
-						{ __(
-							'A newer version of this experience is available — refresh to update the stored copy.',
-							'ceros'
-						) }
+						{ 'flex' === updateReason
+							? __(
+									'A new version of Flex is available — refresh to update the stored assets.',
+									'ceros'
+							  )
+							: __(
+									'A new version of this experience is available — refresh to update the stored copy.',
+									'ceros'
+							  ) }
 					</p>
 				) }
 				{ error && (
