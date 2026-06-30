@@ -557,6 +557,17 @@ $ceros-border-muted: rgb(226, 232, 240); // button & divider borders
 		flex-wrap: wrap;
 	}
 
+	&-update {
+		margin: 0;
+		font-size: 12px;
+		font-weight: 500;
+		color: #946200;
+		background: #fcf3e3;
+		border: 1px solid #f0d9a8;
+		border-radius: 4px;
+		padding: 6px 8px;
+	}
+
 	&-error {
 		margin: 0;
 		font-size: 12px;

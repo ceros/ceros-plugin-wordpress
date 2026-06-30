@@ -60,6 +60,14 @@
     "storedVersion": {
       "type": "string",
       "default": ""
+    },
+    "storedPublishedAt": {
+      "type": "string",
+      "default": ""
+    },
+    "storedFlexVersion": {
+      "type": "string",
+      "default": ""
     }
   },
   "render": "file:./render.php",

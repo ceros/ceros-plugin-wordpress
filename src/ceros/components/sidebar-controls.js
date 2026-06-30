@@ -196,6 +196,8 @@ export function SidebarControls( {
 							manifestUrlFromInline( inlineEmbedCode )
 						}
 						storedAt={ attributes?.storedAt || '' }
+						storedPublishedAt={ attributes?.storedPublishedAt || '' }
+						storedFlexVersion={ attributes?.storedFlexVersion || '' }
 						setAttributes={ setAttributes }
 					/>
 				</PanelBody>

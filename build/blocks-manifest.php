@@ -63,6 +63,14 @@ return array(
 			'storedVersion' => array(
 				'type' => 'string',
 				'default' => ''
+			),
+			'storedPublishedAt' => array(
+				'type' => 'string',
+				'default' => ''
+			),
+			'storedFlexVersion' => array(
+				'type' => 'string',
+				'default' => ''
 			)
 		),
 		'render' => 'file:./render.php',
