@@ -27,10 +27,19 @@ function ceros_render_block( $attributes ) {
 			</div>
 		</div>';
 
-	// Iframeless (Flex Inline) delivery: output the Ceros-provided inline snippet
-	// (the `<div data-flex-inline>` marker + flex-client.js runtime).
-	if ( 'inline' === $delivery_mode && ! empty( $attributes['inlineEmbedCode'] ) ) {
-		return ceros_sanitize_embed_code( $attributes['inlineEmbedCode'] );
+	// Iframeless (Flex Inline) delivery: regenerate the snippet (the
+	// `<div data-flex-inline>` marker + flex-client.js runtime) from the manifest
+	// at render time rather than echoing the persisted `inlineEmbedCode`. Hosts
+	// that disable `unfiltered_html` (e.g. WordPress.com) strip <script> tags out
+	// of stored post content on save, so a persisted snippet loses its runtime;
+	// a render-time <script> survives, matching the SSR path. On any failure we
+	// fall through to the iframe embed below.
+	if ( 'inline' === $delivery_mode && ! empty( $attributes['manifestUrl'] )
+		&& function_exists( 'ceros_render_flex_inline' ) ) {
+		$inline_html = ceros_render_flex_inline( $attributes['manifestUrl'] );
+		if ( '' !== $inline_html ) {
+			return $inline_html;
+		}
 	}
 
 	// Flex SSR (Beta) delivery. On any failure we fall through to the iframe
@@ -50,6 +59,21 @@ function ceros_render_block( $attributes ) {
 			if ( '' !== $ssr_html ) {
 				return $ssr_html;
 			}
+		}
+	}
+
+	// Flex iframe delivery: regenerate the iframe snippet at render time. The
+	// stored embed code's <script> is stripped on save by hosts without the
+	// `unfiltered_html` capability (e.g. WordPress.com), same as inline/SSR. A
+	// Flex block always carries a manifest URL — legacy Studio (scroll-proxy)
+	// embeds never do, so those fall through to the stored embed code below.
+	// This also serves as the WP.com-safe fallback when inline/SSR above fail.
+	if ( ! empty( $attributes['manifestUrl'] ) && function_exists( 'ceros_render_flex_iframe' ) ) {
+		$selected    = $attributes['selectedOption'] ?? 'full';
+		$height      = ( 'scroll' === $selected ) ? '800px' : 'auto';
+		$flex_iframe = ceros_render_flex_iframe( $attributes['manifestUrl'], $height );
+		if ( '' !== $flex_iframe ) {
+			return $flex_iframe;
 		}
 	}
 

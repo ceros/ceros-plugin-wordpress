@@ -414,6 +414,89 @@ function ceros_build_flex_inline_snippet( $manifest_url, $script_url ) {
 }
 
 /**
+ * Render the Flex Inline (iframeless) snippet at request time from the manifest.
+ *
+ * The inline runtime is emitted as a freshly-generated <script> during render
+ * rather than persisted on the block: hosts that disable the `unfiltered_html`
+ * capability (e.g. WordPress.com) strip <script> tags out of stored post
+ * content on save, which neuters a persisted embed snippet (the src URL is left
+ * behind as bare text and auto-linked into an <a>). Generating the snippet here
+ * mirrors the SSR renderer, whose scripts survive for exactly this reason.
+ *
+ * The flex-client URL is read from the manifest's `deliveryModes.inline` block
+ * (so vanity domains and non-prod environments resolve correctly), falling back
+ * to the production Flex assets CDN.
+ *
+ * @param string $manifest_url The manifest URL persisted on the block.
+ * @return string The inline embed snippet, or '' on any failure.
+ */
+function ceros_render_flex_inline( $manifest_url ) {
+	$manifest_url = trim( (string) $manifest_url );
+	if ( '' === $manifest_url ) {
+		return '';
+	}
+
+	$manifest = ceros_fetch_flex_manifest( $manifest_url );
+	if ( is_wp_error( $manifest ) || ! is_array( $manifest ) ) {
+		return '';
+	}
+
+	$delivery = ( isset( $manifest['deliveryModes'] ) && is_array( $manifest['deliveryModes'] ) )
+		? $manifest['deliveryModes']
+		: [];
+
+	$flex_client = ceros_first_script_url( isset( $delivery['inline'] ) ? $delivery['inline'] : [] );
+	if ( '' === $flex_client ) {
+		$flex_client = CEROS_FLEX_ASSETS_BASE . '/js/flex-client.js';
+	}
+
+	return ceros_build_flex_inline_snippet( $manifest_url, $flex_client );
+}
+
+/**
+ * Render the Flex iframe embed snippet at request time from the manifest.
+ *
+ * Like the inline and SSR paths, the iframe runtime (`embed.v1.js`) is emitted
+ * as a freshly-generated <script> during render rather than persisted on the
+ * block, so it survives on hosts that strip <script> from stored content on
+ * save (e.g. WordPress.com, which disables `unfiltered_html`).
+ *
+ * This is Flex-only: a Flex block always carries a manifest URL, whereas the
+ * legacy Studio (scroll-proxy) embed does not, so callers gate on that.
+ *
+ * @param string $manifest_url The manifest URL persisted on the block.
+ * @param string $height       'auto' (full height) or e.g. '800px' (scrollable).
+ * @return string The iframe embed snippet, or '' on any failure.
+ */
+function ceros_render_flex_iframe( $manifest_url, $height ) {
+	$manifest_url = trim( (string) $manifest_url );
+	if ( '' === $manifest_url ) {
+		return '';
+	}
+
+	$experience_url = ceros_derive_experience_url( $manifest_url );
+	if ( '' === $experience_url ) {
+		return '';
+	}
+
+	$manifest = ceros_fetch_flex_manifest( $manifest_url );
+	if ( is_wp_error( $manifest ) || ! is_array( $manifest ) ) {
+		return '';
+	}
+
+	$delivery = ( isset( $manifest['deliveryModes'] ) && is_array( $manifest['deliveryModes'] ) )
+		? $manifest['deliveryModes']
+		: [];
+
+	$embed_script = ceros_first_script_url( isset( $delivery['iframe'] ) ? $delivery['iframe'] : [] );
+	if ( '' === $embed_script ) {
+		$embed_script = CEROS_FLEX_ASSETS_BASE . '/js/embed.v1.js';
+	}
+
+	return ceros_build_flex_iframe_snippet( $experience_url, $embed_script, $height );
+}
+
+/**
  * Build legacy Studio embed codes (the classic scroll-proxy iframe) from a
  * public experience URL.
  *
