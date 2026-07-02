@@ -69,6 +69,17 @@ function ceros_resolve_public_experience_url( $raw_url ) {
 	$experience_url  = ceros_derive_experience_url( $raw_url );
 	$pasted_is_ceros = ceros_is_ceros_owned_url( $raw_url );
 
+	// Catch obviously-wrong editor/preview URLs up front with an actionable hint.
+	// These all live on Ceros-owned hosts, so without this they'd fall through to a
+	// broken embed: the manifest probe 404s and the flow silently emits a legacy
+	// scroll-proxy embed pointing at an editor/preview page.
+	if ( $pasted_is_ceros ) {
+		$non_publish = ceros_detect_non_publish_url( $raw_url );
+		if ( '' !== $non_publish ) {
+			return new WP_Error( 'ceros_url_not_publish', $non_publish );
+		}
+	}
+
 	// HEAD the pasted URL BEFORE we trust anything it serves. We need its response
 	// headers to discover a vanity-domain Flex experience (via `x-flex-manifest`),
 	// and a transport failure (TLS/DNS/timeout) means we genuinely couldn't verify
@@ -206,6 +217,50 @@ function ceros_is_ceros_owned_url( $url ) {
 	}
 
 	return false;
+}
+
+/**
+ * Detect a non-publish Ceros URL — a Studio/Flex editor or preview URL — so the
+ * editor can be told to paste the *published* experience URL instead.
+ *
+ * These shapes all live on Ceros-owned hosts, so without this check they slip
+ * past the whitelist and fall through to a broken embed (the manifest probe 404s
+ * and the flow silently emits a legacy scroll-proxy embed pointing at an
+ * editor/preview page). Recognised shapes (prod + non-prod):
+ *
+ *   Preview (Flex):   <account>.preview.<domain>/<exp>/<page>
+ *   Preview (Studio): <account>.preview.<domain>/<exp>/page/<page-id>
+ *   Editor (Flex):    flex.<domain>/edit/<page-id>
+ *   Editor (Studio):  admin.<domain>/account/<acct>/studio/experience/<exp-id>
+ *
+ * Detection keys off host labels (`preview`, `flex`, `admin`) plus an editor
+ * path marker, which stay stable across environments (`latest.dev.flex.…`,
+ * `latest.admin.…`, `…preview.latest.…`).
+ *
+ * @param string $url The pasted URL (already validated as https + public host).
+ * @return string A warning message when the URL is an editor/preview URL, else ''.
+ */
+function ceros_detect_non_publish_url( $url ) {
+	$host   = strtolower( (string) wp_parse_url( $url, PHP_URL_HOST ) );
+	$path   = strtolower( (string) wp_parse_url( $url, PHP_URL_PATH ) );
+	$labels = explode( '.', $host );
+
+	// Preview hosts (both Flex and Studio) carry a dedicated `preview` label.
+	if ( in_array( 'preview', $labels, true ) ) {
+		return __( 'That looks like a Ceros preview URL. Open the experience and copy its published URL, then paste that here.', 'ceros' );
+	}
+
+	// Flex editor: flex.<domain>/edit/<page-id>.
+	if ( in_array( 'flex', $labels, true ) && preg_match( '#^/edit(?:/|$)#', $path ) ) {
+		return __( 'That looks like a Ceros Flex editor URL. Publish the experience, then paste its published URL here.', 'ceros' );
+	}
+
+	// Studio editor: admin.<domain>/…/studio/experience/<exp-id>.
+	if ( in_array( 'admin', $labels, true ) && false !== strpos( $path, '/studio/' ) ) {
+		return __( 'That looks like a Ceros Studio editor URL. Publish the experience, then paste its published URL here.', 'ceros' );
+	}
+
+	return '';
 }
 
 /**
