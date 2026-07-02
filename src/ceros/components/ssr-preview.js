@@ -139,10 +139,11 @@ export function SsrPreview( { attributes, postId } ) {
 		);
 	}
 
-	const isStored = Boolean( attributes.storedIndexPath );
-	const note = isStored
-		? __( 'Server-rendered preview from the stored copy.', 'ceros' )
-		: __( 'Server-rendered preview.', 'ceros' );
+	// Distinguish a live preview (re-fetched from the published manifest on
+	// every republish) from a snapshot rendered off the stored copy.
+	const note = attributes.storedIndexPath
+		? __( 'Preview of the stored copy.', 'ceros' )
+		: __( 'Live preview of the published embed.', 'ceros' );
 
 	const srcDoc =
 		'<!DOCTYPE html><html><head><meta charset="utf-8">' +
