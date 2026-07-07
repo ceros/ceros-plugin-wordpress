@@ -9,6 +9,10 @@
  * result into a same-origin `srcdoc` iframe. That keeps the editor isolated
  * while still running flex-ssr.js so the preview hydrates exactly like the
  * published page.
+ *
+ * Note: scroll-driven triggers in the experience won't fire here — the preview
+ * frame is sized to its content rather than being a scroll container — which is
+ * fine for an editor preview; the published page scrolls normally.
  */
 
 import { __ } from '@wordpress/i18n';
@@ -92,21 +96,27 @@ export function SsrPreview( { attributes, postId } ) {
 		const onLoad = () => {
 			fit();
 			try {
-				const body = iframe.contentDocument?.body;
-				if ( body && typeof ResizeObserver !== 'undefined' ) {
-					observer = new ResizeObserver( fit );
-					observer.observe( body );
+				const doc = iframe.contentDocument;
+				if ( doc && typeof window.ResizeObserver !== 'undefined' ) {
+					observer = new window.ResizeObserver( fit );
+					// Observe both <html> and <body>: fit() measures
+					// documentElement.scrollHeight, and flex-ssr.js can grow the
+					// document without reflowing <body> (its stage is absolutely
+					// positioned), so watching <body> alone misses those changes.
+					observer.observe( doc.documentElement );
+					if ( doc.body ) {
+						observer.observe( doc.body );
+					}
 				}
 			} catch ( e ) {}
 		};
 
 		iframe.addEventListener( 'load', onLoad );
-		// Late hydration / async scaling can change height after load.
-		const timers = [
-			setTimeout( fit, 600 ),
-			setTimeout( fit, 1500 ),
-			setTimeout( fit, 3000 ),
-		];
+		// flex-ssr.js hydrates and scales asynchronously, and some of that
+		// scaling sets sizes via script without reflowing an observed element —
+		// which the ResizeObserver can't see. Two post-load re-measures cover
+		// that tail without falling back to continuous polling.
+		const timers = [ setTimeout( fit, 600 ), setTimeout( fit, 2000 ) ];
 
 		return () => {
 			iframe.removeEventListener( 'load', onLoad );

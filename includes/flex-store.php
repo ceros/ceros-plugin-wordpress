@@ -45,7 +45,7 @@ function ceros_store_flex_manifest( $manifest_url, $post_id ) {
 		return $primary_meta;
 	}
 
-	$experience   = isset( $primary_meta['experience'] ) ? $primary_meta['experience'] : [];
+	$experience   = $primary_meta['experience'] ?? [];
 	$exp_key      = ceros_store_experience_key( $experience );
 	$version      = ceros_store_version( $primary_meta );
 	$primary_slug = ceros_store_primary_slug( $primary_meta );
@@ -65,12 +65,12 @@ function ceros_store_flex_manifest( $manifest_url, $post_id ) {
 
 	// Pages to store: primary + every linked page (deduped by slug).
 	$page_urls = [ $primary_slug => $manifest_url ];
-	foreach ( ( isset( $primary_meta['pages'] ) ? $primary_meta['pages'] : [] ) as $page ) {
+	foreach ( ( $primary_meta['pages'] ?? [] ) as $page ) {
 		if ( ! is_array( $page ) ) {
 			continue;
 		}
-		$slug = isset( $page['slug'] ) ? $page['slug'] : '';
-		$purl = isset( $page['manifestUrl'] ) ? $page['manifestUrl'] : '';
+		$slug = $page['slug'] ?? '';
+		$purl = $page['manifestUrl'] ?? '';
 		if ( '' !== $slug && '' !== $purl && ! isset( $page_urls[ $slug ] ) ) {
 			$page_urls[ $slug ] = $purl;
 		}
@@ -139,8 +139,8 @@ function ceros_store_flex_manifest( $manifest_url, $post_id ) {
 	$index = [
 		'schema'            => 'ceros-flex-store/2',
 		'postId'            => $post_id,
-		'accountSlug'       => isset( $experience['accountSlug'] ) ? $experience['accountSlug'] : '',
-		'experienceSlug'    => isset( $experience['slug'] ) ? $experience['slug'] : '',
+		'accountSlug'       => $experience['accountSlug'] ?? '',
+		'experienceSlug'    => $experience['slug'] ?? '',
 		'version'           => $version,
 		'sourceManifestUrl' => $manifest_url,
 		'primarySlug'       => $primary_slug,
@@ -417,16 +417,24 @@ function ceros_store_purge_old_versions( $uploads_basedir, $post_id, $exp_key, $
 /**
  * Recursively delete a directory, guarded to the plugin's storage root.
  *
- * @param string $dir Absolute directory path.
+ * Our layout is shallow (…/<version>/<hash>/<asset path>), so a very deep
+ * recursion could only come from a symlink loop. We never follow symlinks
+ * (deleting the link itself, not its target) and cap the depth as a backstop.
+ *
+ * @param string $dir   Absolute directory path.
+ * @param int    $depth Current recursion depth (internal).
  * @return void
  */
-function ceros_store_rrmdir( $dir ) {
-	if ( false === strpos( $dir, '/ceros-flex/' ) || ! is_dir( $dir ) ) {
+function ceros_store_rrmdir( $dir, $depth = 0 ) {
+	if ( $depth > 20 || false === strpos( $dir, '/ceros-flex/' ) || ! is_dir( $dir ) ) {
 		return;
 	}
 	foreach ( (array) glob( trailingslashit( $dir ) . '*' ) as $item ) {
-		if ( is_dir( $item ) ) {
-			ceros_store_rrmdir( $item );
+		if ( is_link( $item ) ) {
+			// Delete the symlink itself; never descend into its target.
+			wp_delete_file( $item );
+		} elseif ( is_dir( $item ) ) {
+			ceros_store_rrmdir( $item, $depth + 1 );
 		} else {
 			wp_delete_file( $item );
 		}
