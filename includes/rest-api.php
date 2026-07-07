@@ -146,6 +146,22 @@ function ceros_register_rest_routes() {
 
 	register_rest_route(
 		CEROS_REST_NAMESPACE,
+		'/manifest-meta',
+		[
+			'methods'             => 'GET',
+			'callback'            => 'ceros_rest_manifest_meta',
+			'permission_callback' => 'ceros_rest_permission_check',
+			'args'                => [
+				'url' => [
+					'required' => true,
+					'type'     => 'string',
+				],
+			],
+		]
+	);
+
+	register_rest_route(
+		CEROS_REST_NAMESPACE,
 		'/experiences/(?P<resource_id>' . CEROS_RESOURCE_ID_PATTERN . ')/embed-codes',
 		[
 			'methods'             => 'GET',
@@ -319,6 +335,38 @@ function ceros_rest_resolve_public_url( WP_REST_Request $request ) {
 	}
 
 	return new WP_REST_Response( $result, 200 );
+}
+
+/**
+ * REST callback: return lightweight manifest metadata (publishedAt + flexVersion).
+ *
+ * Lets the editor compare a locally-stored Flex experience against the live one
+ * to detect that a newer version is available. Reuses the SSRF-guarded manifest
+ * fetch; needs only the edit_posts capability (no Ceros API key).
+ *
+ * @param WP_REST_Request $request The REST request instance.
+ * @return WP_REST_Response
+ */
+function ceros_rest_manifest_meta( WP_REST_Request $request ) {
+	$manifest = ceros_fetch_flex_manifest( (string) $request->get_param( 'url' ) );
+
+	if ( is_wp_error( $manifest ) ) {
+		return new WP_REST_Response(
+			[
+				'error'      => $manifest->get_error_message(),
+				'error_code' => $manifest->get_error_code(),
+			],
+			400
+		);
+	}
+
+	return new WP_REST_Response(
+		[
+			'publishedAt' => isset( $manifest['publishedAt'] ) ? (string) $manifest['publishedAt'] : '',
+			'flexVersion' => isset( $manifest['flexVersion'] ) ? (string) $manifest['flexVersion'] : '',
+		],
+		200
+	);
 }
 
 /**

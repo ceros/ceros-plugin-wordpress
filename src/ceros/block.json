@@ -27,7 +27,9 @@
 		"manifestUrl": { "type": "string", "default": "" },
 		"storedIndexPath": { "type": "string", "default": "" },
 		"storedAt": { "type": "string", "default": "" },
-		"storedVersion": { "type": "string", "default": "" }
+		"storedVersion": { "type": "string", "default": "" },
+		"storedPublishedAt": { "type": "string", "default": "" },
+		"storedFlexVersion": { "type": "string", "default": "" }
 	},
 	"render": "file:./render.php",
 	"viewScript": "file:./view.js"

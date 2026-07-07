@@ -30,7 +30,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  *
  * @param string $manifest_url The experience manifest URL.
  * @param int    $post_id      The post the block belongs to (scopes storage + cleanup).
- * @return array|WP_Error { @type string storedIndexPath, @type string storedAt, @type string storedVersion }
+ * @return array|WP_Error { @type string storedIndexPath, @type string storedAt, @type string storedVersion, @type string storedPublishedAt, @type string storedFlexVersion }
  */
 function ceros_store_flex_manifest( $manifest_url, $post_id ) {
 	$post_id = absint( $post_id );
@@ -49,6 +49,12 @@ function ceros_store_flex_manifest( $manifest_url, $post_id ) {
 	$exp_key      = ceros_store_experience_key( $experience );
 	$version      = ceros_store_version( $primary_meta );
 	$primary_slug = ceros_store_primary_slug( $primary_meta );
+
+	// Captured so the editor can detect when the live experience has been
+	// republished (publishedAt) or rebuilt on a new Flex runtime (flexVersion)
+	// since this copy was stored, and surface a "new version available" hint.
+	$published_at = isset( $primary_meta['publishedAt'] ) ? (string) $primary_meta['publishedAt'] : '';
+	$flex_version = isset( $primary_meta['flexVersion'] ) ? (string) $primary_meta['flexVersion'] : '';
 
 	$upload = wp_upload_dir();
 	if ( ! empty( $upload['error'] ) ) {
@@ -142,6 +148,8 @@ function ceros_store_flex_manifest( $manifest_url, $post_id ) {
 		'accountSlug'       => $experience['accountSlug'] ?? '',
 		'experienceSlug'    => $experience['slug'] ?? '',
 		'version'           => $version,
+		'publishedAt'       => $published_at,
+		'flexVersion'       => $flex_version,
 		'sourceManifestUrl' => $manifest_url,
 		'primarySlug'       => $primary_slug,
 		'baseUrl'           => $url_base,
@@ -154,9 +162,11 @@ function ceros_store_flex_manifest( $manifest_url, $post_id ) {
 	ceros_store_purge_old_versions( $upload['basedir'], $post_id, $exp_key, $version );
 
 	return [
-		'storedIndexPath' => $rel_base . '/index.json',
-		'storedAt'        => $index['storedAt'],
-		'storedVersion'   => $version,
+		'storedIndexPath'   => $rel_base . '/index.json',
+		'storedAt'          => $index['storedAt'],
+		'storedVersion'     => $version,
+		'storedPublishedAt' => $published_at,
+		'storedFlexVersion' => $flex_version,
 	];
 }
 
