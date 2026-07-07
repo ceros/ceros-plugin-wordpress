@@ -10,6 +10,7 @@ import { __ } from '@wordpress/i18n';
 import { InspectorControls } from '@wordpress/block-editor';
 import { PanelBody, BaseControl, Button } from '@wordpress/components';
 import { ACTION_TYPES, EMBED_OPTIONS, DELIVERY_MODES, manifestUrlFromInline } from '../constants';
+import { StoreControls } from './store-controls';
 
 /**
  * Sidebar Controls Component
@@ -182,6 +183,21 @@ export function SidebarControls( {
 							</label>
 						</div>
 					</BaseControl>
+				</PanelBody>
+			) }
+			{ deliveryMode === DELIVERY_MODES.SSR && (
+				<PanelBody
+					title={ __( 'Store locally (Beta)', 'ceros' ) }
+					initialOpen={ true }
+				>
+					<StoreControls
+						manifestUrl={
+							attributes?.manifestUrl ||
+							manifestUrlFromInline( inlineEmbedCode )
+						}
+						storedAt={ attributes?.storedAt || '' }
+						setAttributes={ setAttributes }
+					/>
 				</PanelBody>
 			) }
 			{ isIframeDelivery && (
