@@ -129,6 +129,10 @@ export function PasteUrlPanel( {
 			deliveryMode: hasInline ? selectedDeliveryMode : DELIVERY_MODES.IFRAME,
 			// Manifest URL drives the SSR delivery mode's server-side fetch.
 			manifestUrl: resolved?.manifestUrl || '',
+			// Canonical (Ceros-owned) view URL. Lets render.php rebuild a legacy
+			// Studio scroll-proxy embed fresh at render time — its <script> is
+			// otherwise stripped on hosts without unfiltered_html (e.g. WP.com).
+			experienceUrl: resolved?.viewUrl || '',
 			experienceName: experienceNameFromUrl( resolved?.viewUrl || url ),
 			// No resource id is available via the public URL flow.
 			experienceResourceId: '',

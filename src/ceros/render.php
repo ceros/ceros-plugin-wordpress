@@ -77,6 +77,27 @@ function ceros_render_block( $attributes ) {
 		}
 	}
 
+	// Legacy Studio (scroll-proxy) delivery: rebuild the embed fresh at render
+	// time from the stored experience URL, for the same reason as the Flex paths
+	// above — the persisted embed's <script> (and iframe) don't survive on hosts
+	// that strip them on save (e.g. WordPress.com). Only Studio blocks carry an
+	// experienceUrl without a manifestUrl. SECURITY: re-validate the host is
+	// Ceros-owned before we emit a `<script src="https://{host}/scroll-proxy…">`,
+	// so a tampered attribute can't inject a third-party script.
+	if ( empty( $attributes['manifestUrl'] ) && ! empty( $attributes['experienceUrl'] )
+		&& function_exists( 'ceros_build_legacy_embed_codes' )
+		&& function_exists( 'ceros_is_ceros_owned_url' )
+		&& ceros_is_ceros_owned_url( $attributes['experienceUrl'] ) ) {
+		$codes    = ceros_build_legacy_embed_codes( $attributes['experienceUrl'] );
+		$selected = $attributes['selectedOption'] ?? 'full';
+		$studio   = ( 'scroll' === $selected && ! empty( $codes['scrollableEmbedCode'] ) )
+			? $codes['scrollableEmbedCode']
+			: $codes['fullHeightEmbedCode'];
+		if ( '' !== $studio ) {
+			return ceros_sanitize_embed_code( $studio );
+		}
+	}
+
 	// Show the "experience not found" message when there are no embed codes saved for this block.
 	if ( ! $has_full && ! $has_scroll ) {
 		return $missing_experience_markup;

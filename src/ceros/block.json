@@ -25,6 +25,7 @@
 		"deliveryMode": { "type": "string", "default": "iframe" },
 		"inlineEmbedCode": { "type": "string", "default": "" },
 		"manifestUrl": { "type": "string", "default": "" },
+		"experienceUrl": { "type": "string", "default": "" },
 		"storedIndexPath": { "type": "string", "default": "" },
 		"storedAt": { "type": "string", "default": "" },
 		"storedVersion": { "type": "string", "default": "" },

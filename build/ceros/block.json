@@ -49,6 +49,10 @@
       "type": "string",
       "default": ""
     },
+    "experienceUrl": {
+      "type": "string",
+      "default": ""
+    },
     "storedIndexPath": {
       "type": "string",
       "default": ""
