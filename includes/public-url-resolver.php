@@ -339,19 +339,8 @@ function ceros_build_manifest_url( $url ) {
  * @return array Embed codes keyed by fullHeightEmbedCode/scrollableEmbedCode/inlineEmbedCode.
  */
 function ceros_build_flex_embed_codes( $experience_url, $manifest_url, $manifest ) {
-	$delivery = ( isset( $manifest['deliveryModes'] ) && is_array( $manifest['deliveryModes'] ) )
-		? $manifest['deliveryModes']
-		: [];
-
-	$flex_client = ceros_first_script_url( isset( $delivery['inline'] ) ? $delivery['inline'] : [] );
-	if ( '' === $flex_client ) {
-		$flex_client = CEROS_FLEX_ASSETS_BASE . '/js/flex-client.js';
-	}
-
-	$embed_script = ceros_first_script_url( isset( $delivery['iframe'] ) ? $delivery['iframe'] : [] );
-	if ( '' === $embed_script ) {
-		$embed_script = CEROS_FLEX_ASSETS_BASE . '/js/embed.v1.js';
-	}
+	$flex_client  = ceros_flex_delivery_script_url( $manifest, 'inline', 'flex-client.js' );
+	$embed_script = ceros_flex_delivery_script_url( $manifest, 'iframe', 'embed.v1.js' );
 
 	return [
 		'fullHeightEmbedCode' => ceros_build_flex_iframe_snippet( $experience_url, $embed_script, 'auto' ),
@@ -379,6 +368,41 @@ function ceros_first_script_url( $mode ) {
 	}
 
 	return '';
+}
+
+/**
+ * Resolve a delivery-mode script URL from a manifest, falling back to the
+ * production Flex assets CDN. Centralises the `deliveryModes` lookup + fallback
+ * shared by the embed-code builder and the render-time emitters.
+ *
+ * @param array  $manifest      The decoded manifest.
+ * @param string $mode          Delivery-mode key ('inline' | 'iframe').
+ * @param string $fallback_file Filename under CEROS_FLEX_ASSETS_BASE/js/ used
+ *                              when the manifest specifies no script for $mode.
+ * @return string The script URL.
+ */
+function ceros_flex_delivery_script_url( $manifest, $mode, $fallback_file ) {
+	$delivery = ( isset( $manifest['deliveryModes'] ) && is_array( $manifest['deliveryModes'] ) )
+		? $manifest['deliveryModes']
+		: [];
+	$url = ceros_first_script_url( isset( $delivery[ $mode ] ) ? $delivery[ $mode ] : [] );
+	return '' !== $url ? $url : CEROS_FLEX_ASSETS_BASE . '/js/' . $fallback_file;
+}
+
+/**
+ * Fetch + validate a Flex manifest for the render-time emitters, collapsing the
+ * empty-URL / fetch-error / non-array guards into a single null result.
+ *
+ * @param string $manifest_url The manifest URL.
+ * @return array|null The decoded manifest, or null on any failure.
+ */
+function ceros_load_flex_manifest( $manifest_url ) {
+	$manifest_url = trim( (string) $manifest_url );
+	if ( '' === $manifest_url ) {
+		return null;
+	}
+	$manifest = ceros_fetch_flex_manifest( $manifest_url );
+	return ( is_wp_error( $manifest ) || ! is_array( $manifest ) ) ? null : $manifest;
 }
 
 /**
@@ -411,6 +435,63 @@ function ceros_build_flex_inline_snippet( $manifest_url, $script_url ) {
 		esc_url( $manifest_url ),
 		esc_url( $script_url )
 	);
+}
+
+/**
+ * Render the Flex Inline (iframeless) snippet at request time from the manifest.
+ *
+ * The inline runtime is emitted as a freshly-generated <script> during render
+ * rather than persisted on the block: hosts that disable the `unfiltered_html`
+ * capability (e.g. WordPress.com) strip <script> tags out of stored post
+ * content on save, which neuters a persisted embed snippet (the src URL is left
+ * behind as bare text and auto-linked into an <a>). Generating the snippet here
+ * mirrors the SSR renderer, whose scripts survive for exactly this reason.
+ *
+ * The flex-client URL is read from the manifest's `deliveryModes.inline` block
+ * (so vanity domains and non-prod environments resolve correctly), falling back
+ * to the production Flex assets CDN.
+ *
+ * @param string $manifest_url The manifest URL persisted on the block.
+ * @return string The inline embed snippet, or '' on any failure.
+ */
+function ceros_render_flex_inline( $manifest_url ) {
+	$manifest = ceros_load_flex_manifest( $manifest_url );
+	if ( null === $manifest ) {
+		return '';
+	}
+
+	$flex_client = ceros_flex_delivery_script_url( $manifest, 'inline', 'flex-client.js' );
+	return ceros_build_flex_inline_snippet( trim( (string) $manifest_url ), $flex_client );
+}
+
+/**
+ * Render the Flex iframe embed snippet at request time from the manifest.
+ *
+ * Like the inline and SSR paths, the iframe runtime (`embed.v1.js`) is emitted
+ * as a freshly-generated <script> during render rather than persisted on the
+ * block, so it survives on hosts that strip <script> from stored content on
+ * save (e.g. WordPress.com, which disables `unfiltered_html`).
+ *
+ * This is Flex-only: a Flex block always carries a manifest URL, whereas the
+ * legacy Studio (scroll-proxy) embed does not, so callers gate on that.
+ *
+ * @param string $manifest_url The manifest URL persisted on the block.
+ * @param string $height       'auto' (full height) or e.g. '800px' (scrollable).
+ * @return string The iframe embed snippet, or '' on any failure.
+ */
+function ceros_render_flex_iframe( $manifest_url, $height ) {
+	$manifest = ceros_load_flex_manifest( $manifest_url );
+	if ( null === $manifest ) {
+		return '';
+	}
+
+	$experience_url = ceros_derive_experience_url( trim( (string) $manifest_url ) );
+	if ( '' === $experience_url ) {
+		return '';
+	}
+
+	$embed_script = ceros_flex_delivery_script_url( $manifest, 'iframe', 'embed.v1.js' );
+	return ceros_build_flex_iframe_snippet( $experience_url, $embed_script, $height );
 }
 
 /**

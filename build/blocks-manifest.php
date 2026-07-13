@@ -52,6 +52,10 @@ return array(
 				'type' => 'string',
 				'default' => ''
 			),
+			'experienceUrl' => array(
+				'type' => 'string',
+				'default' => ''
+			),
 			'storedIndexPath' => array(
 				'type' => 'string',
 				'default' => ''

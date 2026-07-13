@@ -1226,7 +1226,14 @@ export default function Edit( { attributes, setAttributes, clientId } ) {
 
 				{(selectedExperienceName || attributes.experienceName || attributes.fullHeightEmbedCode || attributes.scrollableEmbedCode) ? (
 					<div className="ceros-block__selected">
-						{ attributes.deliveryMode === DELIVERY_MODES.SSR ? (
+						{ ( attributes.deliveryMode === DELIVERY_MODES.SSR || attributes.manifestUrl ) ? (
+							// Flex (any delivery mode — detected by a manifest URL) and SSR
+							// preview via the server render (render.php), which regenerates
+							// the snippet from the manifest at request time. The client
+							// preview reads the persisted embed codes, whose <script> is
+							// stripped on save by hosts without `unfiltered_html` (e.g.
+							// WordPress.com), so it would render a dead snippet. Legacy
+							// Studio embeds carry no manifest URL and keep the client preview.
 							<SsrPreview
 								attributes={ attributes }
 								postId={ postId }
