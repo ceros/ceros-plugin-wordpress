@@ -19,6 +19,7 @@ import { __ } from '@wordpress/i18n';
 import { useState, useEffect, useRef } from '@wordpress/element';
 import apiFetch from '@wordpress/api-fetch';
 import { addQueryArgs } from '@wordpress/url';
+import { DELIVERY_MODES } from '../constants';
 
 /**
  * @param {Object} props
@@ -139,11 +140,25 @@ export function SsrPreview( { attributes, postId } ) {
 		);
 	}
 
-	// Distinguish a live preview (re-fetched from the published manifest on
+	// This server render previews every Flex delivery mode (Inline and SSR), so
+	// the note has to reflect the current mode — otherwise switching Inline↔SSR
+	// refreshes the frame but leaves a stale label. Within SSR, further
+	// distinguish a live preview (re-fetched from the published manifest on
 	// every republish) from a snapshot rendered off the stored copy.
-	const note = attributes.storedIndexPath
-		? __( 'Preview of the stored copy.', 'ceros' )
-		: __( 'Live preview of the published embed.', 'ceros' );
+	let note;
+	if ( attributes.deliveryMode === DELIVERY_MODES.INLINE ) {
+		note = __(
+			'Published as Flex Inline (iframeless). Server-rendered preview.',
+			'ceros'
+		);
+	} else if ( attributes.storedIndexPath ) {
+		note = __( 'Published as Flex SSR. Preview of the stored copy.', 'ceros' );
+	} else {
+		note = __(
+			'Published as Flex SSR. Live preview of the published embed.',
+			'ceros'
+		);
+	}
 
 	const srcDoc =
 		'<!DOCTYPE html><html><head><meta charset="utf-8">' +
