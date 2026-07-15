@@ -140,22 +140,34 @@ export function SsrPreview( { attributes, postId } ) {
 		);
 	}
 
-	// This server render previews every Flex delivery mode (Inline and SSR), so
-	// the note has to reflect the current mode — otherwise switching Inline↔SSR
-	// refreshes the frame but leaves a stale label. Within SSR, further
-	// distinguish a live preview (re-fetched from the published manifest on
-	// every republish) from a snapshot rendered off the stored copy.
+	// This server render previews every delivery mode a Flex block can route
+	// here (Inline, SSR, and iframe once a manifest URL is persisted), so the
+	// note has to reflect the current mode — otherwise switching modes refreshes
+	// the frame but leaves a stale label. Within SSR, further distinguish a live
+	// preview (re-fetched from the published manifest on every republish) from a
+	// snapshot rendered off the stored copy.
 	let note;
 	if ( attributes.deliveryMode === DELIVERY_MODES.INLINE ) {
 		note = __(
 			'Published as Flex Inline (iframeless). Server-rendered preview.',
 			'ceros'
 		);
-	} else if ( attributes.storedIndexPath ) {
-		note = __( 'Published as Flex SSR. Preview of the stored copy.', 'ceros' );
+	} else if ( attributes.deliveryMode === DELIVERY_MODES.SSR ) {
+		note = attributes.storedIndexPath
+			? __(
+					'Published as Flex SSR. Preview of the stored copy.',
+					'ceros'
+			  )
+			: __(
+					'Published as Flex SSR. Live preview of the published embed.',
+					'ceros'
+			  );
 	} else {
+		// Iframe delivery is routed through this server render too, because a
+		// persisted manifest URL sticks after SSR has been tried; render.php
+		// returns the iframe embed in that case.
 		note = __(
-			'Published as Flex SSR. Live preview of the published embed.',
+			'Published as an iframe embed. Server-rendered preview.',
 			'ceros'
 		);
 	}
