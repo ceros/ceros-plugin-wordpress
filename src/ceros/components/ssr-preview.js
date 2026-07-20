@@ -139,11 +139,14 @@ export function SsrPreview( { attributes, postId } ) {
 		);
 	}
 
-	// Distinguish a live preview (re-fetched from the published manifest on
-	// every republish) from a snapshot rendered off the stored copy.
+	// Every delivery mode previews through this same server render (the
+	// WP.com-safe path). Inline, SSR live, and iframe all pull the live
+	// experience from Ceros, so their note stays generic; the one exception is
+	// SSR Store mode, which renders from a copy persisted on this site rather
+	// than the live experience, so it's called out explicitly.
 	const note = attributes.storedIndexPath
-		? __( 'Preview of the stored copy.', 'ceros' )
-		: __( 'Live preview of the published embed.', 'ceros' );
+		? __( 'Preview of the copy stored on your site.', 'ceros' )
+		: __( 'Live preview of the published experience.', 'ceros' );
 
 	const srcDoc =
 		'<!DOCTYPE html><html><head><meta charset="utf-8">' +
