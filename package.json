@@ -2,7 +2,7 @@
 	"name": "ceros",
 	"version": "0.31.0",
 	"description": "Ceros WordPress Block.",
-	"author": "Copia Digital",
+	"author": "Ceros.com",
 	"license": "GPL-2.0-or-later",
 	"main": "build/index.js",
 	"scripts": {
