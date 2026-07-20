@@ -295,7 +295,22 @@ function ceros_rest_get_embed_codes( WP_REST_Request $request ) {
 	// Flex experiences, so its presence is what tells the editor that the
 	// iframeless delivery mode is available.
 	if ( ! is_wp_error( $result ) && isset( $result['body'] ) && is_array( $result['body'] ) ) {
-		$result['body'] = ceros_sanitize_embed_codes_array( $result['body'] );
+		$body = $result['body'];
+
+		// Derive a clean `manifestUrl` from the (raw, pre-sanitize) Flex Inline
+		// snippet so the picker gets the same server-provided manifest URL the
+		// paste-a-public-URL flow already returns. This drives the Flex/SSR live
+		// preview and the WP.com-safe render-time rebuild. Extracting server-side
+		// (before wp_kses entity-encodes the attribute value) is more robust than
+		// the editor scraping the sanitized HTML client-side.
+		if ( empty( $body['manifestUrl'] ) && ! empty( $body['inlineEmbedCode'] ) ) {
+			$manifest_url = ceros_manifest_url_from_inline( $body['inlineEmbedCode'] );
+			if ( '' !== $manifest_url ) {
+				$body['manifestUrl'] = $manifest_url;
+			}
+		}
+
+		$result['body'] = ceros_sanitize_embed_codes_array( $body );
 	}
 
 	return ceros_handle_api_response( $result );

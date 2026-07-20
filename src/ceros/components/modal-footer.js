@@ -74,11 +74,22 @@ export const CerosModalFooter = ( {
 								// Commit the delivery mode chosen in the picker
 								// (forced back to iframe for non-Flex experiences).
 								deliveryMode: effectiveDeliveryMode,
-								// Manifest URL drives the SSR delivery mode's
-								// server-side fetch; derived from the inline snippet.
-								manifestUrl: manifestUrlFromInline(
-									currentEmbedCodes.inlineEmbedCode || ''
-								),
+								// Manifest URL drives the Flex/SSR live preview and the
+								// server-side render. Prefer the clean value resolved
+								// by the embed-codes endpoint; fall back to scraping
+								// the inline snippet for older responses.
+								manifestUrl:
+									currentEmbedCodes.manifestUrl ||
+									manifestUrlFromInline(
+										currentEmbedCodes.inlineEmbedCode || ''
+									),
+								// Canonical (Ceros-owned) view URL from the
+								// embed-codes API. Lets render.php rebuild a legacy
+								// Studio scroll-proxy embed fresh at render time —
+								// its <script> is otherwise stripped on save on
+								// hosts without unfiltered_html (e.g. WP.com),
+								// leaving a dead embed. Mirrors the paste-URL flow.
+								experienceUrl: currentEmbedCodes.viewUrl || '',
 							} );
 							onClose();
 						}
