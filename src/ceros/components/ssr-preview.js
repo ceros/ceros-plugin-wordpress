@@ -19,7 +19,6 @@ import { __ } from '@wordpress/i18n';
 import { useState, useEffect, useRef } from '@wordpress/element';
 import apiFetch from '@wordpress/api-fetch';
 import { addQueryArgs } from '@wordpress/url';
-import { DELIVERY_MODES } from '../constants';
 
 /**
  * @param {Object} props
@@ -140,37 +139,14 @@ export function SsrPreview( { attributes, postId } ) {
 		);
 	}
 
-	// This server render previews every delivery mode a Flex block can route
-	// here (Inline, SSR, and iframe once a manifest URL is persisted), so the
-	// note has to reflect the current mode — otherwise switching modes refreshes
-	// the frame but leaves a stale label. Within SSR, further distinguish a live
-	// preview (re-fetched from the published manifest on every republish) from a
-	// snapshot rendered off the stored copy.
-	let note;
-	if ( attributes.deliveryMode === DELIVERY_MODES.INLINE ) {
-		note = __(
-			'Published as Flex Inline (iframeless). Server-rendered preview.',
-			'ceros'
-		);
-	} else if ( attributes.deliveryMode === DELIVERY_MODES.SSR ) {
-		note = attributes.storedIndexPath
-			? __(
-					'Published as Flex SSR. Preview of the stored copy.',
-					'ceros'
-			  )
-			: __(
-					'Published as Flex SSR. Live preview of the published embed.',
-					'ceros'
-			  );
-	} else {
-		// Iframe delivery is routed through this server render too, because a
-		// persisted manifest URL sticks after SSR has been tried; render.php
-		// returns the iframe embed in that case.
-		note = __(
-			'Published as an iframe embed. Server-rendered preview.',
-			'ceros'
-		);
-	}
+	// Every delivery mode previews through this same server render (the
+	// WP.com-safe path). Inline, SSR live, and iframe all pull the live
+	// experience from Ceros, so their note stays generic; the one exception is
+	// SSR Store mode, which renders from a copy persisted on this site rather
+	// than the live experience, so it's called out explicitly.
+	const note = attributes.storedIndexPath
+		? __( 'Preview of the copy stored on your site.', 'ceros' )
+		: __( 'Live preview of the published experience.', 'ceros' );
 
 	const srcDoc =
 		'<!DOCTYPE html><html><head><meta charset="utf-8">' +
