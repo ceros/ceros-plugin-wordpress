@@ -391,3 +391,29 @@ function ceros_sanitize_embed_codes_array( $embed_codes ) {
 
 	return $sanitized;
 }
+
+/**
+ * Extract the Flex manifest URL from a Flex Inline snippet's
+ * `data-flex-manifest-url` attribute.
+ *
+ * Must run on the RAW snippet (before `ceros_sanitize_embed_code`): wp_kses
+ * normalizes entities in attribute values (e.g. `&` becomes `&#038;`), which
+ * would corrupt a manifest URL carrying query parameters. Extracting here — and
+ * decoding any entities the API itself included — yields a real, fetchable URL,
+ * matching the `manifestUrl` the paste-a-public-URL flow returns.
+ *
+ * @param string $inline_embed_code The raw Flex Inline snippet from the API.
+ * @return string The manifest URL (esc_url_raw'd), or '' when not present.
+ */
+function ceros_manifest_url_from_inline( $inline_embed_code ) {
+	if ( ! is_string( $inline_embed_code ) || '' === $inline_embed_code ) {
+		return '';
+	}
+
+	// Accept single- or double-quoted attribute values.
+	if ( preg_match( '/data-flex-manifest-url=(["\'])(.*?)\1/i', $inline_embed_code, $matches ) ) {
+		return esc_url_raw( html_entity_decode( $matches[2], ENT_QUOTES ) );
+	}
+
+	return '';
+}
