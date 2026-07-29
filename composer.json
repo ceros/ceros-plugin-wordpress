@@ -12,10 +12,27 @@
 	"require": {
 		"php": ">=7.4"
 	},
+	"require-dev": {
+		"phpcompatibility/phpcompatibility-wp": "^2.1",
+		"squizlabs/php_codesniffer": "^3.13",
+		"wp-coding-standards/wpcs": "^3.2"
+	},
 	"autoload": {
 		"psr-4": {
 			"CopiaDigital\\Ceros\\": "src/"
 		}
+	},
+	"config": {
+		"allow-plugins": {
+			"dealerdirect/phpcodesniffer-composer-installer": true
+		},
+		"platform": {
+			"php": "7.4"
+		}
+	},
+	"scripts": {
+		"lint": "phpcs",
+		"lint:fix": "phpcbf"
 	},
 	"extra": {
 		"installer-name": "ceros"

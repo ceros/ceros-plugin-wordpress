@@ -3,6 +3,10 @@ src/.DS_Store
 
 # Dependencies
 node_modules/
+vendor/
+
+# PHPCS local cache
+.phpcs-cache
 
 # Local wp-env personal overrides
 .wp-env.override.json
