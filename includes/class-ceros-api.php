@@ -14,6 +14,14 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+/**
+ * Client for the Ceros REST API.
+ *
+ * A singleton wrapper around the authenticated Ceros endpoints the plugin
+ * consumes (current account, folder tree, experiences, embed codes). Each
+ * method returns either `[ 'code' => int, 'body' => array ]` or a WP_Error,
+ * which the REST layer maps onto an HTTP response.
+ */
 class Ceros_API {
 
 	/**
@@ -71,7 +79,7 @@ class Ceros_API {
 			);
 		}
 
-		$url = $base_url . $endpoint;
+		$url      = $base_url . $endpoint;
 		$response = wp_remote_get(
 			$url,
 			[
@@ -184,11 +192,11 @@ class Ceros_API {
 
 		$result = $this->make_authenticated_request( '/folder/' . $resource_id . '/experiences' );
 
-		// Filter out invalid experiences on the backend to reduce data sent to frontend
+		// Filter out invalid experiences on the backend to reduce data sent to frontend.
 		if ( ! is_wp_error( $result ) && isset( $result['body'] ) ) {
 			$experiences = $result['body'];
 
-			// Handle different response structures
+			// Handle different response structures.
 			if ( isset( $experiences['items'] ) && is_array( $experiences['items'] ) ) {
 				$experiences = $experiences['items'];
 			} elseif ( isset( $experiences['data'] ) && is_array( $experiences['data'] ) ) {
@@ -197,7 +205,7 @@ class Ceros_API {
 				$experiences = [];
 			}
 
-			// Filter out experiences that shouldn't be shown
+			// Filter out experiences that shouldn't be shown.
 			$valid_experiences = array_filter(
 				$experiences,
 				function ( $exp ) {
@@ -210,7 +218,7 @@ class Ceros_API {
 				}
 			);
 
-			// Re-index array to ensure sequential keys
+			// Re-index array to ensure sequential keys.
 			$result['body'] = array_values( $valid_experiences );
 		}
 

@@ -210,8 +210,8 @@ function ceros_handle_api_response( $result ) {
 	}
 
 	// Check for 403 Forbidden response which typically means invalid API key.
-	if ( isset( $result['code'] ) && $result['code'] === 403 &&
-		 isset( $result['body']['message'] ) && $result['body']['message'] === 'Forbidden resource' ) {
+	if ( isset( $result['code'] ) && 403 === $result['code'] &&
+		isset( $result['body']['message'] ) && 'Forbidden resource' === $result['body']['message'] ) {
 		return new WP_REST_Response(
 			[
 				'code'  => 403,

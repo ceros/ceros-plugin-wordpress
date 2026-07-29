@@ -103,9 +103,9 @@ function ceros_resolve_public_experience_url( $raw_url ) {
 	}
 
 	// Determine which manifest URL (if any) to probe:
-	//  - an `x-flex-manifest` response header points at the (vanity-aware) manifest;
-	//  - else, a Ceros-owned host exposes it at `<experience>/CEROS_MANIFEST_FILENAME`;
-	//  - else there is no manifest we are willing to trust.
+	// - an `x-flex-manifest` response header points at the (vanity-aware) manifest;
+	// - else, a Ceros-owned host exposes it at `<experience>/CEROS_MANIFEST_FILENAME`;
+	// - else there is no manifest we are willing to trust.
 	$header_manifest = trim( (string) wp_remote_retrieve_header( $head, 'x-flex-manifest' ) );
 	if ( '' !== $header_manifest ) {
 		$manifest_url = $header_manifest;
@@ -144,7 +144,7 @@ function ceros_resolve_public_experience_url( $raw_url ) {
 		// positively identified itself as Flex — but the manifest didn't load.
 		// Surface that failure rather than misclassifying it below as "not a Ceros
 		// experience". (A *constructed* Ceros-host URL failing is the normal Studio
-		// case, so it falls through to the Studio embed instead.)
+		// case, so it falls through to the Studio embed instead).
 		if ( '' !== $header_manifest ) {
 			return new WP_Error(
 				'ceros_manifest_unavailable',
@@ -385,7 +385,7 @@ function ceros_flex_delivery_script_url( $manifest, $mode, $fallback_file ) {
 	$delivery = ( isset( $manifest['deliveryModes'] ) && is_array( $manifest['deliveryModes'] ) )
 		? $manifest['deliveryModes']
 		: [];
-	$url = ceros_first_script_url( isset( $delivery[ $mode ] ) ? $delivery[ $mode ] : [] );
+	$url      = ceros_first_script_url( isset( $delivery[ $mode ] ) ? $delivery[ $mode ] : [] );
 	return '' !== $url ? $url : CEROS_FLEX_ASSETS_BASE . '/js/' . $fallback_file;
 }
 
@@ -415,6 +415,7 @@ function ceros_load_flex_manifest( $manifest_url ) {
  */
 function ceros_build_flex_iframe_snippet( $experience_url, $embed_script_url, $height ) {
 	return sprintf(
+		// phpcs:ignore WordPress.WP.EnqueuedResources.NonEnqueuedScript -- an embed snippet returned to the editor and stored on the block, not a site asset to enqueue.
 		'<div data-embed-width="100%%" data-embed-height="%s" data-ceros-experience="%s"></div>' . "\n" . '<script src="%s"></script>',
 		esc_attr( $height ),
 		esc_url( $experience_url ),
@@ -431,6 +432,7 @@ function ceros_build_flex_iframe_snippet( $experience_url, $embed_script_url, $h
  */
 function ceros_build_flex_inline_snippet( $manifest_url, $script_url ) {
 	return sprintf(
+		// phpcs:ignore WordPress.WP.EnqueuedResources.NonEnqueuedScript -- an embed snippet returned to the editor and stored on the block, not a site asset to enqueue.
 		'<div data-flex-inline data-flex-manifest-url="%s"></div>' . "\n" . '<script src="%s"></script>',
 		esc_url( $manifest_url ),
 		esc_url( $script_url )
@@ -516,6 +518,7 @@ function ceros_build_legacy_embed_codes( $experience_url ) {
 	// The scroll-proxy script is served from the same origin as the experience
 	// so it also works behind legacy vanity domains.
 	$script = sprintf(
+		// phpcs:ignore WordPress.WP.EnqueuedResources.NonEnqueuedScript -- an embed snippet returned to the editor and stored on the block, not a site asset to enqueue.
 		'<script type="text/javascript" src="%s" data-ceros-origin-domains="%s"></script>',
 		esc_url( 'https://' . $host . '/scroll-proxy.min.js' ),
 		esc_attr( $host )

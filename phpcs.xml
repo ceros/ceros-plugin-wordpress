@@ -18,7 +18,6 @@
 	<!-- CLI defaults, so `composer lint` needs no arguments. -->
 	<arg name="extensions" value="php"/>
 	<arg name="basepath" value="."/>
-	<arg name="cache" value=".phpcs-cache"/>
 	<arg name="parallel" value="8"/>
 	<arg name="colors"/>
 	<!-- s: show the sniff name on every message, so it can be fixed or excluded. -->

@@ -248,6 +248,7 @@ function ceros_flex_ssr_asset_styles( $assets, $type ) {
  * @return string The <link> tag.
  */
 function ceros_flex_ssr_style_tag( $url, $integrity ) {
+	// phpcs:ignore WordPress.WP.EnqueuedResources.NonEnqueuedStylesheet -- same as the script tags below: a manifest-supplied stylesheet emitted inline with the SSR body.
 	$tag = '<link rel="stylesheet" href="' . esc_url( $url ) . '"';
 	if ( ! empty( $integrity ) ) {
 		$tag .= ' integrity="' . esc_attr( $integrity ) . '"';
@@ -337,6 +338,7 @@ function ceros_flex_ssr_script_tag( $args ) {
 		return '';
 	}
 
+	// phpcs:ignore WordPress.WP.EnqueuedResources.NonEnqueuedScript -- builds a <script> tag for a manifest-supplied runtime, emitted inline with the SSR body; there is no enqueue phase at block-render time.
 	$tag = '<script src="' . esc_url( $args['url'] ) . '"';
 	if ( ! empty( $args['module'] ) ) {
 		$tag .= ' type="module"';
