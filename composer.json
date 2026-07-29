@@ -32,7 +32,10 @@
 	},
 	"scripts": {
 		"lint": "phpcs",
-		"lint:fix": "phpcbf"
+		"lint:fix": "phpcbf",
+		"install-hooks": "sh tools/install-hooks.sh",
+		"post-install-cmd": "@install-hooks",
+		"post-update-cmd": "@install-hooks"
 	},
 	"extra": {
 		"installer-name": "ceros"

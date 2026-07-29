@@ -1,0 +1,62 @@
+#!/usr/bin/env bash
+#
+# Auto-fix staged PHP with phpcbf and restage it, so commits land already
+# formatted to the WordPress standard.
+#
+# Deliberately NOT `composer lint:fix`: that runs phpcbf over every path in
+# phpcs.xml, so it would rewrite files this commit never touched and leave
+# stray unstaged edits behind. Only staged PHP is fixed here.
+#
+# Bypass with `git commit --no-verify`.
+
+set -euo pipefail
+
+cd "$(git rev-parse --show-toplevel)"
+
+if [ ! -x vendor/bin/phpcbf ]; then
+	echo "pre-commit: vendor/bin/phpcbf not found — run 'composer install'." >&2
+	exit 1
+fi
+
+# Staged PHP files, NUL-delimited so paths with spaces survive. ACMR skips
+# deletions, which have nothing to fix.
+staged=()
+while IFS= read -r -d '' file; do
+	case "$file" in
+		build/* | vendor/* | node_modules/*) continue ;;
+		*.php) staged+=( "$file" ) ;;
+	esac
+done < <(git diff --cached --name-only --diff-filter=ACMR -z)
+
+if [ "${#staged[@]}" -eq 0 ]; then
+	exit 0
+fi
+
+# Refuse to touch a file that is only partially staged. phpcbf rewrites the
+# working-tree copy, so restaging it would silently sweep in the hunks you
+# deliberately left out of this commit.
+partial="$(git diff --name-only -- "${staged[@]}")"
+if [ -n "$partial" ]; then
+	echo "pre-commit: these staged files also have unstaged changes:" >&2
+	printf '  %s\n' $partial >&2
+	echo >&2
+	echo "Auto-fixing them would commit the unstaged hunks too. Stage them" >&2
+	echo "fully, stash the rest, or commit with --no-verify." >&2
+	exit 1
+fi
+
+# phpcbf exits 1 when it successfully fixed something, so don't let set -e
+# treat a fix as a failure.
+vendor/bin/phpcbf -q "${staged[@]}" || true
+
+git add -- "${staged[@]}"
+
+# Report what phpcbf could not fix, but let the commit through: pre-push is
+# the gate. Keeps `git commit` usable mid-refactor.
+if ! vendor/bin/phpcs "${staged[@]}"; then
+	echo >&2
+	echo "pre-commit: violations above need a human — phpcbf can't fix them." >&2
+	echo "The commit will proceed; 'git push' will block until they're fixed." >&2
+fi
+
+exit 0
