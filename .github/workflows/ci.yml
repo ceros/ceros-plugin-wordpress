@@ -80,3 +80,7 @@ jobs:
       # readme.txt is a .org-style manifest; this is what that directory gates on.
       - name: Run plugin check
         uses: wordpress/plugin-check-action@v1
+        with:
+          # Without this the slug is taken from the repo name, so every
+          # __( …, 'ceros' ) call reads as a text-domain mismatch.
+          slug: ceros
