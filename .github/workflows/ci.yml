@@ -1,0 +1,82 @@
+name: CI
+
+# The .githooks/ gates are local-only and take --no-verify; this is the real one.
+on:
+  pull_request:
+  push:
+    # TEMPORARY: lets this workflow be iterated to green before the PR is
+    # opened. Removed before review.
+    branches: [ main, afsuarez/CER-17301-ci-checks ]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  php:
+    name: PHP lint & compatibility
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # 7.4 is the declared floor and phpcs.xml's testVersion, so
+      # PHPCompatibility sees the target it enforces.
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '7.4'
+          coverage: none
+          tools: composer:v2
+
+      - name: Cache Composer downloads
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/composer/files
+          key: composer-${{ hashFiles('composer.lock') }}
+          restore-keys: composer-
+
+      # --strict also checks composer.lock is in sync with composer.json.
+      - name: Validate composer.json and lock
+        run: composer validate --strict
+
+      - name: Install Composer dependencies
+        run: composer install --no-interaction --no-progress
+
+      - name: Run PHPCS
+        run: composer lint
+
+  js:
+    name: JS build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install npm dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      # build/ is committed and shipped, so an unrebuilt src/ change ships
+      # stale assets. wp-scripts output is deterministic for a given lockfile.
+      - name: Verify committed build/ matches src/
+        run: git diff --exit-code -- build/
+
+  plugin-check:
+    name: WordPress plugin check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # readme.txt is a .org-style manifest; this is what that directory gates on.
+      - name: Run plugin check
+        uses: wordpress/plugin-check-action@v1
