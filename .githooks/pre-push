@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+#
+# Block a push while PHPCS reports violations.
+#
+# Note this lints the working tree, not the exact commits being pushed — if the
+# tree is dirty, that dirt is what gets checked. Matching the pushed refs
+# exactly would mean checking each one out, which is not worth the complexity
+# for a local convenience gate. CI is the real authority.
+#
+# Bypass with `git push --no-verify`.
+
+set -euo pipefail
+
+cd "$(git rev-parse --show-toplevel)"
+
+if [ ! -x vendor/bin/phpcs ]; then
+	echo "pre-push: vendor/bin/phpcs not found — run 'composer install'." >&2
+	exit 1
+fi
+
+echo "pre-push: running composer lint…"
+
+if ! composer lint; then
+	echo >&2
+	echo "pre-push: lint failed. Run 'composer lint:fix' for the mechanical" >&2
+	echo "fixes, then resolve whatever is left by hand." >&2
+	echo "To push regardless: git push --no-verify" >&2
+	exit 1
+fi
+
+exit 0

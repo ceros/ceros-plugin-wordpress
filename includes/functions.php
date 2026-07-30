@@ -51,10 +51,10 @@ function ceros_sanitize_resource_id( $resource_id ) {
 		return false;
 	}
 
-	// Remove any whitespace and validate format
+	// Remove any whitespace and validate format.
 	$resource_id = trim( $resource_id );
 
-	// Basic validation for Ceros resource ID format (alphanumeric with hyphens and underscores)
+	// Basic validation for Ceros resource ID format (alphanumeric with hyphens and underscores).
 	if ( ! preg_match( '/^' . CEROS_RESOURCE_ID_PATTERN . '$/', $resource_id ) ) {
 		return false;
 	}
@@ -130,13 +130,17 @@ function ceros_enqueue_admin_assets() {
 		ceros_get_version()
 	);
 
-	// Localize script with API data
-	wp_localize_script( 'ceros-admin', 'cerosAdmin', [
-		'apiUrl'          => rest_url( CEROS_REST_NAMESPACE . '/' ),
-		'nonce'           => wp_create_nonce( 'wp_rest' ),
-		'isApiConfigured' => ceros_is_api_configured(),
-		'settingsUrl'     => admin_url( 'options-general.php?page=ceros_settings' ),
-	] );
+	// Localize script with API data.
+	wp_localize_script(
+		'ceros-admin',
+		'cerosAdmin',
+		[
+			'apiUrl'          => rest_url( CEROS_REST_NAMESPACE . '/' ),
+			'nonce'           => wp_create_nonce( 'wp_rest' ),
+			'isApiConfigured' => ceros_is_api_configured(),
+			'settingsUrl'     => admin_url( 'options-general.php?page=ceros_settings' ),
+		]
+	);
 }
 
 /**
@@ -150,35 +154,35 @@ function ceros_enqueue_admin_assets() {
  * @return string User-friendly error message.
  */
 function ceros_get_friendly_error_message( $error_message ) {
-	// Default error messages - easy to modify
+	// Default error messages - easy to modify.
 	$error_messages = [
-		// cURL error 6: Could not resolve host
+		// cURL error 6: Could not resolve host.
 		'could not resolve host' => __( 'Unable to connect to the Ceros API. Please check your internet connection and try again. If the problem persists, the Ceros API server may be temporarily unavailable.', 'ceros' ),
 
-		// cURL error 7: Failed to connect
-		'failed to connect' => __( 'Failed to connect to the Ceros API. Please check your internet connection and try again.', 'ceros' ),
+		// cURL error 7: Failed to connect.
+		'failed to connect'      => __( 'Failed to connect to the Ceros API. Please check your internet connection and try again.', 'ceros' ),
 
-		// cURL error 28: Operation timeout
-		'timeout' => __( 'The connection to the Ceros API timed out. Please try again in a moment.', 'ceros' ),
+		// cURL error 28: Operation timeout.
+		'timeout'                => __( 'The connection to the Ceros API timed out. Please try again in a moment.', 'ceros' ),
 
-		// Generic connection errors
-		'curl error' => __( 'Unable to connect to the Ceros API. Please check your internet connection and try again.', 'ceros' ),
+		// Generic connection errors.
+		'curl error'             => __( 'Unable to connect to the Ceros API. Please check your internet connection and try again.', 'ceros' ),
 	];
 
-	// Allow filtering of error messages for easy customization
+	// Allow filtering of error messages for easy customization.
 	$error_messages = apply_filters( 'ceros_api_error_messages', $error_messages );
 
-	// Convert error message to lowercase for case-insensitive matching
+	// Convert error message to lowercase for case-insensitive matching.
 	$error_lower = strtolower( $error_message );
 
-	// Check for specific error patterns
+	// Check for specific error patterns.
 	foreach ( $error_messages as $pattern => $friendly_message ) {
 		if ( strpos( $error_lower, $pattern ) !== false ) {
 			return $friendly_message;
 		}
 	}
 
-	// Default fallback message if no pattern matches
+	// Default fallback message if no pattern matches.
 	return __( 'An error occurred while connecting to the Ceros API. Please try again later or contact support if the problem persists.', 'ceros' );
 }
 
@@ -224,7 +228,7 @@ function ceros_format_error( $technical_message, $friendly_message = '' ) {
  * Enqueue block editor assets and localize data for blocks
  */
 function ceros_enqueue_block_editor_assets() {
-	// Localize script data for block editor
+	// Localize script data for block editor.
 	wp_localize_script(
 		'create-block-ceros-editor-script',
 		'cerosBlockData',
@@ -260,7 +264,7 @@ function ceros_get_allowed_embed_html() {
 			'id'                      => true,
 			'class'                   => true,
 			'style'                   => true,
-			'data-*'                  => true, // Allow all data attributes
+			'data-*'                  => true, // Allow all data attributes.
 			'data-aspectratio'        => true,
 			'data-mobile-aspectratio' => true,
 			// Flex Inline (iframeless) marker attributes.
@@ -288,13 +292,13 @@ function ceros_get_allowed_embed_html() {
 			'scrolling'       => true,
 		],
 		'script' => [
-			'id'      => true,
-			'src'     => true,
-			'async'   => true,
-			'defer'   => true,
-			'type'    => true,
+			'id'     => true,
+			'src'    => true,
+			'async'  => true,
+			'defer'  => true,
+			'type'   => true,
 			// The legacy scroll-proxy script carries data-ceros-origin-domains.
-			'data-*'  => true,
+			'data-*' => true,
 		],
 		'style'  => [
 			'type' => true,

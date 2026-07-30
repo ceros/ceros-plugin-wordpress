@@ -3,6 +3,7 @@ src/.DS_Store
 
 # Dependencies
 node_modules/
+vendor/
 
 # Local wp-env personal overrides
 .wp-env.override.json

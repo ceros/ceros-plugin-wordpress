@@ -449,7 +449,7 @@ function ceros_store_rrmdir( $dir, $depth = 0 ) {
 			wp_delete_file( $item );
 		}
 	}
-	// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- removing our own empty storage dir.
+	// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir, WordPress.PHP.NoSilencedErrors.Discouraged -- removing our own empty storage dir; rmdir() warns when it is not empty, which is an expected outcome here.
 	@rmdir( $dir );
 }
 
@@ -507,7 +507,7 @@ function ceros_store_read_file( $abs_path ) {
 	if ( ! is_file( $abs_path ) ) {
 		return '';
 	}
-	// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_get_contents -- reading our own stored file.
+	// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- reading our own stored file.
 	$contents = file_get_contents( $abs_path );
 	return false === $contents ? '' : $contents;
 }

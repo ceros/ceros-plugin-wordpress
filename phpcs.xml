@@ -1,0 +1,62 @@
+<?xml version="1.0"?>
+<ruleset xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	name="Ceros"
+	xsi:noNamespaceSchemaLocation="https://schema.phpcodesniffer.com/phpcs.xsd">
+
+	<description>Coding standards for the Ceros WordPress plugin.</description>
+
+	<!-- Hand-written PHP only. -->
+	<file>ceros.php</file>
+	<file>includes</file>
+	<file>src</file>
+
+	<!-- `build/` is wp-scripts output, `vendor/` is Composer's. -->
+	<exclude-pattern>*/build/*</exclude-pattern>
+	<exclude-pattern>*/node_modules/*</exclude-pattern>
+	<exclude-pattern>*/vendor/*</exclude-pattern>
+
+	<!-- CLI defaults, so `composer lint` needs no arguments. -->
+	<arg name="extensions" value="php"/>
+	<arg name="basepath" value="."/>
+	<arg name="parallel" value="8"/>
+	<arg name="colors"/>
+	<!-- s: show the sniff name on every message, so it can be fixed or excluded. -->
+	<arg value="sp"/>
+
+	<!-- Core + Docs + Extra. -->
+	<rule ref="WordPress">
+		<!-- WPCS mandates long `array()`; this plugin has used short `[ … ]`
+		     consistently since it was written. Keeping the existing style is
+		     worth more than matching upstream on a purely cosmetic point. -->
+		<exclude name="Universal.Arrays.DisallowShortArraySyntax"/>
+	</rule>
+
+	<!-- Flag translator calls that use the wrong text domain. -->
+	<rule ref="WordPress.WP.I18n">
+		<properties>
+			<property name="text_domain" type="array">
+				<element value="ceros"/>
+			</property>
+		</properties>
+	</rule>
+
+	<!-- Every global must carry a plugin prefix, so nothing can collide with
+	     another plugin or with core. -->
+	<rule ref="WordPress.NamingConventions.PrefixAllGlobals">
+		<properties>
+			<property name="prefixes" type="array">
+				<element value="ceros"/>
+				<element value="Ceros_"/>
+				<element value="CEROS_"/>
+			</property>
+		</properties>
+	</rule>
+
+	<!-- Must match "Requires at least" in ceros.php / readme.txt. -->
+	<config name="minimum_wp_version" value="6.7"/>
+
+	<!-- Syntax/functions unavailable on the oldest PHP we support
+	     ("Requires PHP: 7.4"). -->
+	<config name="testVersion" value="7.4-"/>
+	<rule ref="PHPCompatibilityWP"/>
+</ruleset>

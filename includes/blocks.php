@@ -40,10 +40,13 @@ function ceros_block_init() {
 	 */
 	$manifest_data = require $plugin_dir . 'build/blocks-manifest.php';
 	foreach ( array_keys( $manifest_data ) as $block_type ) {
-		if ( $block_type === 'ceros' ) {
-			register_block_type( $plugin_dir . "build/{$block_type}", [
-				'render_callback' => 'ceros_render_block',
-			] );
+		if ( 'ceros' === $block_type ) {
+			register_block_type(
+				$plugin_dir . "build/{$block_type}",
+				[
+					'render_callback' => 'ceros_render_block',
+				]
+			);
 		} else {
 			register_block_type( $plugin_dir . "build/{$block_type}" );
 		}
@@ -68,32 +71,37 @@ function ceros_get_asset_version() {
 function ceros_add_cache_busting_to_css() {
 	$version = ceros_get_asset_version();
 
-	add_filter( 'style_loader_src', function( $src, $handle ) use ( $version ) {
-		// Only target Ceros CSS files
-		if ( strpos( $src, '/ceros/' ) === false || strpos( $src, '.css' ) === false ) {
-			return $src;
-		}
+	add_filter(
+		'style_loader_src',
+		function ( $src ) use ( $version ) {
+			// Only target Ceros CSS files.
+			if ( strpos( $src, '/ceros/' ) === false || strpos( $src, '.css' ) === false ) {
+				return $src;
+			}
 
-		// Parse URL to check/replace version parameter
-		$parsed = wp_parse_url( $src );
-		$query_params = [];
+			// Parse URL to check/replace version parameter.
+			$parsed       = wp_parse_url( $src );
+			$query_params = [];
 
-		if ( ! empty( $parsed['query'] ) ) {
-			parse_str( $parsed['query'], $query_params );
-		}
+			if ( ! empty( $parsed['query'] ) ) {
+				parse_str( $parsed['query'], $query_params );
+			}
 
-		// Set or replace the version parameter (prevents duplicates)
-		$query_params['ver'] = $version;
+			// Set or replace the version parameter (prevents duplicates).
+			$query_params['ver'] = $version;
 
-		// Rebuild the URL
-		$base_url = $parsed['scheme'] . '://' . $parsed['host'];
-		if ( ! empty( $parsed['port'] ) ) {
-			$base_url .= ':' . $parsed['port'];
-		}
-		$base_url .= $parsed['path'];
+			// Rebuild the URL.
+			$base_url = $parsed['scheme'] . '://' . $parsed['host'];
+			if ( ! empty( $parsed['port'] ) ) {
+				$base_url .= ':' . $parsed['port'];
+			}
+			$base_url .= $parsed['path'];
 
-		return $base_url . '?' . http_build_query( $query_params );
-	}, 10, 2 );
+			return $base_url . '?' . http_build_query( $query_params );
+		},
+		10,
+		1
+	);
 }
 add_action( 'init', 'ceros_add_cache_busting_to_css' );
 
@@ -103,11 +111,16 @@ add_action( 'init', 'ceros_add_cache_busting_to_css' );
 function ceros_modify_block_registration() {
 	$version = ceros_get_asset_version();
 
-	add_filter( 'block_type_metadata', function( $metadata ) use ( $version ) {
-		if ( isset( $metadata['name'] ) && $metadata['name'] === 'create-block/ceros' ) {
-			$metadata['version'] = $version;
-		}
-		return $metadata;
-	}, 10, 1 );
+	add_filter(
+		'block_type_metadata',
+		function ( $metadata ) use ( $version ) {
+			if ( isset( $metadata['name'] ) && 'create-block/ceros' === $metadata['name'] ) {
+				$metadata['version'] = $version;
+			}
+			return $metadata;
+		},
+		10,
+		1
+	);
 }
 add_action( 'init', 'ceros_modify_block_registration' );

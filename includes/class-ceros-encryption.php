@@ -158,6 +158,7 @@ class Ceros_Encryption {
 			$ciphertext = sodium_crypto_secretbox( $plaintext, $nonce, $key );
 
 			// Prepend nonce to ciphertext for storage.
+			// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode -- transport encoding for sodium ciphertext so it survives the options table, not obfuscation.
 			$encoded = base64_encode( $nonce . $ciphertext );
 
 			// Clear sensitive data from memory.
@@ -181,6 +182,7 @@ class Ceros_Encryption {
 		}
 
 		try {
+			// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_decode -- decoding our own sodium ciphertext, not obfuscation.
 			$decoded = base64_decode( $encrypted, true );
 			if ( false === $decoded ) {
 				return '';
@@ -211,6 +213,10 @@ class Ceros_Encryption {
 	 * Generate encryption key from WordPress salts.
 	 *
 	 * @return string 32-byte encryption key.
+	 * @throws RuntimeException When LOGGED_IN_KEY and LOGGED_IN_SALT are both
+	 *                          undefined, so no key can be derived. Failing
+	 *                          closed is deliberate: the previous fallback
+	 *                          derived a predictable key from the site URL.
 	 */
 	private static function get_encryption_key() {
 		$salt = '';
@@ -242,9 +248,9 @@ class Ceros_Encryption {
 	 */
 	private static function is_sodium_available() {
 		return function_exists( 'sodium_crypto_secretbox' ) &&
-			   function_exists( 'sodium_crypto_secretbox_open' ) &&
-			   function_exists( 'sodium_crypto_generichash' ) &&
-			   function_exists( 'sodium_memzero' );
+				function_exists( 'sodium_crypto_secretbox_open' ) &&
+				function_exists( 'sodium_crypto_generichash' ) &&
+				function_exists( 'sodium_memzero' );
 	}
 
 	/**
@@ -258,6 +264,7 @@ class Ceros_Encryption {
 			return false;
 		}
 
+		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_decode -- length probe on our own stored ciphertext, not obfuscation.
 		$decoded = base64_decode( $value, true );
 		if ( false === $decoded ) {
 			return false;

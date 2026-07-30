@@ -322,8 +322,8 @@ function ceros_render_options_page() {
 	}
 
 	// Check if API key is configured and how.
-	$is_configured    = Ceros_Encryption::is_configured();
-	$using_constant   = Ceros_Encryption::is_using_constant();
+	$is_configured  = Ceros_Encryption::is_configured();
+	$using_constant = Ceros_Encryption::is_using_constant();
 
 	// Never put the key (or a mask) in the value — an empty field means "keep existing key".
 	$placeholder = $is_configured
