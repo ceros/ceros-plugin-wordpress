@@ -4,8 +4,7 @@ name: CI
 on:
   pull_request:
   push:
-    # TEMPORARY: verifies the action bumps before the PR is opened.
-    branches: [ main, afsuarez/CER-17301-ci-checks ]
+    branches: [ main ]
 
 concurrency:
   group: ci-${{ github.ref }}
