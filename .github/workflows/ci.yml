@@ -102,3 +102,7 @@ jobs:
           # Without this the slug is taken from the repo name, so every
           # __( …, 'ceros' ) call reads as a text-domain mismatch.
           slug: ceros
+          # "Tested up to" goes stale when WordPress releases, not when this
+          # repo changes, so as a per-PR gate it fails unrelated PRs. Bumping
+          # the header belongs in release prep, where it can actually be tested.
+          ignore-codes: outdated_tested_upto_header
