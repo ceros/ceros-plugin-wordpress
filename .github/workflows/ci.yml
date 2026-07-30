@@ -4,9 +4,7 @@ name: CI
 on:
   pull_request:
   push:
-    # TEMPORARY: lets this workflow be iterated to green before the PR is
-    # opened. Removed before review.
-    branches: [ main, afsuarez/CER-17301-ci-checks ]
+    branches: [ main ]
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -22,8 +20,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # 7.4 is the declared floor and phpcs.xml's testVersion, so
-      # PHPCompatibility sees the target it enforces.
+      # 7.4 is the declared floor and phpcs.xml's testVersion.
       - name: Set up PHP
         uses: shivammathur/setup-php@v2
         with:
@@ -66,8 +63,7 @@ jobs:
       - name: Build
         run: npm run build
 
-      # build/ is committed and shipped, so an unrebuilt src/ change ships
-      # stale assets. wp-scripts output is deterministic for a given lockfile.
+      # build/ is committed and shipped, so an unrebuilt src/ change ships stale assets.
       - name: Verify committed build/ matches src/
         run: git diff --exit-code -- build/
 
@@ -83,10 +79,7 @@ jobs:
           node-version: '22'
           cache: npm
 
-      # Check what actually ships, not the repo tree: otherwise dev-only files
-      # plugin-zip already excludes (.wp-env.json, tools/, .github) all report
-      # as violations, and suppressing those means maintaining an exclude list
-      # that duplicates plugin-zip's own file selection.
+      # Check what ships: dev files plugin-zip already excludes would otherwise fail.
       - name: Build the distributable
         run: |
           npm ci
@@ -94,15 +87,11 @@ jobs:
           npm run plugin-zip
           unzip -q ceros.zip -d dist
 
-      # readme.txt is a .org-style manifest; this is what that directory gates on.
       - name: Run plugin check
         uses: wordpress/plugin-check-action@v1
         with:
           build-dir: ./dist/ceros
-          # Without this the slug is taken from the repo name, so every
-          # __( …, 'ceros' ) call reads as a text-domain mismatch.
+          # Otherwise the slug comes from the repo name and every 'ceros' domain mismatches.
           slug: ceros
-          # "Tested up to" goes stale when WordPress releases, not when this
-          # repo changes, so as a per-PR gate it fails unrelated PRs. Bumping
-          # the header belongs in release prep, where it can actually be tested.
+          # Goes stale on WordPress releases, not repo changes; bump it in release prep.
           ignore-codes: outdated_tested_upto_header
