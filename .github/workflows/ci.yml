@@ -77,10 +77,28 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      # Check what actually ships, not the repo tree: otherwise dev-only files
+      # plugin-zip already excludes (.wp-env.json, tools/, .github) all report
+      # as violations, and suppressing those means maintaining an exclude list
+      # that duplicates plugin-zip's own file selection.
+      - name: Build the distributable
+        run: |
+          npm ci
+          npm run build
+          npm run plugin-zip
+          unzip -q ceros.zip -d dist
+
       # readme.txt is a .org-style manifest; this is what that directory gates on.
       - name: Run plugin check
         uses: wordpress/plugin-check-action@v1
         with:
+          build-dir: ./dist/ceros
           # Without this the slug is taken from the repo name, so every
           # __( …, 'ceros' ) call reads as a text-domain mismatch.
           slug: ceros
