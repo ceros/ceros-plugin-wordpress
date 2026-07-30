@@ -4,7 +4,8 @@ name: CI
 on:
   pull_request:
   push:
-    branches: [ main ]
+    # TEMPORARY: verifies the action bumps before the PR is opened.
+    branches: [ main, afsuarez/CER-17301-ci-checks ]
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -18,7 +19,7 @@ jobs:
     name: PHP lint & compatibility
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       # 7.4 is the declared floor and phpcs.xml's testVersion.
       - name: Set up PHP
@@ -29,7 +30,7 @@ jobs:
           tools: composer:v2
 
       - name: Cache Composer downloads
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.cache/composer/files
           key: composer-${{ hashFiles('composer.lock') }}
@@ -49,10 +50,10 @@ jobs:
     name: JS build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: '22'
           cache: npm
@@ -71,10 +72,10 @@ jobs:
     name: WordPress plugin check
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: '22'
           cache: npm
