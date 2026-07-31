@@ -1,5 +1,6 @@
 .DS_Store
 src/.DS_Store
+build/
 
 # Dependencies
 node_modules/
