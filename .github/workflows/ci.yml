@@ -70,6 +70,10 @@ jobs:
   plugin-check:
     name: WordPress plugin check
     runs-on: ubuntu-latest
+    # Scoped to this job: the action posts its findings as a PR comment.
+    permissions:
+      contents: read
+      pull-requests: write
     steps:
       - uses: actions/checkout@v5
 
