@@ -33,6 +33,8 @@ final class CerosOwnedUrlTest extends TestCase {
 			'uppercase'         => [ 'HTTPS://VIEW.CEROS.COM' ],
 			// The port is not part of the host, so it must not defeat the match.
 			'host with port'    => [ 'https://ceros.com:8443/exp' ],
+			// Userinfo is not the host: the real origin here IS ceros.com.
+			'userinfo prefix'   => [ 'https://evil.com@ceros.com/exp' ],
 		];
 	}
 
@@ -54,6 +56,10 @@ final class CerosOwnedUrlTest extends TestCase {
 			'no dot boundary'     => [ 'https://evilceros.com' ],
 			'no dot before .site' => [ 'https://xceros.site' ],
 			'truncated tld'       => [ 'https://ceros.co' ],
+			// Reads as ceros.com to a human, but the host is evil.com.
+			'userinfo confusion'  => [ 'https://ceros.com@evil.com/exp' ],
+			// A trailing-dot FQDN is not treated as equivalent.
+			'trailing dot host'   => [ 'https://ceros.com./exp' ],
 			// Scheme must be https: the injected origin has to be authenticated.
 			'plain http'          => [ 'http://ceros.com' ],
 			'protocol relative'   => [ '//ceros.com' ],

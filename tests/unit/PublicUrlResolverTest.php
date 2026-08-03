@@ -26,6 +26,8 @@ final class PublicUrlResolverTest extends TestCase {
 			'flex editor'           => [ 'https://flex.ceros.com/edit/123', 'flex editor' ],
 			'flex editor bare edit' => [ 'https://flex.ceros.com/edit', 'flex editor' ],
 			'studio editor'         => [ 'https://admin.ceros.com/account/a1/studio/experience/7', 'studio editor' ],
+			// Host and path are both lowercased, so casing is not a way past this.
+			'uppercase throughout'  => [ 'HTTPS://FLEX.CEROS.COM/EDIT/1', 'flex editor' ],
 		];
 	}
 
@@ -111,6 +113,13 @@ final class PublicUrlResolverTest extends TestCase {
 		$this->assertSame( $expected, ceros_build_manifest_url( $url ) );
 	}
 
+	public function test_building_a_manifest_url_is_idempotent() {
+		$once = ceros_build_manifest_url( 'https://a.ceros.site/exp' );
+
+		// Applying it again must not append a second manifest filename.
+		$this->assertSame( $once, ceros_build_manifest_url( $once ) );
+	}
+
 	public function test_first_script_url_returns_first_https_entry() {
 		$mode = [
 			'scripts' => [
@@ -143,6 +152,10 @@ final class PublicUrlResolverTest extends TestCase {
 			'no scripts key'    => [ [ 'other' => [] ] ],
 			'scripts not array' => [ [ 'scripts' => 'nope' ] ],
 			'only http'         => [ [ 'scripts' => [ [ 'url' => 'http://x.example/a.js' ] ] ] ],
+			'url not a string'  => [ [ 'scripts' => [ [ 'url' => 123 ] ] ] ],
+			// The https:// check is case-sensitive, so an uppercase scheme in a
+			// manifest is dropped and the caller falls back to the CDN.
+			'uppercase scheme'  => [ [ 'scripts' => [ [ 'url' => 'HTTPS://x.ceros.site/a.js' ] ] ] ],
 		];
 	}
 

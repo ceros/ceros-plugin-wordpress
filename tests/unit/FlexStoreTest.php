@@ -47,6 +47,9 @@ final class FlexStoreTest extends TestCase {
 		return [
 			'nested'            => [ 'assets/app.min.js', 'assets/app.min.js' ],
 			'strips leading /'  => [ '/assets/app.js', 'assets/app.js' ],
+			// ltrim strips every leading slash, so this stays relative rather
+			// than escaping to an absolute path.
+			'many leading /'    => [ '//etc/passwd', 'etc/passwd' ],
 			'spaces'            => [ 'my assets/my file.js', 'my assets/my file.js' ],
 			'parens and commas' => [ 'assets/file (1),v2.js', 'assets/file (1),v2.js' ],
 			'unicode'           => [ 'assets/ünïcodé.js', 'assets/ünïcodé.js' ],
