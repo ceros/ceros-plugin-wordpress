@@ -29,12 +29,19 @@ define( 'ABSPATH', __DIR__ . '/' );
 
 define( 'CEROS_PLUGIN_FILE', dirname( __DIR__ ) . '/ceros.php' );
 define( 'CEROS_API_REQUEST_TIMEOUT', 15 );
+define( 'CEROS_RESOURCE_ID_PATTERN', '[a-zA-Z0-9\-_]+' );
 define( 'CEROS_ENV_PRODUCTION', 'production' );
 define( 'CEROS_ENV_STAGING', 'staging' );
 define( 'CEROS_PRODUCTION_API_URL', 'https://rest.ceros.com' );
 define( 'CEROS_FLEX_ASSETS_BASE', 'https://assets.ceros.site' );
 define( 'CEROS_LEGACY_VIEW_HOST', 'view.ceros.com' );
 define( 'CEROS_MANIFEST_FILENAME', 'manifest.v1.json' );
+
+// Ceros_Encryption derives its key from these WordPress salt constants rather
+// than from wp_salt(), so defining them is all the crypto tests need. Fixed
+// values keep key derivation deterministic across runs.
+define( 'LOGGED_IN_KEY', 'unit-test-logged-in-key-0123456789abcdef' );
+define( 'LOGGED_IN_SALT', 'unit-test-logged-in-salt-fedcba9876543210' );
 
 /**
  * Faithful stand-in for WordPress's wp_parse_url().
@@ -140,8 +147,11 @@ function plugin_basename( $file ) {
 	return basename( dirname( $file ) ) . '/' . basename( $file );
 }
 
+require_once dirname( __DIR__ ) . '/includes/class-ceros-encryption.php';
 require_once dirname( __DIR__ ) . '/includes/public-url-resolver.php';
 require_once dirname( __DIR__ ) . '/includes/flex-store.php';
-// Loaded for ceros_is_public_host(); its file-scope hook calls are the reason
-// add_action/add_filter/plugin_basename are shimmed above.
+require_once dirname( __DIR__ ) . '/includes/flex-ssr-renderer.php';
+// functions.php and settings.php register hooks at file scope, which is the
+// reason add_action/add_filter/plugin_basename are shimmed above.
+require_once dirname( __DIR__ ) . '/includes/functions.php';
 require_once dirname( __DIR__ ) . '/includes/settings.php';

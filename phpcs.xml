@@ -78,6 +78,16 @@
 		<exclude-pattern>tests/bootstrap.php</exclude-pattern>
 	</rule>
 
+	<!-- The crypto tests take apart the base64 envelope Ceros_Encryption stores,
+	     to tamper with the nonce and ciphertext. Transport encoding, as in the
+	     class itself, not obfuscation. -->
+	<rule ref="WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode">
+		<exclude-pattern>tests/unit/EncryptionTest.php</exclude-pattern>
+	</rule>
+	<rule ref="WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_decode">
+		<exclude-pattern>tests/unit/EncryptionTest.php</exclude-pattern>
+	</rule>
+
 	<!-- Must match "Requires at least" in ceros.php / readme.txt. -->
 	<config name="minimum_wp_version" value="6.7"/>
 
