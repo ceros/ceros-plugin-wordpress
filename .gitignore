@@ -11,3 +11,7 @@ vendor/
 # plugin-zip output, and where CI unpacks it to run plugin-check
 ceros.zip
 dist/
+
+# PHPUnit's test-order cache, and a local phpunit.xml override
+.phpunit.result.cache
+phpunit.xml

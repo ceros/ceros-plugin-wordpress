@@ -9,6 +9,7 @@
 	<file>ceros.php</file>
 	<file>includes</file>
 	<file>src</file>
+	<file>tests</file>
 
 	<!-- `build/` is wp-scripts output, `vendor/` is Composer's. -->
 	<exclude-pattern>*/build/*</exclude-pattern>
@@ -50,6 +51,30 @@
 				<element value="CEROS_"/>
 			</property>
 		</properties>
+		<!-- The unit bootstrap defines WordPress's own names on purpose. -->
+		<exclude-pattern>tests/bootstrap.php</exclude-pattern>
+	</rule>
+
+	<!-- A PHPUnit method name is its description, and data providers are covered
+	     by the @return tag alone. -->
+	<rule ref="Generic.Commenting.DocComment">
+		<exclude-pattern>tests/*</exclude-pattern>
+	</rule>
+	<rule ref="Squiz.Commenting.FunctionComment.Missing">
+		<exclude-pattern>tests/*</exclude-pattern>
+	</rule>
+	<rule ref="Squiz.Commenting.ClassComment.Missing">
+		<exclude-pattern>tests/*</exclude-pattern>
+	</rule>
+
+	<!-- The bootstrap's shims must keep WordPress's signatures, so some params
+	     go unused, and wp_parse_url() is implemented with parse_url() by
+	     definition. -->
+	<rule ref="Generic.CodeAnalysis.UnusedFunctionParameter">
+		<exclude-pattern>tests/bootstrap.php</exclude-pattern>
+	</rule>
+	<rule ref="WordPress.WP.AlternativeFunctions.parse_url_parse_url">
+		<exclude-pattern>tests/bootstrap.php</exclude-pattern>
 	</rule>
 
 	<!-- Must match "Requires at least" in ceros.php / readme.txt. -->
