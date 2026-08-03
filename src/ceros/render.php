@@ -5,6 +5,11 @@
  * @package Ceros
  */
 
+// Exit if accessed directly.
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 /**
  * Render the Ceros block on the frontend.
  *

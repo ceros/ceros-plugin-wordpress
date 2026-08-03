@@ -8,3 +8,7 @@ vendor/
 
 # Local wp-env personal overrides
 .wp-env.override.json
+
+# plugin-zip output, and where CI unpacks it to run plugin-check
+ceros.zip
+dist/
