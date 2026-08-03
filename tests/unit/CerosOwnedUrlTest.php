@@ -43,6 +43,11 @@ final class CerosOwnedUrlTest extends TestCase {
 			// An allowlisted domain appearing anywhere but the end.
 			'domain mid-host'     => [ 'https://ceros.com.evil.com' ],
 			'dev domain mid-host' => [ 'https://cerosdev.com.attacker.net' ],
+			// Same, but with a label in front, so the host really does contain
+			// ".ceros.com". Only an anchored suffix match rejects these — a
+			// substring search for the dot-prefixed domain accepts them.
+			'subdomain mid-host'  => [ 'https://sub.ceros.com.evil.com' ],
+			'subdomain mid .site' => [ 'https://x.ceros.site.attacker.net' ],
 			// Ends with the domain, but with no dot boundary.
 			'no dot boundary'     => [ 'https://evilceros.com' ],
 			'no dot before .site' => [ 'https://xceros.site' ],

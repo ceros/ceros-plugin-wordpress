@@ -22,6 +22,9 @@ final class SanitizersTest extends TestCase {
 			'single char'      => [ 'a', 'a' ],
 			'trims whitespace' => [ '  abc123  ', 'abc123' ],
 			'trims newline'    => [ "abc123\n", 'abc123' ],
+			// trim()'s character list includes NUL, so a trailing one is
+			// stripped rather than refused. An inner NUL still fails the regex.
+			'trims nul'        => [ 'abc123' . chr( 0 ), 'abc123' ],
 		];
 	}
 
@@ -47,7 +50,9 @@ final class SanitizersTest extends TestCase {
 			'query string'    => [ 'abc?x=1' ],
 			'angle brackets'  => [ '<script>' ],
 			'percent encoded' => [ 'abc%2f123' ],
-			'nul byte'        => [ "abc\0123" ],
+			// chr() rather than "\0", which PHP reads as an octal escape when
+			// digits follow — "abc\0123" is abc + LF + "3", i.e. the case below.
+			'nul byte'        => [ 'abc' . chr( 0 ) . '123' ],
 			'newline inside'  => [ "abc\n123" ],
 		];
 	}
