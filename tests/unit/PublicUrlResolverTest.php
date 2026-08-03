@@ -2,13 +2,8 @@
 /**
  * Tests for the URL-shaping helpers in includes/public-url-resolver.php.
  *
- * Covers the deterministic parts of the keyless resolve flow: recognising
- * editor/preview URLs, canonicalising an experience URL, building a manifest
- * URL, and picking a delivery-mode script out of a manifest.
- *
- * The snippet builders (ceros_build_flex_iframe_snippet and friends) are not
- * here on purpose — they depend on esc_url()/esc_attr(), and escaping is what
- * makes them correct, so they belong in an integration suite.
+ * The snippet builders are absent on purpose: escaping is what makes them
+ * correct, so they belong in an integration suite. See tests/README.md.
  *
  * @package ceros
  */
@@ -17,25 +12,19 @@ use PHPUnit\Framework\TestCase;
 
 final class PublicUrlResolverTest extends TestCase {
 
-	/**
-	 * One row per detected shape, plus the `/edit` regex's `$` alternative.
-	 */
 	public function non_publish_urls() {
 		return [
 			'preview'               => [ 'https://acct.preview.ceros.site/exp/page', 'preview' ],
 			'flex editor'           => [ 'https://flex.ceros.com/edit/123', 'flex editor' ],
 			'flex editor bare edit' => [ 'https://flex.ceros.com/edit', 'flex editor' ],
 			'studio editor'         => [ 'https://admin.ceros.com/account/a1/studio/experience/7', 'studio editor' ],
-			// Host and path are both lowercased, so casing is not a way past this.
+			// Host and path are both lowercased.
 			'uppercase throughout'  => [ 'HTTPS://FLEX.CEROS.COM/EDIT/1', 'flex editor' ],
 		];
 	}
 
 	/**
 	 * @dataProvider non_publish_urls
-	 *
-	 * @param string $url      URL under test.
-	 * @param string $expected Phrase the guidance should mention.
 	 */
 	public function test_flags_editor_and_preview_urls( $url, $expected ) {
 		$message = ceros_detect_non_publish_url( $url );
@@ -45,8 +34,8 @@ final class PublicUrlResolverTest extends TestCase {
 	}
 
 	/**
-	 * Published URLs, plus the near-misses: the host label must match exactly
-	 * and the editor path marker must be anchored.
+	 * The near-misses matter: the host label must match exactly and the editor
+	 * path marker must be anchored.
 	 */
 	public function publish_urls() {
 		return [
@@ -60,8 +49,6 @@ final class PublicUrlResolverTest extends TestCase {
 
 	/**
 	 * @dataProvider publish_urls
-	 *
-	 * @param string $url URL under test.
 	 */
 	public function test_allows_published_urls( $url ) {
 		$this->assertSame( '', ceros_detect_non_publish_url( $url ) );
@@ -76,7 +63,7 @@ final class PublicUrlResolverTest extends TestCase {
 			'strips query'            => [ 'https://a.ceros.site/exp?x=1', 'https://a.ceros.site/exp' ],
 			'strips fragment'         => [ 'https://a.ceros.site/exp#page', 'https://a.ceros.site/exp' ],
 			'keeps port'              => [ 'https://a.ceros.site:8443/exp', 'https://a.ceros.site:8443/exp' ],
-			// Userinfo is dropped by the rebuild; pinned because it is credential-adjacent.
+			// Userinfo is dropped by the rebuild.
 			'drops userinfo'          => [ 'https://user:pass@a.ceros.site/exp', 'https://a.ceros.site/exp' ],
 			'bare host'               => [ 'https://a.ceros.site', 'https://a.ceros.site' ],
 			'no scheme or host'       => [ 'not-a-url', '' ],
@@ -85,9 +72,6 @@ final class PublicUrlResolverTest extends TestCase {
 
 	/**
 	 * @dataProvider experience_urls
-	 *
-	 * @param string $url      URL under test.
-	 * @param string $expected Expected canonical experience URL.
 	 */
 	public function test_derives_canonical_experience_url( $url, $expected ) {
 		$this->assertSame( $expected, ceros_derive_experience_url( $url ) );
@@ -105,9 +89,6 @@ final class PublicUrlResolverTest extends TestCase {
 
 	/**
 	 * @dataProvider manifest_urls
-	 *
-	 * @param string $url      URL under test.
-	 * @param string $expected Expected manifest URL.
 	 */
 	public function test_builds_manifest_url( $url, $expected ) {
 		$this->assertSame( $expected, ceros_build_manifest_url( $url ) );
@@ -116,7 +97,6 @@ final class PublicUrlResolverTest extends TestCase {
 	public function test_building_a_manifest_url_is_idempotent() {
 		$once = ceros_build_manifest_url( 'https://a.ceros.site/exp' );
 
-		// Applying it again must not append a second manifest filename.
 		$this->assertSame( $once, ceros_build_manifest_url( $once ) );
 	}
 
@@ -143,9 +123,6 @@ final class PublicUrlResolverTest extends TestCase {
 		$this->assertSame( 'https://assets.ceros.site/js/good.js', ceros_first_script_url( $mode ) );
 	}
 
-	/**
-	 * One row per guard condition, plus the no-https-match fall-through.
-	 */
 	public function empty_script_modes() {
 		return [
 			'not an array'      => [ 'nope' ],
@@ -153,16 +130,13 @@ final class PublicUrlResolverTest extends TestCase {
 			'scripts not array' => [ [ 'scripts' => 'nope' ] ],
 			'only http'         => [ [ 'scripts' => [ [ 'url' => 'http://x.example/a.js' ] ] ] ],
 			'url not a string'  => [ [ 'scripts' => [ [ 'url' => 123 ] ] ] ],
-			// The https:// check is case-sensitive, so an uppercase scheme in a
-			// manifest is dropped and the caller falls back to the CDN.
+			// The https:// check is case-sensitive, so this falls back to the CDN.
 			'uppercase scheme'  => [ [ 'scripts' => [ [ 'url' => 'HTTPS://x.ceros.site/a.js' ] ] ] ],
 		];
 	}
 
 	/**
 	 * @dataProvider empty_script_modes
-	 *
-	 * @param mixed $mode Delivery-mode value under test.
 	 */
 	public function test_first_script_url_returns_empty_when_nothing_usable( $mode ) {
 		$this->assertSame( '', ceros_first_script_url( $mode ) );
@@ -191,8 +165,6 @@ final class PublicUrlResolverTest extends TestCase {
 
 	/**
 	 * @dataProvider manifests_without_delivery_script
-	 *
-	 * @param array $manifest Manifest under test.
 	 */
 	public function test_delivery_script_url_falls_back_to_cdn( $manifest ) {
 		$this->assertSame(

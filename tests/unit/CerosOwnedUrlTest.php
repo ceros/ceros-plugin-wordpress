@@ -1,11 +1,8 @@
 <?php
 /**
- * Tests for ceros_is_ceros_owned_url(), the security gate for the keyless paste
- * flow: every manifest and script origin the plugin injects must pass it.
- *
- * The look-alikes are the point. A substring match instead of an exact suffix
- * match would let an attacker-controlled host through, so both failure modes
- * are covered twice — they are the threat model, not redundancy.
+ * Tests for ceros_is_ceros_owned_url(): every manifest and script origin the
+ * plugin injects must pass it. A substring match instead of an exact suffix
+ * match would let an attacker-controlled host through.
  *
  * @package ceros
  */
@@ -31,17 +28,15 @@ final class CerosOwnedUrlTest extends TestCase {
 			'subdomain'         => [ 'https://view.ceros.com' ],
 			'nested subdomain'  => [ 'https://a.b.c.ceros.site' ],
 			'uppercase'         => [ 'HTTPS://VIEW.CEROS.COM' ],
-			// The port is not part of the host, so it must not defeat the match.
+			// The port is not part of the host.
 			'host with port'    => [ 'https://ceros.com:8443/exp' ],
-			// Userinfo is not the host: the real origin here IS ceros.com.
+			// The real origin is ceros.com.
 			'userinfo prefix'   => [ 'https://evil.com@ceros.com/exp' ],
 		];
 	}
 
 	/**
 	 * @dataProvider accepted_urls
-	 *
-	 * @param string $url URL under test.
 	 */
 	public function test_accepts_ceros_owned_https_urls( $url ) {
 		$this->assertTrue( ceros_is_ceros_owned_url( $url ) );
@@ -49,18 +44,17 @@ final class CerosOwnedUrlTest extends TestCase {
 
 	public function rejected_urls() {
 		return [
-			// Mode 1: an allowlisted domain appearing anywhere but the end.
+			// An allowlisted domain appearing anywhere but the end.
 			'domain mid-host'     => [ 'https://ceros.com.evil.com' ],
 			'dev domain mid-host' => [ 'https://cerosdev.com.attacker.net' ],
-			// Mode 2: ends with the domain, but with no dot boundary before it.
+			// Ends with the domain, but with no dot boundary.
 			'no dot boundary'     => [ 'https://evilceros.com' ],
 			'no dot before .site' => [ 'https://xceros.site' ],
 			'truncated tld'       => [ 'https://ceros.co' ],
-			// Reads as ceros.com to a human, but the host is evil.com.
+			// Reads as ceros.com, but the host is evil.com.
 			'userinfo confusion'  => [ 'https://ceros.com@evil.com/exp' ],
-			// A trailing-dot FQDN is not treated as equivalent.
 			'trailing dot host'   => [ 'https://ceros.com./exp' ],
-			// Scheme must be https: the injected origin has to be authenticated.
+			// https only.
 			'plain http'          => [ 'http://ceros.com' ],
 			'protocol relative'   => [ '//ceros.com' ],
 			'no scheme'           => [ 'ceros.com' ],
@@ -69,8 +63,6 @@ final class CerosOwnedUrlTest extends TestCase {
 
 	/**
 	 * @dataProvider rejected_urls
-	 *
-	 * @param string $url URL under test.
 	 */
 	public function test_rejects_non_ceros_or_insecure_urls( $url ) {
 		$this->assertFalse( ceros_is_ceros_owned_url( $url ) );

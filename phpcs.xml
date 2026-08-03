@@ -67,6 +67,9 @@
 	<rule ref="Squiz.Commenting.ClassComment.Missing">
 		<exclude-pattern>tests/*</exclude-pattern>
 	</rule>
+	<rule ref="Squiz.Commenting.FunctionComment.MissingParamTag">
+		<exclude-pattern>tests/*</exclude-pattern>
+	</rule>
 
 	<!-- The bootstrap's shims must keep WordPress's signatures, so some params
 	     go unused, and wp_parse_url() is implemented with parse_url() by

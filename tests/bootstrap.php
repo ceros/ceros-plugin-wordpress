@@ -2,24 +2,9 @@
 /**
  * Bootstrap for the unit suite. Loads plugin files with no WordPress present.
  *
- * The suite covers functions whose logic does not depend on WordPress
- * behaviour, so it runs in milliseconds with no Docker, database or network —
- * which is what makes it usable from the pre-push hook.
- *
- * WHAT MAY BE SHIMMED HERE, and nothing beyond it:
- *
- *   1. Hook registration (add_action/add_filter) as no-ops. Registering a hook
- *      cannot affect the return value of the functions under test.
- *   2. Helpers where WordPress is a thin wrapper over PHP and a faithful
- *      equivalent is exact, not approximate (wp_parse_url, plugin_basename).
- *   3. Translation passthrough (__), which is what WordPress itself returns
- *      when no textdomain is loaded.
- *
- * Escaping and sanitizing (esc_*, sanitize_*, wp_kses), HTTP (wp_remote_*),
- * options (get_option) and upload-dir helpers are deliberately NOT shimmed. A
- * stub for those would mean asserting against the stub instead of against
- * WordPress, so anything depending on them belongs in an integration suite
- * running against real WordPress. See tests/README.md.
+ * Only hook registration, exact PHP equivalents and translation passthrough may
+ * be shimmed here. Escaping, sanitizing, HTTP and options must not be — see
+ * tests/README.md for the rule and the reasoning.
  *
  * @package ceros
  */
@@ -37,22 +22,13 @@ define( 'CEROS_FLEX_ASSETS_BASE', 'https://assets.ceros.site' );
 define( 'CEROS_LEGACY_VIEW_HOST', 'view.ceros.com' );
 define( 'CEROS_MANIFEST_FILENAME', 'manifest.v1.json' );
 
-// Ceros_Encryption derives its key from these WordPress salt constants rather
-// than from wp_salt(), so defining them is all the crypto tests need. Fixed
-// values keep key derivation deterministic across runs.
+// Ceros_Encryption derives its key from these constants, not wp_salt().
 define( 'LOGGED_IN_KEY', 'unit-test-logged-in-key-0123456789abcdef' );
 define( 'LOGGED_IN_SALT', 'unit-test-logged-in-salt-fedcba9876543210' );
 
 /**
- * Faithful stand-in for WordPress's wp_parse_url().
- *
- * Mirrors core: protocol-relative and root-relative URLs are parsed by giving
- * them a placeholder scheme/host which is then removed, because parse_url()
- * alone misreads them. For absolute URLs this is exactly parse_url().
- *
- * @param string $url       The URL to parse.
- * @param int    $component The specific component to retrieve.
- * @return mixed Parsed URL components, or false on failure.
+ * Mirrors core: a placeholder scheme/host makes protocol- and root-relative
+ * URLs parse correctly, then is removed. For absolute URLs this is parse_url().
  */
 function wp_parse_url( $url, $component = -1 ) {
 	$to_unset = [];
@@ -100,48 +76,28 @@ function wp_parse_url( $url, $component = -1 ) {
 }
 
 /**
- * Translation passthrough. WordPress returns the string unchanged when no
- * textdomain is loaded, so this is faithful rather than a stub.
- *
- * @param string $text   Text to translate.
- * @param string $domain Textdomain (unused).
- * @return string
+ * WordPress returns the string unchanged with no textdomain loaded.
  */
 function __( $text, $domain = 'default' ) { // phpcs:ignore Universal.NamingConventions.NoReservedKeywordParameterNames.stringFound
 	return $text;
 }
 
 /**
- * No-op hook registration. Nothing under test observes the hook registry.
- *
- * @param string   $hook     Hook name.
- * @param callable $callback Callback.
- * @param int      $priority Priority.
- * @param int      $args     Accepted args.
- * @return true
+ * No-op: nothing under test observes the hook registry.
  */
 function add_action( $hook, $callback, $priority = 10, $args = 1 ) {
 	return true;
 }
 
 /**
- * No-op hook registration.
- *
- * @param string   $hook     Hook name.
- * @param callable $callback Callback.
- * @param int      $priority Priority.
- * @param int      $args     Accepted args.
- * @return true
+ * No-op: nothing under test observes the hook registry.
  */
 function add_filter( $hook, $callback, $priority = 10, $args = 1 ) {
 	return true;
 }
 
 /**
- * Plugin basename. Only used here to build a filter name at file scope.
- *
- * @param string $file Plugin file path.
- * @return string
+ * Only used at file scope to build a filter name.
  */
 function plugin_basename( $file ) {
 	return basename( dirname( $file ) ) . '/' . basename( $file );

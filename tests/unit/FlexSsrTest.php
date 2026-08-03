@@ -1,11 +1,8 @@
 <?php
 /**
- * Tests for ceros_flex_ssr_html_body(), which pulls the pre-rendered body out
- * of a manifest's asset list.
- *
- * It is the only helper in includes/flex-ssr-renderer.php that does not reach
- * esc_url()/esc_attr() or the request superglobals; the rest are deferred to an
- * integration suite. See tests/README.md.
+ * Tests for ceros_flex_ssr_html_body(), the only helper in
+ * includes/flex-ssr-renderer.php that reaches neither escaping nor the request
+ * superglobals. The rest are deferred; see tests/README.md.
  *
  * @package ceros
  */
@@ -48,10 +45,6 @@ final class FlexSsrTest extends TestCase {
 		$this->assertSame( 'first', ceros_flex_ssr_html_body( $manifest ) );
 	}
 
-	/**
-	 * Manifests with no usable html-body asset. Each must yield '' rather than
-	 * a warning or a partial value.
-	 */
 	public function manifests_without_html_body() {
 		return [
 			'empty manifest'       => [ [] ],
@@ -85,8 +78,6 @@ final class FlexSsrTest extends TestCase {
 
 	/**
 	 * @dataProvider manifests_without_html_body
-	 *
-	 * @param array $manifest Manifest under test.
 	 */
 	public function test_returns_empty_string_when_there_is_no_html_body( $manifest ) {
 		$this->assertSame( '', ceros_flex_ssr_html_body( $manifest ) );
