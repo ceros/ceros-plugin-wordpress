@@ -18,7 +18,6 @@ final class PublicUrlResolverTest extends TestCase {
 			'flex editor'           => [ 'https://flex.ceros.com/edit/123', 'flex editor' ],
 			'flex editor bare edit' => [ 'https://flex.ceros.com/edit', 'flex editor' ],
 			'studio editor'         => [ 'https://admin.ceros.com/account/a1/studio/experience/7', 'studio editor' ],
-			// Host and path are both lowercased.
 			'uppercase throughout'  => [ 'HTTPS://FLEX.CEROS.COM/EDIT/1', 'flex editor' ],
 		];
 	}
@@ -63,7 +62,6 @@ final class PublicUrlResolverTest extends TestCase {
 			'strips query'            => [ 'https://a.ceros.site/exp?x=1', 'https://a.ceros.site/exp' ],
 			'strips fragment'         => [ 'https://a.ceros.site/exp#page', 'https://a.ceros.site/exp' ],
 			'keeps port'              => [ 'https://a.ceros.site:8443/exp', 'https://a.ceros.site:8443/exp' ],
-			// Userinfo is dropped by the rebuild.
 			'drops userinfo'          => [ 'https://user:pass@a.ceros.site/exp', 'https://a.ceros.site/exp' ],
 			'bare host'               => [ 'https://a.ceros.site', 'https://a.ceros.site' ],
 			'no scheme or host'       => [ 'not-a-url', '' ],

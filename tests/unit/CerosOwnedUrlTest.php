@@ -9,9 +9,6 @@
 
 use PHPUnit\Framework\TestCase;
 
-/**
- * @covers ::ceros_is_ceros_owned_url
- */
 final class CerosOwnedUrlTest extends TestCase {
 
 	/**
@@ -28,7 +25,6 @@ final class CerosOwnedUrlTest extends TestCase {
 			'subdomain'         => [ 'https://view.ceros.com' ],
 			'nested subdomain'  => [ 'https://a.b.c.ceros.site' ],
 			'uppercase'         => [ 'HTTPS://VIEW.CEROS.COM' ],
-			// The port is not part of the host.
 			'host with port'    => [ 'https://ceros.com:8443/exp' ],
 			// The real origin is ceros.com.
 			'userinfo prefix'   => [ 'https://evil.com@ceros.com/exp' ],
@@ -51,10 +47,8 @@ final class CerosOwnedUrlTest extends TestCase {
 			'no dot boundary'     => [ 'https://evilceros.com' ],
 			'no dot before .site' => [ 'https://xceros.site' ],
 			'truncated tld'       => [ 'https://ceros.co' ],
-			// Reads as ceros.com, but the host is evil.com.
 			'userinfo confusion'  => [ 'https://ceros.com@evil.com/exp' ],
 			'trailing dot host'   => [ 'https://ceros.com./exp' ],
-			// https only.
 			'plain http'          => [ 'http://ceros.com' ],
 			'protocol relative'   => [ '//ceros.com' ],
 			'no scheme'           => [ 'ceros.com' ],

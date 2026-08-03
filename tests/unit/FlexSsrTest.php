@@ -9,9 +9,6 @@
 
 use PHPUnit\Framework\TestCase;
 
-/**
- * @covers ::ceros_flex_ssr_html_body
- */
 final class FlexSsrTest extends TestCase {
 
 	public function test_returns_the_html_body_asset_content() {

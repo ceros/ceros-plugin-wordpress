@@ -11,14 +11,8 @@
 
 use PHPUnit\Framework\TestCase;
 
-/**
- * @covers Ceros_Encryption
- */
 final class EncryptionTest extends TestCase {
 
-	/**
-	 * Call a private static method on Ceros_Encryption.
-	 */
 	private function call( $method, array $args = [] ) {
 		$ref = new ReflectionMethod( 'Ceros_Encryption', $method );
 		$ref->setAccessible( true );
@@ -75,7 +69,6 @@ final class EncryptionTest extends TestCase {
 	public function test_tampered_ciphertext_does_not_decrypt() {
 		$decoded = base64_decode( $this->call( 'encrypt', [ 'secret-value' ] ), true );
 
-		// Flip a bit past the nonce; authentication must reject it.
 		$offset             = SODIUM_CRYPTO_SECRETBOX_NONCEBYTES + 2;
 		$decoded[ $offset ] = chr( ord( $decoded[ $offset ] ) ^ 0x01 );
 

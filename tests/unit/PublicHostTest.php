@@ -11,9 +11,6 @@
 
 use PHPUnit\Framework\TestCase;
 
-/**
- * @covers ::ceros_is_public_host
- */
 final class PublicHostTest extends TestCase {
 
 	public function public_ips() {
@@ -38,7 +35,6 @@ final class PublicHostTest extends TestCase {
 			'rfc1918 172'         => [ '172.16.0.1' ],
 			// Drops if NO_RES_RANGE is ever removed.
 			'ipv4 loopback'       => [ '127.0.0.1' ],
-			// Cloud instance-metadata address.
 			'link local metadata' => [ '169.254.169.254' ],
 		];
 	}
