@@ -55,8 +55,9 @@
 		<exclude-pattern>tests/bootstrap.php</exclude-pattern>
 	</rule>
 
-	<!-- A PHPUnit method name is its description, and data providers are covered
-	     by the @return tag alone. -->
+	<!-- A PHPUnit method name is its description, and an annotation-only docblock
+	     (@dataProvider, @covers) is idiomatic. Satisfying these would mean a
+	     prose sentence on every one. -->
 	<rule ref="Generic.Commenting.DocComment">
 		<exclude-pattern>tests/*</exclude-pattern>
 	</rule>

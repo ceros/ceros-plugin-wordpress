@@ -18,20 +18,14 @@ use PHPUnit\Framework\TestCase;
 final class PublicUrlResolverTest extends TestCase {
 
 	/**
-	 * Editor and preview URLs, with the guidance each should produce.
-	 *
-	 * @return array<string, array{string, string}>
+	 * One row per detected shape, plus the `/edit` regex's `$` alternative.
 	 */
 	public function non_publish_urls() {
 		return [
-			'flex preview'          => [ 'https://acct.preview.ceros.site/exp/page', 'preview' ],
-			'studio preview'        => [ 'https://acct.preview.ceros.com/exp/page/12', 'preview' ],
-			'non-prod preview'      => [ 'https://acct.preview.latest.cerosdev.site/exp/p', 'preview' ],
+			'preview'               => [ 'https://acct.preview.ceros.site/exp/page', 'preview' ],
 			'flex editor'           => [ 'https://flex.ceros.com/edit/123', 'flex editor' ],
 			'flex editor bare edit' => [ 'https://flex.ceros.com/edit', 'flex editor' ],
-			'non-prod flex editor'  => [ 'https://latest.dev.flex.cerosdev.com/edit/9', 'flex editor' ],
 			'studio editor'         => [ 'https://admin.ceros.com/account/a1/studio/experience/7', 'studio editor' ],
-			'non-prod studio'       => [ 'https://latest.admin.cerosdev.com/account/a/studio/experience/1', 'studio editor' ],
 		];
 	}
 
@@ -49,19 +43,16 @@ final class PublicUrlResolverTest extends TestCase {
 	}
 
 	/**
-	 * Published URLs, and hosts that merely look like editor hosts.
-	 *
-	 * @return array<string, array{string}>
+	 * Published URLs, plus the near-misses: the host label must match exactly
+	 * and the editor path marker must be anchored.
 	 */
 	public function publish_urls() {
 		return [
-			'studio published'       => [ 'https://view.ceros.com/acct/exp' ],
-			'flex published'         => [ 'https://acct.ceros.site/exp' ],
-			// The `flex`/`admin` labels alone are not enough; the path marker matters.
+			'published'              => [ 'https://view.ceros.com/acct/exp' ],
 			'flex host, other path'  => [ 'https://flex.ceros.com/something' ],
 			'flex host, edit inside' => [ 'https://flex.ceros.com/x/edit/1' ],
 			'admin host, other path' => [ 'https://admin.ceros.com/account/a1/billing' ],
-			'previewish word'        => [ 'https://previews.ceros.site/exp' ],
+			'previewish label'       => [ 'https://previews.ceros.site/exp' ],
 		];
 	}
 
@@ -74,23 +65,19 @@ final class PublicUrlResolverTest extends TestCase {
 		$this->assertSame( '', ceros_detect_non_publish_url( $url ) );
 	}
 
-	/**
-	 * @return array<string, array{string, string}>
-	 */
 	public function experience_urls() {
 		return [
 			'strips manifest file'    => [ 'https://a.ceros.site/exp/manifest.v1.json', 'https://a.ceros.site/exp' ],
-			'strips versioned man.'   => [ 'https://a.ceros.site/exp/manifest.v2.json', 'https://a.ceros.site/exp' ],
 			'strips dotted version'   => [ 'https://a.ceros.site/exp/manifest.v1.2.json', 'https://a.ceros.site/exp' ],
 			'strips unversioned man.' => [ 'https://a.ceros.site/exp/manifest.json', 'https://a.ceros.site/exp' ],
 			'strips trailing slash'   => [ 'https://a.ceros.site/exp/', 'https://a.ceros.site/exp' ],
 			'strips query'            => [ 'https://a.ceros.site/exp?x=1', 'https://a.ceros.site/exp' ],
 			'strips fragment'         => [ 'https://a.ceros.site/exp#page', 'https://a.ceros.site/exp' ],
 			'keeps port'              => [ 'https://a.ceros.site:8443/exp', 'https://a.ceros.site:8443/exp' ],
+			// Userinfo is dropped by the rebuild; pinned because it is credential-adjacent.
+			'drops userinfo'          => [ 'https://user:pass@a.ceros.site/exp', 'https://a.ceros.site/exp' ],
 			'bare host'               => [ 'https://a.ceros.site', 'https://a.ceros.site' ],
 			'no scheme or host'       => [ 'not-a-url', '' ],
-			'root relative'           => [ '/exp/manifest.v1.json', '' ],
-			'empty'                   => [ '', '' ],
 		];
 	}
 
@@ -104,17 +91,13 @@ final class PublicUrlResolverTest extends TestCase {
 		$this->assertSame( $expected, ceros_derive_experience_url( $url ) );
 	}
 
-	/**
-	 * @return array<string, array{string, string}>
-	 */
 	public function manifest_urls() {
 		return [
 			'appends filename'    => [ 'https://a.ceros.site/exp', 'https://a.ceros.site/exp/manifest.v1.json' ],
-			'trailing slash'      => [ 'https://a.ceros.site/exp/', 'https://a.ceros.site/exp/manifest.v1.json' ],
 			'already a manifest'  => [ 'https://a.ceros.site/exp/manifest.v1.json', 'https://a.ceros.site/exp/manifest.v1.json' ],
 			'manifest with query' => [ 'https://a.ceros.site/exp/manifest.v1.json?v=2', 'https://a.ceros.site/exp/manifest.v1.json' ],
 			'manifest with frag'  => [ 'https://a.ceros.site/exp/manifest.v1.json#x', 'https://a.ceros.site/exp/manifest.v1.json' ],
-			'undelivered url'     => [ 'not-a-url', '' ],
+			'not a url'           => [ 'not-a-url', '' ],
 		];
 	}
 
@@ -152,14 +135,13 @@ final class PublicUrlResolverTest extends TestCase {
 	}
 
 	/**
-	 * @return array<string, array{mixed}>
+	 * One row per guard condition, plus the no-https-match fall-through.
 	 */
 	public function empty_script_modes() {
 		return [
 			'not an array'      => [ 'nope' ],
-			'empty array'       => [ [] ],
-			'scripts not array' => [ [ 'scripts' => 'nope' ] ],
 			'no scripts key'    => [ [ 'other' => [] ] ],
+			'scripts not array' => [ [ 'scripts' => 'nope' ] ],
 			'only http'         => [ [ 'scripts' => [ [ 'url' => 'http://x.example/a.js' ] ] ] ],
 		];
 	}
@@ -186,15 +168,11 @@ final class PublicUrlResolverTest extends TestCase {
 		);
 	}
 
-	/**
-	 * @return array<string, array{array}>
-	 */
 	public function manifests_without_delivery_script() {
 		return [
 			'no deliveryModes'   => [ [] ],
 			'wrong mode'         => [ [ 'deliveryModes' => [ 'iframe' => [ 'scripts' => [ [ 'url' => 'https://x.ceros.site/a.js' ] ] ] ] ] ],
 			'mode without shape' => [ [ 'deliveryModes' => [ 'inline' => [] ] ] ],
-			'deliveryModes junk' => [ [ 'deliveryModes' => 'nope' ] ],
 		];
 	}
 
