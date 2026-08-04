@@ -9,23 +9,29 @@
 import { __ } from '@wordpress/i18n';
 import { InspectorControls } from '@wordpress/block-editor';
 import { PanelBody, BaseControl, Button } from '@wordpress/components';
-import { ACTION_TYPES, EMBED_OPTIONS, DELIVERY_MODES, manifestUrlFromInline } from '../constants';
+import {
+	ACTION_TYPES,
+	EMBED_OPTIONS,
+	DELIVERY_MODES,
+	manifestUrlFromInline,
+} from '../constants';
 import { StoreControls } from './store-controls';
 
 /**
  * Sidebar Controls Component
  *
- * @param {Object} props
- * @param {string} props.selectedExperienceName - Name of the selected experience
- * @param {Object} props.attributes - Block attributes
- * @param {string} props.selectedEmbedOption - Currently selected embed option ('full' or 'scroll')
- * @param {boolean} props.hasFullHeight - Whether full height embed code is available
- * @param {boolean} props.hasScrolling - Whether scrolling embed code is available
- * @param {string} props.deliveryMode - Current delivery mode ('iframe' or 'inline')
- * @param {boolean} props.hasInline - Whether the experience exposes a Flex Inline (iframeless) snippet
- * @param {string} props.inlineEmbedCode - The Ceros-provided Flex Inline snippet
- * @param {Function} props.dispatch - Reducer dispatch function
- * @param {Function} props.setAttributes - WordPress setAttributes function
+ * @param {Object}   props
+ * @param {string}   props.selectedExperienceName - Name of the selected experience
+ * @param {Object}   props.attributes             - Block attributes
+ * @param {string}   props.selectedEmbedOption    - Currently selected embed option ('full' or 'scroll')
+ * @param {boolean}  props.hasFullHeight          - Whether full height embed code is available
+ * @param {boolean}  props.hasScrolling           - Whether scrolling embed code is available
+ * @param {string}   props.deliveryMode           - Current delivery mode ('iframe' or 'inline')
+ * @param {boolean}  props.hasInline              - Whether the experience exposes a Flex Inline (iframeless) snippet
+ * @param {string}   props.inlineEmbedCode        - The Ceros-provided Flex Inline snippet
+ * @param {Function} props.dispatch               - Reducer dispatch function
+ * @param {Function} props.setAttributes          - WordPress setAttributes function
+ * @param            props.onEdit
  */
 export function SidebarControls( {
 	selectedExperienceName,
@@ -79,7 +85,10 @@ export function SidebarControls( {
 				</BaseControl>
 			</PanelBody>
 			{ hasInline && (
-				<PanelBody title={ __( 'Delivery mode', 'ceros' ) } initialOpen={ true }>
+				<PanelBody
+					title={ __( 'Delivery mode', 'ceros' ) }
+					initialOpen={ true }
+				>
 					<BaseControl>
 						<div className="ceros-sidebar__radio-group">
 							<label className="ceros-sidebar__radio-label">
@@ -87,9 +96,13 @@ export function SidebarControls( {
 									className="ceros-sidebar__radio-input"
 									type="radio"
 									value={ DELIVERY_MODES.IFRAME }
-									checked={ deliveryMode === DELIVERY_MODES.IFRAME }
+									checked={
+										deliveryMode === DELIVERY_MODES.IFRAME
+									}
 									onChange={ () =>
-										setAttributes( { deliveryMode: DELIVERY_MODES.IFRAME } )
+										setAttributes( {
+											deliveryMode: DELIVERY_MODES.IFRAME,
+										} )
 									}
 								/>
 								<div className="ceros-sidebar__radio-content">
@@ -115,7 +128,9 @@ export function SidebarControls( {
 									className="ceros-sidebar__radio-input"
 									type="radio"
 									value={ DELIVERY_MODES.INLINE }
-									checked={ deliveryMode === DELIVERY_MODES.INLINE }
+									checked={
+										deliveryMode === DELIVERY_MODES.INLINE
+									}
 									disabled={ ! hasInline }
 									onChange={ () => {
 										if ( hasInline ) {
@@ -123,7 +138,8 @@ export function SidebarControls( {
 											// saved block always has what render.php needs, even if
 											// it only existed in live API state until now.
 											setAttributes( {
-												deliveryMode: DELIVERY_MODES.INLINE,
+												deliveryMode:
+													DELIVERY_MODES.INLINE,
 												inlineEmbedCode,
 											} );
 										}
@@ -131,7 +147,10 @@ export function SidebarControls( {
 								/>
 								<div className="ceros-sidebar__radio-content">
 									<span className="ceros-sidebar__radio-title">
-										{ __( 'Inline — iframeless (Beta)', 'ceros' ) }
+										{ __(
+											'Inline — iframeless (Beta)',
+											'ceros'
+										) }
 									</span>
 									<span className="ceros-sidebar__radio-description">
 										{ __(
@@ -152,14 +171,17 @@ export function SidebarControls( {
 									className="ceros-sidebar__radio-input"
 									type="radio"
 									value={ DELIVERY_MODES.SSR }
-									checked={ deliveryMode === DELIVERY_MODES.SSR }
+									checked={
+										deliveryMode === DELIVERY_MODES.SSR
+									}
 									disabled={ ! hasInline }
 									onChange={ () => {
 										if ( hasInline ) {
 											// Persist the manifest URL so render.php
 											// can re-fetch it server-side.
 											setAttributes( {
-												deliveryMode: DELIVERY_MODES.SSR,
+												deliveryMode:
+													DELIVERY_MODES.SSR,
 												inlineEmbedCode,
 												manifestUrl:
 													manifestUrlFromInline(
@@ -171,7 +193,10 @@ export function SidebarControls( {
 								/>
 								<div className="ceros-sidebar__radio-content">
 									<span className="ceros-sidebar__radio-title">
-										{ __( 'SSR — server-rendered (Beta)', 'ceros' ) }
+										{ __(
+											'SSR — server-rendered (Beta)',
+											'ceros'
+										) }
 									</span>
 									<span className="ceros-sidebar__radio-description">
 										{ __(
@@ -196,95 +221,108 @@ export function SidebarControls( {
 							manifestUrlFromInline( inlineEmbedCode )
 						}
 						storedAt={ attributes?.storedAt || '' }
-						storedPublishedAt={ attributes?.storedPublishedAt || '' }
-						storedFlexVersion={ attributes?.storedFlexVersion || '' }
+						storedPublishedAt={
+							attributes?.storedPublishedAt || ''
+						}
+						storedFlexVersion={
+							attributes?.storedFlexVersion || ''
+						}
 						setAttributes={ setAttributes }
 					/>
 				</PanelBody>
 			) }
 			{ isIframeDelivery && (
-			<PanelBody title={ __( 'Settings', 'ceros' ) } initialOpen={ true }>
-				<BaseControl>
-					<div className="ceros-sidebar__radio-group">
-						<label
-							className={ `ceros-sidebar__radio-label${
-								! hasFullHeight
-									? ' ceros-sidebar__radio-label--disabled'
-									: ''
-							}` }
-						>
-							<input
-								className="ceros-sidebar__radio-input"
-								type="radio"
-								value={ EMBED_OPTIONS.FULL }
-								checked={
-									selectedEmbedOption === EMBED_OPTIONS.FULL
-								}
-								disabled={ ! hasFullHeight }
-								onChange={ () => {
-									if ( hasFullHeight ) {
-										dispatch( {
-											type: ACTION_TYPES.SET_EMBED_OPTION,
-											payload: EMBED_OPTIONS.FULL,
-										} );
-										setAttributes( {
-											selectedOption: EMBED_OPTIONS.FULL,
-										} );
+				<PanelBody
+					title={ __( 'Settings', 'ceros' ) }
+					initialOpen={ true }
+				>
+					<BaseControl>
+						<div className="ceros-sidebar__radio-group">
+							<label
+								className={ `ceros-sidebar__radio-label${
+									! hasFullHeight
+										? ' ceros-sidebar__radio-label--disabled'
+										: ''
+								}` }
+							>
+								<input
+									className="ceros-sidebar__radio-input"
+									type="radio"
+									value={ EMBED_OPTIONS.FULL }
+									checked={
+										selectedEmbedOption ===
+										EMBED_OPTIONS.FULL
 									}
-								} }
-							/>
-							<div className="ceros-sidebar__radio-content">
-								<span className="ceros-sidebar__radio-title">
-									{ __( 'Full height', 'ceros' ) }
-								</span>
-								<span className="ceros-sidebar__radio-description">
-									{ __( 'Scrolls with the page.', 'ceros' ) }
-								</span>
-							</div>
-						</label>
-						<label
-							className={ `ceros-sidebar__radio-label${
-								! hasScrolling
-									? ' ceros-sidebar__radio-label--disabled'
-									: ''
-							}` }
-						>
-							<input
-								className="ceros-sidebar__radio-input"
-								type="radio"
-								value={ EMBED_OPTIONS.SCROLL }
-								checked={
-									selectedEmbedOption === EMBED_OPTIONS.SCROLL
-								}
-								disabled={ ! hasScrolling }
-								onChange={ () => {
-									if ( hasScrolling ) {
-										dispatch( {
-											type: ACTION_TYPES.SET_EMBED_OPTION,
-											payload: EMBED_OPTIONS.SCROLL,
-										} );
-										setAttributes( {
-											selectedOption:
-												EMBED_OPTIONS.SCROLL,
-										} );
+									disabled={ ! hasFullHeight }
+									onChange={ () => {
+										if ( hasFullHeight ) {
+											dispatch( {
+												type: ACTION_TYPES.SET_EMBED_OPTION,
+												payload: EMBED_OPTIONS.FULL,
+											} );
+											setAttributes( {
+												selectedOption:
+													EMBED_OPTIONS.FULL,
+											} );
+										}
+									} }
+								/>
+								<div className="ceros-sidebar__radio-content">
+									<span className="ceros-sidebar__radio-title">
+										{ __( 'Full height', 'ceros' ) }
+									</span>
+									<span className="ceros-sidebar__radio-description">
+										{ __(
+											'Scrolls with the page.',
+											'ceros'
+										) }
+									</span>
+								</div>
+							</label>
+							<label
+								className={ `ceros-sidebar__radio-label${
+									! hasScrolling
+										? ' ceros-sidebar__radio-label--disabled'
+										: ''
+								}` }
+							>
+								<input
+									className="ceros-sidebar__radio-input"
+									type="radio"
+									value={ EMBED_OPTIONS.SCROLL }
+									checked={
+										selectedEmbedOption ===
+										EMBED_OPTIONS.SCROLL
 									}
-								} }
-							/>
-							<div className="ceros-sidebar__radio-content">
-								<span className="ceros-sidebar__radio-title">
-									{ __( 'Scrolling', 'ceros' ) }
-								</span>
-								<span className="ceros-sidebar__radio-description">
-									{ __(
-										'Scrolls in its own set area.',
-										'ceros'
-									) }
-								</span>
-							</div>
-						</label>
-					</div>
-				</BaseControl>
-			</PanelBody>
+									disabled={ ! hasScrolling }
+									onChange={ () => {
+										if ( hasScrolling ) {
+											dispatch( {
+												type: ACTION_TYPES.SET_EMBED_OPTION,
+												payload: EMBED_OPTIONS.SCROLL,
+											} );
+											setAttributes( {
+												selectedOption:
+													EMBED_OPTIONS.SCROLL,
+											} );
+										}
+									} }
+								/>
+								<div className="ceros-sidebar__radio-content">
+									<span className="ceros-sidebar__radio-title">
+										{ __( 'Scrolling', 'ceros' ) }
+									</span>
+									<span className="ceros-sidebar__radio-description">
+										{ __(
+											'Scrolls in its own set area.',
+											'ceros'
+										) }
+									</span>
+								</div>
+							</label>
+						</div>
+					</BaseControl>
+				</PanelBody>
 			) }
 		</InspectorControls>
 	);

@@ -4,6 +4,9 @@ import { DELIVERY_MODES } from '../constants';
  * Delivery-mode picker shown in the experience modal when the selected
  * experience is a Flex experience (i.e. the API returned an inline snippet).
  * Lets the user choose iframe vs iframeless before adding the experience.
+ * @param root0
+ * @param root0.selectedDeliveryMode
+ * @param root0.setSelectedDeliveryMode
  */
 export const DeliveryOptions = ( {
 	selectedDeliveryMode,

@@ -87,6 +87,7 @@ $ceros-border-muted: rgb(226, 232, 240); // button & divider borders
 	}
 
 	&__folder {
+
 		div:not(.ceros-block__item,.ceros-block__folder,.ceros-block__file) {
 			margin-left: 0.5rem;
 
@@ -99,6 +100,7 @@ $ceros-border-muted: rgb(226, 232, 240); // button & divider borders
 			}
 
 			.ceros-block__folder {
+
 				.ceros-block__folder .ceros-block__item {
 					padding-left: 3rem;
 				}
@@ -108,6 +110,7 @@ $ceros-border-muted: rgb(226, 232, 240); // button & divider borders
 				}
 
 				.ceros-block__folder {
+
 					.ceros-block__folder .ceros-block__item {
 						padding-left: 4.25rem;
 					}
@@ -130,7 +133,7 @@ $ceros-border-muted: rgb(226, 232, 240); // button & divider borders
 		border: 1px solid transparent;
 		cursor: pointer;
 		font-size: 0.875rem;
-    	line-height: 1.25rem;
+		line-height: 1.25rem;
 		transition: background-color 0.2s ease-in-out;
 
 		&:hover,
@@ -238,29 +241,30 @@ $ceros-border-muted: rgb(226, 232, 240); // button & divider borders
 				line-height: 1.14285714;
 			}
 
-				&:disabled {
-					cursor: not-allowed;
-					border-color: rgb(148, 163, 184);
-					background: rgb(248, 250, 252);
-					box-shadow: none;
-				}
+			&:disabled {
+				cursor: not-allowed;
+				border-color: rgb(148, 163, 184);
+				background: rgb(248, 250, 252);
+				box-shadow: none;
+			}
 
-				&:disabled:checked::before {
-					background-color: rgb(100, 116, 139);
-				}
+			&:disabled:checked::before {
+				background-color: rgb(100, 116, 139);
+			}
 
-				&:disabled + span {
-					opacity: 0.6;
-					color: rgb(100, 116, 139);
-				}
+			&:disabled + span {
+				opacity: 0.6;
+				color: rgb(100, 116, 139);
+			}
 
-				&:disabled + span .ceros-block__embed-options-description {
-					color: rgb(148, 163, 184);
-				}
+			&:disabled + span .ceros-block__embed-options-description {
+				color: rgb(148, 163, 184);
+			}
 		}
 	}
 
 	&__selected {
+
 		.ceros-block__embed-options {
 			margin-top: 0;
 		}
@@ -344,10 +348,11 @@ $ceros-border-muted: rgb(226, 232, 240); // button & divider borders
 }
 
 .ceros-block__modal {
+
 	.ceros-block__button {
 		color: white;
 		font-size: 0.875rem;
-    	line-height: 1.25rem;
+		line-height: 1.25rem;
 		padding: 0.5rem 1rem !important;
 		border-radius: 0.375rem;
 		cursor: pointer;
@@ -386,12 +391,19 @@ $ceros-border-muted: rgb(226, 232, 240); // button & divider borders
 }
 
 @keyframes spin {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
+
+	from {
+		transform: rotate(0deg);
+	}
+
+	to {
+		transform: rotate(360deg);
+	}
 }
 
 // Sidebar Controls Styles
 .ceros-sidebar {
+
 	&__file-selector {
 		display: flex;
 		align-items: center;

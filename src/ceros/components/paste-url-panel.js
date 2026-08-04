@@ -58,7 +58,9 @@ export function PasteUrlPanel( {
 		currentEmbedCodes?.inlineEmbedCode &&
 			String( currentEmbedCodes.inlineEmbedCode ).trim()
 	);
-	const deliveryMode = hasInline ? selectedDeliveryMode : DELIVERY_MODES.IFRAME;
+	const deliveryMode = hasInline
+		? selectedDeliveryMode
+		: DELIVERY_MODES.IFRAME;
 	// Full-vs-scroll sizing only applies to the iframe delivery mode.
 	const isIframe = deliveryMode === DELIVERY_MODES.IFRAME;
 
@@ -126,7 +128,9 @@ export function PasteUrlPanel( {
 			scrollableEmbedCode: currentEmbedCodes.scrollableEmbedCode || '',
 			inlineEmbedCode: currentEmbedCodes.inlineEmbedCode || '',
 			selectedOption: selectedEmbedOption,
-			deliveryMode: hasInline ? selectedDeliveryMode : DELIVERY_MODES.IFRAME,
+			deliveryMode: hasInline
+				? selectedDeliveryMode
+				: DELIVERY_MODES.IFRAME,
 			// Manifest URL drives the SSR delivery mode's server-side fetch.
 			manifestUrl: resolved?.manifestUrl || '',
 			// Canonical (Ceros-owned) view URL. Lets render.php rebuild a legacy
@@ -162,7 +166,10 @@ export function PasteUrlPanel( {
 			</button>
 
 			<div className="ceros-block__paste">
-				<label className="ceros-block__paste-label" htmlFor="ceros-paste-url">
+				<label
+					className="ceros-block__paste-label"
+					htmlFor="ceros-paste-url"
+				>
 					{ __( 'Public experience URL', 'ceros' ) }
 				</label>
 				<div className="ceros-block__paste-row">

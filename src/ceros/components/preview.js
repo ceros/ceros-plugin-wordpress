@@ -13,6 +13,10 @@ import { DELIVERY_MODES, EMBED_OPTIONS } from '../constants';
  *
  * A ref + effect is used so any <script> tags inside the embed HTML are
  * re-created and executed in the editor (they don't run via innerHTML).
+ * @param root0
+ * @param root0.currentEmbedCodes
+ * @param root0.deliveryMode
+ * @param root0.selectedEmbedOption
  */
 export const CerosPreview = ( {
 	currentEmbedCodes,
@@ -81,16 +85,16 @@ export const CerosPreview = ( {
 	// always the isolated iframe — surface a short note explaining that.
 	let note = '';
 	if ( deliveryMode === DELIVERY_MODES.INLINE ) {
-		note = 'Published as Flex Inline (iframeless). Preview shown as an iframe.';
+		note =
+			'Published as Flex Inline (iframeless). Preview shown as an iframe.';
 	} else if ( deliveryMode === DELIVERY_MODES.SSR ) {
-		note = 'Published as Flex SSR (server-rendered). Preview shown as an iframe.';
+		note =
+			'Published as Flex SSR (server-rendered). Preview shown as an iframe.';
 	}
 
 	return (
 		<div className="ceros-block__preview-section">
-			{ note && (
-				<p className="ceros-block__preview-note">{ note }</p>
-			) }
+			{ note && <p className="ceros-block__preview-note">{ note }</p> }
 			<div ref={ containerRef } className="ceros-block__preview" />
 		</div>
 	);

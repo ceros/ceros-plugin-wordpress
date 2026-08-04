@@ -1,4 +1,10 @@
-const TreeNode = ( { node, onNodeClick, expandedNodes, loadingNodes, selectedNodeId } ) => {
+const TreeNode = ( {
+	node,
+	onNodeClick,
+	expandedNodes,
+	loadingNodes,
+	selectedNodeId,
+} ) => {
 	const isExpanded = expandedNodes.has( node.resourceId );
 	const childArray = node.children || [];
 	const hasChildren = childArray.length > 0;
@@ -14,11 +20,17 @@ const TreeNode = ( { node, onNodeClick, expandedNodes, loadingNodes, selectedNod
 	const isFileStyle = node.isExperience || isEmptyMessage;
 
 	return (
-		<div className={ isFileStyle ? 'ceros-block__file' : 'ceros-block__folder' }>
+		<div
+			className={
+				isFileStyle ? 'ceros-block__file' : 'ceros-block__folder'
+			}
+		>
 			<div
 				className={ `ceros-block__item ${
 					isSelected ? 'ceros-block__item--selected' : ''
-				} ${ isEmptyMessage ? 'ceros-block__item--empty-message' : '' }` }
+				} ${
+					isEmptyMessage ? 'ceros-block__item--empty-message' : ''
+				}` }
 				onClick={
 					isEmptyMessage
 						? undefined
@@ -28,7 +40,9 @@ const TreeNode = ( { node, onNodeClick, expandedNodes, loadingNodes, selectedNod
 						  }
 				}
 				data-resource-id={ node.resourceId }
-				style={ isEmptyMessage ? { cursor: 'default', opacity: 0.6 } : {} }
+				style={
+					isEmptyMessage ? { cursor: 'default', opacity: 0.6 } : {}
+				}
 			>
 				{ shouldShowArrow &&
 					! isEmptyMessage &&
@@ -178,4 +192,3 @@ export const TreeView = ( {
 		</div>
 	);
 };
-

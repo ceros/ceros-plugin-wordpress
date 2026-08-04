@@ -32,7 +32,10 @@ export const CerosModal = ( { isOpen, onClose, state } ) => {
 
 	return createPortal(
 		<div className="ceros-block__modal-overlay" onClick={ onClose }>
-			<div className="ceros-block__modal" onClick={ ( e ) => e.stopPropagation() }>
+			<div
+				className="ceros-block__modal"
+				onClick={ ( e ) => e.stopPropagation() }
+			>
 				<CerosModalHeader onClose={ onClose } />
 				<CerosModalBody
 					currentAccountError={ currentAccountError }
@@ -60,4 +63,3 @@ export const CerosModal = ( { isOpen, onClose, state } ) => {
 		document.body
 	);
 };
-

@@ -15,6 +15,7 @@ import { ErrorBoundary } from './components/error-boundary';
 
 /**
  * Wrapper component that adds error boundary protection
+ * @param props
  */
 const EditWithErrorBoundary = ( props ) => (
 	<ErrorBoundary>
