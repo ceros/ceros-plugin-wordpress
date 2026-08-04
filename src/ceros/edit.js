@@ -11,20 +11,13 @@ import { __ } from '@wordpress/i18n';
  *
  * @see https://developer.wordpress.org/block-editor/reference-guides/packages/packages-block-editor/#useblockprops
  */
-import {
-	useBlockProps,
-	BlockControls,
-	InspectorControls,
-} from '@wordpress/block-editor';
+import { useBlockProps, BlockControls } from '@wordpress/block-editor';
 import {
 	ToolbarGroup,
 	ToolbarButton,
 	DropdownMenu,
 	MenuGroup,
 	MenuItem,
-	PanelBody,
-	BaseControl,
-	Button,
 } from '@wordpress/components';
 
 /**
@@ -144,7 +137,8 @@ function getCerosSettingsUrl() {
 
 /**
  * Initial state for the reducer
- * @param attributes
+ *
+ * @param {Object} attributes Block attributes to seed the state from.
  */
 const initialState = ( attributes ) => ( {
 	api: {
@@ -219,7 +213,8 @@ function normaliseFolderTreeResponse( folderRes ) {
 /**
  * Helpers for working with Ceros API shapes.
  * These centralise the "try multiple fields" logic so it isn't repeated.
- * @param body
+ *
+ * @param {Object} body Decoded API response body.
  */
 function getAccountResourceId( body ) {
 	if ( ! body || typeof body !== 'object' ) {
@@ -302,8 +297,9 @@ function updateTreeNodes( nodes, updater ) {
 
 /**
  * Reducer function to manage all component state
- * @param state
- * @param action
+ *
+ * @param {Object} state  Current state.
+ * @param {Object} action Action with a `type` and optional `payload`.
  */
 function cerosReducer( state, action ) {
 	switch ( action.type ) {
@@ -473,15 +469,14 @@ function cerosReducer( state, action ) {
  * The edit function describes the structure of your block in the context of the
  * editor. This represents what the editor will render when the block is used.
  *
- * @param  root0
- * @param  root0.attributes
- * @param  root0.setAttributes
- * @param  root0.clientId
+ * @param {Object}   props               Block edit props.
+ * @param {Object}   props.attributes    Block attributes.
+ * @param {Function} props.setAttributes Updates block attributes.
  * @see https://developer.wordpress.org/block-editor/reference-guides/block-api/block-edit-save/#edit
  *
  * @return {Element} Element to render.
  */
-export default function Edit( { attributes, setAttributes, clientId } ) {
+export default function Edit( { attributes, setAttributes } ) {
 	const [ state, dispatch ] = useReducer(
 		cerosReducer,
 		attributes,
@@ -507,16 +502,6 @@ export default function Edit( { attributes, setAttributes, clientId } ) {
 		},
 		modal: { isOpen: isModalOpen },
 	} = state;
-
-	// Determine if this block is currently selected (used to detect insertion)
-	const isSelected = useSelect(
-		( select ) => {
-			const selectedId =
-				select( 'core/block-editor' ).getSelectedBlockClientId?.();
-			return selectedId === clientId;
-		},
-		[ clientId ]
-	);
 
 	// Current post ID — passed to the server-rendered SSR preview for context.
 	const postId = useSelect(
@@ -659,6 +644,8 @@ export default function Edit( { attributes, setAttributes, clientId } ) {
 			lastInitializedResourceIdRef.current =
 				attributes.experienceResourceId;
 		}
+		// Narrowed on purpose so a manual selection does not retrigger this.
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [
 		isModalOpen,
 		folderTreeData,
@@ -794,6 +781,8 @@ export default function Edit( { attributes, setAttributes, clientId } ) {
 		};
 
 		void fetchAccountAndTree();
+		// Runs once on mount; currentAccountResult is what it produces, not an input.
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [] );
 
 	// Extract a human-readable API error message from different error shapes

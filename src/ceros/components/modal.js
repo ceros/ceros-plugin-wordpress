@@ -31,6 +31,10 @@ export const CerosModal = ( { isOpen, onClose, state } ) => {
 	} = state;
 
 	return createPortal(
+		/* eslint-disable jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions --
+		   The overlay is a backdrop and the inner div only stops propagation, so
+		   neither is a control. The real gap is that this modal has no Escape
+		   handler at all; adding one is a behaviour change, tracked separately. */
 		<div className="ceros-block__modal-overlay" onClick={ onClose }>
 			<div
 				className="ceros-block__modal"
@@ -60,6 +64,7 @@ export const CerosModal = ( { isOpen, onClose, state } ) => {
 				/>
 			</div>
 		</div>,
+		/* eslint-enable jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions */
 		document.body
 	);
 };

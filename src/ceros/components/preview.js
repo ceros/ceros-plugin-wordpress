@@ -13,10 +13,11 @@ import { DELIVERY_MODES, EMBED_OPTIONS } from '../constants';
  *
  * A ref + effect is used so any <script> tags inside the embed HTML are
  * re-created and executed in the editor (they don't run via innerHTML).
- * @param root0
- * @param root0.currentEmbedCodes
- * @param root0.deliveryMode
- * @param root0.selectedEmbedOption
+ *
+ * @param {Object} props                     Component props.
+ * @param {Object} props.currentEmbedCodes   Embed codes for the selected experience.
+ * @param {string} props.deliveryMode        Delivery mode ('iframe' or 'inline').
+ * @param {string} props.selectedEmbedOption Embed option ('full' or 'scroll').
  */
 export const CerosPreview = ( {
 	currentEmbedCodes,

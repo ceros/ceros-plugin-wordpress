@@ -64,6 +64,9 @@ export function SsrPreview( { attributes, postId } ) {
 			cancelled = true;
 		};
 		// Re-render whenever something that changes the server output changes.
+		// Narrowed to the fields that change the server output on purpose: the
+		// whole attributes object would refetch on every unrelated edit.
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [
 		attributes.deliveryMode,
 		attributes.storedIndexPath,

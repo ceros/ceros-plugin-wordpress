@@ -1,3 +1,5 @@
+/* eslint-disable no-nested-ternary -- the icon pickers are 3-way chains;
+   extracting them is deferred to the PR that adds tree-view test coverage. */
 const TreeNode = ( {
 	node,
 	onNodeClick,
@@ -25,6 +27,9 @@ const TreeNode = ( {
 				isFileStyle ? 'ceros-block__file' : 'ceros-block__folder'
 			}
 		>
+			{ /* eslint-disable-next-line jsx-a11y/click-events-have-key-events --
+			     Tree rows are not keyboard-reachable; making them so needs roles,
+			     tabIndex and arrow-key handling, tracked separately. */ }
 			<div
 				className={ `ceros-block__item ${
 					isSelected ? 'ceros-block__item--selected' : ''

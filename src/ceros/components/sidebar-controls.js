@@ -31,7 +31,7 @@ import { StoreControls } from './store-controls';
  * @param {string}   props.inlineEmbedCode        - The Ceros-provided Flex Inline snippet
  * @param {Function} props.dispatch               - Reducer dispatch function
  * @param {Function} props.setAttributes          - WordPress setAttributes function
- * @param            props.onEdit
+ * @param {Function} props.onEdit                 - Reopens the experience picker
  */
 export function SidebarControls( {
 	selectedExperienceName,
