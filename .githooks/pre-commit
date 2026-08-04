@@ -13,11 +13,6 @@ set -euo pipefail
 
 cd "$(git rev-parse --show-toplevel)"
 
-if [ ! -x vendor/bin/phpcbf ]; then
-	echo "pre-commit: vendor/bin/phpcbf not found — run 'composer install'." >&2
-	exit 1
-fi
-
 # Staged PHP files, NUL-delimited so paths with spaces survive. ACMR skips
 # deletions, which have nothing to fix.
 staged=()
@@ -30,6 +25,13 @@ done < <(git diff --cached --name-only --diff-filter=ACMR -z)
 
 if [ "${#staged[@]}" -eq 0 ]; then
 	exit 0
+fi
+
+# Checked only once there is PHP to fix, so a JS-only commit does not require
+# Composer to have been installed.
+if [ ! -x vendor/bin/phpcbf ]; then
+	echo "pre-commit: vendor/bin/phpcbf not found — run 'composer install'." >&2
+	exit 1
 fi
 
 # Refuse to touch a file that is only partially staged. phpcbf rewrites the
