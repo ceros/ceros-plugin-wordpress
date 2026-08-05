@@ -190,7 +190,7 @@ class Ceros_API {
 			);
 		}
 
-		$result = $this->make_authenticated_request( '/folder/' . $resource_id . '/experiences' );
+		$result = $this->make_authenticated_request( '/folder/' . $resource_id . '/experiences?pageSize=1000' );
 
 		// Filter out invalid experiences on the backend to reduce data sent to frontend.
 		if ( ! is_wp_error( $result ) && isset( $result['body'] ) ) {
