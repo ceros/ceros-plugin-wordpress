@@ -1,12 +1,13 @@
 # Tests
 
-Run with `composer test`.
+PHP: `composer test`. JavaScript: `npm run test:js`.
 
 ## Suites
 
 | Suite | Needs | Runs in | Where |
 | --- | --- | --- | --- |
-| `unit` | nothing | milliseconds | pre-push hook + CI |
+| PHP `unit` | nothing | milliseconds | pre-push hook + CI |
+| JS (`tests/js`) | happy-dom | under a second | pre-push hook + CI |
 
 The `unit` suite runs with **no WordPress loaded** — no Docker, no database, no
 network. That is what makes it safe to run from `.githooks/pre-push`.
@@ -77,3 +78,35 @@ Deliberate, so they are not silently missing:
   absent. Constants cannot be undefined once set, so this needs a subprocess or
   the integration suite. It guards a deliberate fail-closed decision, so it is
   worth covering there.
+
+
+## The JavaScript suite
+
+Vitest with happy-dom, in `tests/js`. It covers the block editor code that
+imports no `@wordpress/*` package, since those are webpack externals mapped to
+`window.wp.*` at build time and are not installed:
+
+- `constants.js` — `manifestUrlFromInline()`, the counterpart of the PHP
+  `ceros_manifest_url_from_inline()`, plus the option and delivery-mode values,
+  which are persisted on the block and read by the PHP renderer.
+- `tree-view`, `embed-options`, `delivery-options`, `modal-header`.
+
+Anything importing `@wordpress/components`, `block-editor`, `data` or
+`api-fetch` is out of scope until those are installed as devDependencies — a
+decision worth making on evidence rather than up front, since
+`@wordpress/components` is a large tree and only `edit.js` and the control
+panels need it.
+
+### Two things about the setup
+
+`vitest.config.mjs` carries a small `ceros:jsx-in-js` plugin. The sources are
+`.js` files containing JSX, Vite picks its loader from the file extension, and
+no supported config option changes that — `OxcOptions` omits `lang` and
+`esbuild.loader` does not reach them. Renaming the sources to `.jsx` is the
+alternative, but `src/ceros/index.js` is the block entry wp-scripts finds by
+name.
+
+`tests/js/setup.js` registers Testing Library's `cleanup` by hand. It only
+self-registers when a global `afterEach` exists, and this suite uses explicit
+imports rather than Vitest globals, so without it every render stays in the
+document and later queries match earlier tests' DOM.
