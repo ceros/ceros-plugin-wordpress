@@ -9,6 +9,7 @@
 	<file>ceros.php</file>
 	<file>includes</file>
 	<file>src</file>
+	<file>tests</file>
 
 	<!-- `build/` is wp-scripts output, `vendor/` is Composer's. -->
 	<exclude-pattern>*/build/*</exclude-pattern>
@@ -50,6 +51,44 @@
 				<element value="CEROS_"/>
 			</property>
 		</properties>
+		<!-- The unit bootstrap defines WordPress's own names on purpose. -->
+		<exclude-pattern>tests/bootstrap.php</exclude-pattern>
+	</rule>
+
+	<!-- A PHPUnit method name is its description, and an annotation-only docblock
+	     (@dataProvider, @covers) is idiomatic. Satisfying these would mean a
+	     prose sentence on every one. -->
+	<rule ref="Generic.Commenting.DocComment">
+		<exclude-pattern>tests/*</exclude-pattern>
+	</rule>
+	<rule ref="Squiz.Commenting.FunctionComment.Missing">
+		<exclude-pattern>tests/*</exclude-pattern>
+	</rule>
+	<rule ref="Squiz.Commenting.ClassComment.Missing">
+		<exclude-pattern>tests/*</exclude-pattern>
+	</rule>
+	<rule ref="Squiz.Commenting.FunctionComment.MissingParamTag">
+		<exclude-pattern>tests/*</exclude-pattern>
+	</rule>
+
+	<!-- The bootstrap's shims must keep WordPress's signatures, so some params
+	     go unused, and wp_parse_url() is implemented with parse_url() by
+	     definition. -->
+	<rule ref="Generic.CodeAnalysis.UnusedFunctionParameter">
+		<exclude-pattern>tests/bootstrap.php</exclude-pattern>
+	</rule>
+	<rule ref="WordPress.WP.AlternativeFunctions.parse_url_parse_url">
+		<exclude-pattern>tests/bootstrap.php</exclude-pattern>
+	</rule>
+
+	<!-- The crypto tests take apart the base64 envelope Ceros_Encryption stores,
+	     to tamper with the nonce and ciphertext. Transport encoding, as in the
+	     class itself, not obfuscation. -->
+	<rule ref="WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode">
+		<exclude-pattern>tests/unit/EncryptionTest.php</exclude-pattern>
+	</rule>
+	<rule ref="WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_decode">
+		<exclude-pattern>tests/unit/EncryptionTest.php</exclude-pattern>
 	</rule>
 
 	<!-- Must match "Requires at least" in ceros.php / readme.txt. -->

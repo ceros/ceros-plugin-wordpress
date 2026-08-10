@@ -45,6 +45,34 @@ jobs:
       - name: Run PHPCS
         run: composer lint
 
+  php-tests:
+    name: PHP unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      # Same floor as the lint job. The suite needs no WordPress, database or
+      # network, so there is nothing else to provision.
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '7.4'
+          coverage: none
+          tools: composer:v2
+
+      - name: Cache Composer downloads
+        uses: actions/cache@v5
+        with:
+          path: ~/.cache/composer/files
+          key: composer-${{ hashFiles('composer.lock') }}
+          restore-keys: composer-
+
+      - name: Install Composer dependencies
+        run: composer install --no-interaction --no-progress
+
+      - name: Run unit tests
+        run: composer test
+
   js:
     name: JS build
     runs-on: ubuntu-latest
