@@ -141,20 +141,20 @@ class Ceros_API {
 		}
 
 		$result = $this->make_authenticated_request( '/accounts/' . $account_resource_id . '/folder-tree' );
-
+		$resources = $result['body']['resources'];
 		// Only filter successful responses that actually contain a folder list.
 		// Skip WP_Error, non-2xx responses, and non-list bodies (e.g. `{"message": "..."}`
 		// error payloads) so their structure is preserved for the error handler downstream.
-		$body_is_list = is_array( $result['body'] ?? null )
-			&& ( [] === $result['body'] || array_keys( $result['body'] ) === range( 0, count( $result['body'] ) - 1 ) );
+		$body_is_list = is_array($resources ?? null )
+			&& ( [] === $resources || array_keys( $resources ) === range( 0, count( $resources ) - 1 ) );
 		if (
 			! is_wp_error( $result ) &&
 			isset( $result['code'] ) && $result['code'] >= 200 && $result['code'] < 300 &&
 			$body_is_list
 		) {
-			$result['body'] = array_values(
+			$resources = array_values(
 				array_filter(
-					$result['body'],
+					$resources,
 					function ( $item ) {
 						if ( ! is_array( $item ) || ! isset( $item['name'] ) ) {
 							return true;
@@ -165,6 +165,7 @@ class Ceros_API {
 					}
 				)
 			);
+			$result['body'] = $resources;
 		}
 
 		return $result;
@@ -190,7 +191,7 @@ class Ceros_API {
 			);
 		}
 
-		$result = $this->make_authenticated_request( '/folder/' . $resource_id . '/experiences?pageSize=1000&filter=published' );
+		$result = $this->make_authenticated_request( '/folders/' . $resource_id . '/experiences?pageSize=1000&filter=published' );
 
 		// Filter out invalid experiences on the backend to reduce data sent to frontend.
 		if ( ! is_wp_error( $result ) && isset( $result['body'] ) ) {
@@ -199,8 +200,8 @@ class Ceros_API {
 			// Handle different response structures.
 			if ( isset( $experiences['items'] ) && is_array( $experiences['items'] ) ) {
 				$experiences = $experiences['items'];
-			} elseif ( isset( $experiences['data'] ) && is_array( $experiences['data'] ) ) {
-				$experiences = $experiences['data'];
+			} elseif ( isset( $experiences['resources'] ) && is_array( $experiences['resources'] ) ) {
+				$experiences = $experiences['resources'];
 			} elseif ( ! is_array( $experiences ) ) {
 				$experiences = [];
 			}
