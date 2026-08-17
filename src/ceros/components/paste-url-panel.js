@@ -40,6 +40,7 @@ function experienceNameFromUrl( url ) {
  * @param {Object}   props.currentEmbedCodes    Resolved embed codes (from state).
  * @param {string}   props.selectedDeliveryMode Current delivery mode.
  * @param {string}   props.selectedEmbedOption  Current iframe size option.
+ * @param {boolean}  props.apiKeyConfigured     Whether the API key is configured.
  */
 export function PasteUrlPanel( {
 	dispatch,
@@ -48,6 +49,7 @@ export function PasteUrlPanel( {
 	currentEmbedCodes,
 	selectedDeliveryMode,
 	selectedEmbedOption,
+	apiKeyConfigured,
 } ) {
 	const [ url, setUrl ] = useState( '' );
 	const [ isLoading, setIsLoading ] = useState( false );
@@ -146,21 +148,28 @@ export function PasteUrlPanel( {
 	return (
 		<div className="ceros-block__empty">
 			<h3>{ __( 'Add a Ceros Experience', 'ceros' ) }</h3>
-			<p>
-				{ __(
-					'No API key is configured, so experience browsing is disabled. Paste a public Ceros experience URL to add it directly.',
-					'ceros'
-				) }
-			</p>
+			{ ! apiKeyConfigured && (
+				<p>
+					{ __(
+						'No API key is configured, so experience browsing is disabled. Paste a public Ceros experience URL to add it directly.',
+						'ceros'
+					) }
+				</p>
+			) }
 
 			<button
 				className="ceros-block__button ceros-block__button--primary"
 				type="button"
-				disabled={ true }
-				title={ __(
-					'Add a Ceros API key in settings to browse experiences.',
-					'ceros'
-				) }
+				disabled={ ! apiKeyConfigured }
+				title={
+					! apiKeyConfigured
+						? __(
+								'Add a Ceros API key in settings to browse experiences.',
+								'ceros'
+						  )
+						: ''
+				}
+				onClick={ () => dispatch( { type: ACTION_TYPES.OPEN_MODAL } ) }
 			>
 				{ __( 'Browse Experiences', 'ceros' ) }
 			</button>
@@ -253,19 +262,20 @@ export function PasteUrlPanel( {
 					</div>
 				) }
 			</div>
-
-			<p className="ceros-block__paste-hint">
-				<a
-					href={ settingsUrl }
-					target="_blank"
-					rel="noopener noreferrer"
-				>
-					{ __(
-						'Add a Ceros API key to enable experience browsing.',
-						'ceros'
-					) }
-				</a>
-			</p>
+			{ ! apiKeyConfigured && (
+				<p className="ceros-block__paste-hint">
+					<a
+						href={ settingsUrl }
+						target="_blank"
+						rel="noopener noreferrer"
+					>
+						{ __(
+							'Add a Ceros API key to enable experience browsing.',
+							'ceros'
+						) }
+					</a>
+				</p>
+			) }
 		</div>
 	);
 }

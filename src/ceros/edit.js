@@ -1469,27 +1469,9 @@ export default function Edit( { attributes, setAttributes } ) {
 						</div>
 					) : (
 						! isModalOpen &&
-						! currentAccountError &&
-						( IS_API_KEY_CONFIGURED ? (
-							<div className="ceros-block__empty">
-								<h3>No Experience Selected</h3>
-								<p>
-									Click the button below to browse and select
-									a Ceros experience.
-								</p>
-								<button
-									className="ceros-block__button ceros-block__button--primary"
-									onClick={ () =>
-										dispatch( {
-											type: ACTION_TYPES.OPEN_MODAL,
-										} )
-									}
-								>
-									Browse Experiences
-								</button>
-							</div>
-						) : (
+						! currentAccountError && (
 							<PasteUrlPanel
+								apiKeyConfigured={ IS_API_KEY_CONFIGURED }
 								dispatch={ dispatch }
 								setAttributes={ setAttributes }
 								settingsUrl={ getCerosSettingsUrl() }
@@ -1497,7 +1479,7 @@ export default function Edit( { attributes, setAttributes } ) {
 								selectedDeliveryMode={ selectedDeliveryMode }
 								selectedEmbedOption={ selectedEmbedOption }
 							/>
-						) )
+						)
 					) }
 				</div>
 			</div>
