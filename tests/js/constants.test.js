@@ -1,7 +1,16 @@
 /**
- * Tests for manifestUrlFromInline(), the JS counterpart of the PHP
- * ceros_manifest_url_from_inline(). Both read the manifest URL back out of a
- * stored Flex Inline snippet, so they need to agree.
+ * Tests for manifestUrlFromInline(), the editor-side fallback for recovering a
+ * manifest URL from a Flex Inline snippet when the server did not supply one.
+ *
+ * The PHP ceros_manifest_url_from_inline() is the primary extractor: it reads
+ * the raw snippet from the Ceros API before wp_kses touches it. This one reads
+ * the sanitized snippet, so the two see different input and are not held to the
+ * same contract — the PHP accepts either quote style because a raw snippet may
+ * carry either, while wp_kses rewrites every attribute it keeps as name="value",
+ * so single quotes cannot reach the editor.
+ *
+ * Where they do have to agree is entity decoding, since wp_kses is what encodes
+ * the value in the first place. Both decode.
  */
 import { describe, it, expect } from 'vitest';
 import {
@@ -45,13 +54,41 @@ describe( 'manifestUrlFromInline', () => {
 		[ 'an object', {} ],
 		[ 'a snippet without the attribute', '<div data-flex-inline></div>' ],
 		[ 'an empty attribute value', '<div data-flex-manifest-url=""></div>' ],
-		// Single quotes are not what the plugin writes, so they are not accepted.
-		[
-			'single-quoted value',
-			"<div data-flex-manifest-url='https://a.ceros.site/m.json'></div>",
-		],
 	] )( 'returns an empty string for %s', ( _label, input ) => {
 		expect( manifestUrlFromInline( input ) ).toBe( '' );
+	} );
+
+	it( 'decodes the ampersands wp_kses encodes, so query parameters survive', () => {
+		expect(
+			manifestUrlFromInline(
+				'<div data-flex-manifest-url="https://a.ceros.site/m.json?v=1&#038;p=2"></div>'
+			)
+		).toBe( 'https://a.ceros.site/m.json?v=1&p=2' );
+	} );
+
+	it( 'decodes a named ampersand entity too', () => {
+		expect(
+			manifestUrlFromInline(
+				'<div data-flex-manifest-url="https://a.ceros.site/m.json?v=1&amp;p=2"></div>'
+			)
+		).toBe( 'https://a.ceros.site/m.json?v=1&p=2' );
+	} );
+
+	it( 'leaves a URL with no entities alone', () => {
+		const url = 'https://a.ceros.site/exp/manifest.v1.json?v=1&p=2';
+
+		expect( manifestUrlFromInline( snippet( url ) ) ).toBe( url );
+	} );
+
+	// Not a parity gap with the PHP extractor, which takes either quote style:
+	// wp_kses rewrites the attributes it keeps as name="value", so a
+	// single-quoted value cannot reach the editor in the first place.
+	it( 'does not read a single-quoted value', () => {
+		expect(
+			manifestUrlFromInline(
+				"<div data-flex-manifest-url='https://a.ceros.site/m.json'></div>"
+			)
+		).toBe( '' );
 	} );
 } );
 

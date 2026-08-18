@@ -86,9 +86,13 @@ Vitest with happy-dom, in `tests/js`. It covers the block editor code that
 imports no `@wordpress/*` package, since those are webpack externals mapped to
 `window.wp.*` at build time and are not installed:
 
-- `constants.js` — `manifestUrlFromInline()`, the counterpart of the PHP
-  `ceros_manifest_url_from_inline()`, plus the option and delivery-mode values,
-  which are persisted on the block and read by the PHP renderer.
+- `constants.js` — `manifestUrlFromInline()`, the editor-side fallback for
+  recovering a manifest URL from a snippet the plugin already sanitized. It is
+  not a port of the PHP `ceros_manifest_url_from_inline()`, which reads the raw
+  API snippet and so accepts either quote style; the tests pin the narrower
+  contract and say why, and cover the entity decoding the two do share. Plus the
+  option and delivery-mode values, which are persisted on the block and read by
+  the PHP renderer.
 - `tree-view`, `embed-options`, `delivery-options`, `modal-header`.
 
 Anything importing `@wordpress/components`, `block-editor`, `data` or

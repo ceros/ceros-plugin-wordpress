@@ -22,8 +22,29 @@ export const DELIVERY_MODES = {
 };
 
 /**
+ * Undo the entity encoding wp_kses applies to attribute values, which rewrites a
+ * bare `&` as `&#038;`. Parsing in a detached textarea keeps the content as raw
+ * text — no markup in it is ever built or run.
+ *
+ * @param {string} value The encoded attribute value.
+ * @return {string} The decoded value.
+ */
+function decodeEntities( value ) {
+	const textarea = document.createElement( 'textarea' );
+	textarea.innerHTML = value;
+	return textarea.value;
+}
+
+/**
  * Extract the manifest URL from a Flex Inline snippet's
  * `data-flex-manifest-url` attribute. Returns '' when not present.
+ *
+ * The snippet reaching the editor has been through `ceros_sanitize_embed_code`,
+ * so its entities are decoded on the way out: an encoded `&` would otherwise
+ * corrupt a manifest URL carrying query parameters. This mirrors the
+ * `html_entity_decode()` in the PHP `ceros_manifest_url_from_inline()`, which
+ * extracts from the raw snippet server-side and supplies the `manifestUrl` this
+ * function only has to fall back for.
  *
  * @param {string} inlineEmbedCode The Flex Inline snippet.
  * @return {string} The manifest URL, or ''.
@@ -33,7 +54,7 @@ export function manifestUrlFromInline( inlineEmbedCode ) {
 		return '';
 	}
 	const match = inlineEmbedCode.match( /data-flex-manifest-url="([^"]+)"/i );
-	return match ? match[ 1 ] : '';
+	return match ? decodeEntities( match[ 1 ] ) : '';
 }
 
 /**

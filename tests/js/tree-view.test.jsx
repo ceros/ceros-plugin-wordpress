@@ -135,14 +135,26 @@ describe( 'TreeNode styling', () => {
 		).toBeNull();
 	} );
 
-	it( 'marks an empty-message row and does not select it', () => {
-		const { container } = renderTree( [
-			folder( { isEmptyMessage: true, name: 'No experiences' } ),
-		] );
+	it( 'marks an empty-message row and never selects it', () => {
+		// The shape edit.js builds for a folder that turned out empty.
+		const { container } = renderTree(
+			[
+				folder( {
+					resourceId: 'empty-f1',
+					name: 'No published experiences found',
+					isExperience: false,
+					isEmptyMessage: true,
+				} ),
+			],
+			{ selectedNodeId: 'empty-f1' }
+		);
 
 		expect(
 			container.querySelector( '.ceros-block__item--empty-message' )
 		).toBeTruthy();
+		expect(
+			container.querySelector( '.ceros-block__item--selected' )
+		).toBeNull();
 	} );
 } );
 

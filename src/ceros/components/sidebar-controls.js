@@ -178,12 +178,16 @@ export function SidebarControls( {
 									onChange={ () => {
 										if ( hasInline ) {
 											// Persist the manifest URL so render.php
-											// can re-fetch it server-side.
+											// can re-fetch it server-side. Prefer the
+											// value the embed-codes endpoint resolved
+											// from the raw snippet; scraping the
+											// sanitized one is the fallback.
 											setAttributes( {
 												deliveryMode:
 													DELIVERY_MODES.SSR,
 												inlineEmbedCode,
 												manifestUrl:
+													attributes?.manifestUrl ||
 													manifestUrlFromInline(
 														inlineEmbedCode
 													),
