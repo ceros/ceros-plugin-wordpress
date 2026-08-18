@@ -145,7 +145,7 @@ class Ceros_API {
 		// Only filter successful responses that actually contain a folder list.
 		// Skip WP_Error, non-2xx responses, and non-list bodies (e.g. `{"message": "..."}`
 		// error payloads) so their structure is preserved for the error handler downstream.
-		$body_is_list = is_array($resources ?? null )
+		$body_is_list = is_array( $resources ?? null )
 			&& ( [] === $resources || array_keys( $resources ) === range( 0, count( $resources ) - 1 ) );
 		if (
 			! is_wp_error( $result ) &&
