@@ -140,7 +140,7 @@ class Ceros_API {
 			);
 		}
 
-		$result = $this->make_authenticated_request( '/accounts/' . $account_resource_id . '/folder-tree' );
+		$result    = $this->make_authenticated_request( '/accounts/' . $account_resource_id . '/folder-tree' );
 		$resources = $result['body']['resources'];
 		// Only filter successful responses that actually contain a folder list.
 		// Skip WP_Error, non-2xx responses, and non-list bodies (e.g. `{"message": "..."}`
@@ -152,7 +152,7 @@ class Ceros_API {
 			isset( $result['code'] ) && $result['code'] >= 200 && $result['code'] < 300 &&
 			$body_is_list
 		) {
-			$resources = array_values(
+			$resources      = array_values(
 				array_filter(
 					$resources,
 					function ( $item ) {
