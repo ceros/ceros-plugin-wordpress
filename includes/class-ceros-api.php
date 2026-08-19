@@ -141,6 +141,10 @@ class Ceros_API {
 		}
 
 		$result    = $this->make_authenticated_request( '/accounts/' . $account_resource_id . '/folder-tree' );
+		if ( is_wp_error( $result ) ) {
+			return $result;
+		}
+
 		$resources = $result['body']['resources'];
 		// Only filter successful responses that actually contain a folder list.
 		// Skip WP_Error, non-2xx responses, and non-list bodies (e.g. `{"message": "..."}`
@@ -148,7 +152,6 @@ class Ceros_API {
 		$body_is_list = is_array( $resources ?? null )
 			&& ( [] === $resources || array_keys( $resources ) === range( 0, count( $resources ) - 1 ) );
 		if (
-			! is_wp_error( $result ) &&
 			isset( $result['code'] ) && $result['code'] >= 200 && $result['code'] < 300 &&
 			$body_is_list
 		) {
