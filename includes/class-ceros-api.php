@@ -140,7 +140,7 @@ class Ceros_API {
 			);
 		}
 
-		$result    = $this->make_authenticated_request( '/accounts/' . $account_resource_id . '/folder-tree?depth=0' );
+		$result = $this->make_authenticated_request( '/accounts/' . $account_resource_id . '/folder-tree?depth=0' );
 		if ( is_wp_error( $result ) ) {
 			return $result;
 		}
