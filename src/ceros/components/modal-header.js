@@ -20,4 +20,3 @@ export const CerosModalHeader = ( { onClose } ) => (
 		</button>
 	</div>
 );
-

@@ -10,17 +10,21 @@ export const EmbedOptions = ( {
 					type="radio"
 					value="full"
 					checked={ selectedEmbedOption === 'full' }
-					disabled={ ! Boolean(
-						currentEmbedCodes?.fullHeightEmbedCode &&
-							String( currentEmbedCodes?.fullHeightEmbedCode ).trim()
-					) }
+					disabled={
+						! Boolean(
+							currentEmbedCodes?.fullHeightEmbedCode &&
+								String(
+									currentEmbedCodes?.fullHeightEmbedCode
+								).trim()
+						)
+					}
 					onChange={ () => setSelectedEmbedOption( 'full' ) }
 				/>
 				<span>
 					<span>Full height</span>
 					<span className="ceros-block__embed-options-description">
-						This option scrolls naturally with your parent page without
-						additional scrollbars.
+						This option scrolls naturally with your parent page
+						without additional scrollbars.
 					</span>
 				</span>
 			</label>
@@ -29,20 +33,24 @@ export const EmbedOptions = ( {
 					type="radio"
 					value="scroll"
 					checked={ selectedEmbedOption === 'scroll' }
-					disabled={ ! Boolean(
-						currentEmbedCodes?.scrollableEmbedCode &&
-							String( currentEmbedCodes?.scrollableEmbedCode ).trim()
-					) }
+					disabled={
+						! Boolean(
+							currentEmbedCodes?.scrollableEmbedCode &&
+								String(
+									currentEmbedCodes?.scrollableEmbedCode
+								).trim()
+						)
+					}
 					onChange={ () => setSelectedEmbedOption( 'scroll' ) }
 				/>
 				<span>
 					<span>Scrolling</span>
 					<span className="ceros-block__embed-options-description">
-						Displays your content in a viewport with internal scrollbars.
+						Displays your content in a viewport with internal
+						scrollbars.
 					</span>
 				</span>
 			</label>
 		</div>
 	</div>
 );
-

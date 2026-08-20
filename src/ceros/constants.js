@@ -32,9 +32,7 @@ export function manifestUrlFromInline( inlineEmbedCode ) {
 	if ( ! inlineEmbedCode || typeof inlineEmbedCode !== 'string' ) {
 		return '';
 	}
-	const match = inlineEmbedCode.match(
-		/data-flex-manifest-url="([^"]+)"/i
-	);
+	const match = inlineEmbedCode.match( /data-flex-manifest-url="([^"]+)"/i );
 	return match ? match[ 1 ] : '';
 }
 

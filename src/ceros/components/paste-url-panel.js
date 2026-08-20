@@ -60,7 +60,9 @@ export function PasteUrlPanel( {
 		currentEmbedCodes?.inlineEmbedCode &&
 			String( currentEmbedCodes.inlineEmbedCode ).trim()
 	);
-	const deliveryMode = hasInline ? selectedDeliveryMode : DELIVERY_MODES.IFRAME;
+	const deliveryMode = hasInline
+		? selectedDeliveryMode
+		: DELIVERY_MODES.IFRAME;
 	// Full-vs-scroll sizing only applies to the iframe delivery mode.
 	const isIframe = deliveryMode === DELIVERY_MODES.IFRAME;
 
@@ -128,7 +130,9 @@ export function PasteUrlPanel( {
 			scrollableEmbedCode: currentEmbedCodes.scrollableEmbedCode || '',
 			inlineEmbedCode: currentEmbedCodes.inlineEmbedCode || '',
 			selectedOption: selectedEmbedOption,
-			deliveryMode: hasInline ? selectedDeliveryMode : DELIVERY_MODES.IFRAME,
+			deliveryMode: hasInline
+				? selectedDeliveryMode
+				: DELIVERY_MODES.IFRAME,
 			// Manifest URL drives the SSR delivery mode's server-side fetch.
 			manifestUrl: resolved?.manifestUrl || '',
 			// Canonical (Ceros-owned) view URL. Lets render.php rebuild a legacy
@@ -144,30 +148,37 @@ export function PasteUrlPanel( {
 	return (
 		<div className="ceros-block__empty">
 			<h3>{ __( 'Add a Ceros Experience', 'ceros' ) }</h3>
-			{ !apiKeyConfigured && (
-			<p>
-				{ __(
-					'No API key is configured, so experience browsing is disabled. Paste a public Ceros experience URL to add it directly.',
-					'ceros'
-				) }
-			</p>
-			)}
+			{ ! apiKeyConfigured && (
+				<p>
+					{ __(
+						'No API key is configured, so experience browsing is disabled. Paste a public Ceros experience URL to add it directly.',
+						'ceros'
+					) }
+				</p>
+			) }
 
 			<button
 				className="ceros-block__button ceros-block__button--primary"
 				type="button"
-				disabled={ !apiKeyConfigured }
-				title={ !apiKeyConfigured ? __(
-					'Add a Ceros API key in settings to browse experiences.',
-					'ceros'
-				) : '' }
-				onClick={ () => dispatch({ type: ACTION_TYPES.OPEN_MODAL }) }
+				disabled={ ! apiKeyConfigured }
+				title={
+					! apiKeyConfigured
+						? __(
+								'Add a Ceros API key in settings to browse experiences.',
+								'ceros'
+						  )
+						: ''
+				}
+				onClick={ () => dispatch( { type: ACTION_TYPES.OPEN_MODAL } ) }
 			>
 				{ __( 'Browse Experiences', 'ceros' ) }
 			</button>
 
 			<div className="ceros-block__paste">
-				<label className="ceros-block__paste-label" htmlFor="ceros-paste-url">
+				<label
+					className="ceros-block__paste-label"
+					htmlFor="ceros-paste-url"
+				>
 					{ __( 'Public experience URL', 'ceros' ) }
 				</label>
 				<div className="ceros-block__paste-row">
@@ -251,7 +262,7 @@ export function PasteUrlPanel( {
 					</div>
 				) }
 			</div>
-			{ !apiKeyConfigured && (
+			{ ! apiKeyConfigured && (
 				<p className="ceros-block__paste-hint">
 					<a
 						href={ settingsUrl }

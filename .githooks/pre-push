@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Block a push while PHPCS reports violations or the unit suite fails.
+# Block a push while PHPCS, PHPUnit, ESLint or Stylelint report a problem.
 #
 # Note this checks the working tree, not the exact commits being pushed — if the
 # tree is dirty, that dirt is what gets checked. Matching the pushed refs
@@ -23,6 +23,11 @@ for bin in phpcs phpunit; do
 	fi
 done
 
+if [ ! -d node_modules ]; then
+	echo "pre-push: node_modules not found — run 'npm ci'." >&2
+	exit 1
+fi
+
 echo "pre-push: running composer lint…"
 
 if ! composer lint; then
@@ -38,6 +43,26 @@ echo "pre-push: running composer test…"
 if ! composer test; then
 	echo >&2
 	echo "pre-push: unit tests failed. Run 'composer test' to reproduce." >&2
+	echo "To push regardless: git push --no-verify" >&2
+	exit 1
+fi
+
+echo "pre-push: running npm run lint:js…"
+
+if ! npm run --silent lint:js; then
+	echo >&2
+	echo "pre-push: JS lint failed. Run 'npm run lint:js -- --fix' for the" >&2
+	echo "mechanical fixes, then resolve whatever is left by hand." >&2
+	echo "To push regardless: git push --no-verify" >&2
+	exit 1
+fi
+
+echo "pre-push: running npm run lint:css…"
+
+if ! npm run --silent lint:css; then
+	echo >&2
+	echo "pre-push: CSS lint failed. Run 'npm run lint:css -- --fix' for the" >&2
+	echo "mechanical fixes, then resolve whatever is left by hand." >&2
 	echo "To push regardless: git push --no-verify" >&2
 	exit 1
 fi

@@ -1,0 +1,14 @@
+{
+	"extends": "@wordpress/stylelint-config/scss-stylistic",
+	"rules": {
+		"selector-class-pattern": [
+			"^-?[a-z][a-z0-9]*(-[a-z0-9]+)*(__[a-z0-9]+(-[a-z0-9]+)*)?(--[a-z0-9]+(-[a-z0-9]+)*)?$",
+			{
+				"message": "Expected BEM naming, as this stylesheet already uses, e.g. ceros-block__item--selected"
+			}
+		],
+		"declaration-property-unit-allowed-list": {
+			"line-height": ["rem", "px", "em", ""]
+		}
+	}
+}
