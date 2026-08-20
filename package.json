@@ -9,7 +9,7 @@
 		"build": "wp-scripts build --blocks-manifest",
 		"format": "wp-scripts format",
 		"lint:css": "stylelint \"**/*.{css,scss}\"",
-		"lint:js": "eslint .",
+		"lint:js": "eslint . --ext .js,.jsx",
 		"packages-update": "wp-scripts packages-update",
 		"plugin-zip": "wp-scripts plugin-zip",
 		"start": "wp-scripts start --blocks-manifest",
@@ -18,17 +18,27 @@
 		"env:stop": "wp-env stop",
 		"env:clean": "wp-env clean all",
 		"env:destroy": "wp-env destroy",
-		"env:cli": "wp-env run cli wp"
+		"env:cli": "wp-env run cli wp",
+		"test:js": "vitest run",
+		"test:js:watch": "vitest"
 	},
 	"devDependencies": {
 		"@babel/core": "^7.29.7",
+		"@testing-library/jest-dom": "^7.0.0",
+		"@testing-library/react": "^16.3.2",
+		"@testing-library/user-event": "^14.6.3",
 		"@wordpress/env": "^10.19.0",
 		"@wordpress/eslint-plugin": "^22.22.0",
 		"@wordpress/scripts": "^30.19.0",
 		"@wordpress/stylelint-config": "^23.42.0",
 		"eslint": "^8.57.1",
+		"happy-dom": "^20.11.1",
 		"prettier": "npm:wp-prettier@^3.0.3",
+		"react": "^18.3.1",
+		"react-dom": "^18.3.1",
 		"stylelint": "^16.26.1",
-		"stylelint-scss": "^6.14.0"
+		"stylelint-scss": "^6.14.0",
+		"vite": "^7.3.6",
+		"vitest": "^3.2.7"
 	}
 }

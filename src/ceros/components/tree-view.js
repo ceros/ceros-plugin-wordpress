@@ -1,5 +1,65 @@
-/* eslint-disable no-nested-ternary -- the icon pickers are 3-way chains;
-   extracting them is deferred to the PR that adds tree-view test coverage. */
+// Shared attributes for the row icons, which are all 24px lucide glyphs.
+const iconProps = {
+	xmlns: 'http://www.w3.org/2000/svg',
+	width: '24',
+	height: '24',
+	viewBox: '0 0 24 24',
+	fill: 'none',
+	stroke: 'currentColor',
+	strokeWidth: '2',
+	strokeLinecap: 'round',
+	strokeLinejoin: 'round',
+};
+
+const SpinnerIcon = () => (
+	<svg className="ceros-block__item-icon -loading" { ...iconProps }>
+		<path d="M21 12a9 9 0 1 1-6.219-8.56"></path>
+	</svg>
+);
+
+const ChevronDownIcon = () => (
+	<svg className="ceros-block__item-icon -arrow" { ...iconProps }>
+		<path d="m6 9 6 6 6-6"></path>
+	</svg>
+);
+
+const ChevronRightIcon = () => (
+	<svg className="ceros-block__item-icon -arrow" { ...iconProps }>
+		<path d="m9 18 6-6-6-6"></path>
+	</svg>
+);
+
+const FileIcon = () => (
+	<svg className="ceros-block__item-icon -file" { ...iconProps }>
+		<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"></path>
+		<path d="M14 2v4a2 2 0 0 0 2 2h4"></path>
+		<path d="M10 9H8"></path>
+		<path d="M16 13H8"></path>
+		<path d="M16 17H8"></path>
+	</svg>
+);
+
+const FolderIcon = () => (
+	<svg className="ceros-block__item-icon -folder" { ...iconProps }>
+		<path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"></path>
+	</svg>
+);
+
+// Disclosure control: a spinner while the node's children load, otherwise a
+// chevron pointing down when open and right when closed.
+const DisclosureIcon = ( { isLoading, isExpanded } ) => {
+	if ( isLoading ) {
+		return <SpinnerIcon />;
+	}
+
+	return isExpanded ? <ChevronDownIcon /> : <ChevronRightIcon />;
+};
+
+// Experiences and empty-message rows both read as files; everything else is a
+// folder.
+const NodeIcon = ( { isEmptyMessage, isExperience } ) =>
+	isEmptyMessage || isExperience ? <FileIcon /> : <FolderIcon />;
+
 const TreeNode = ( {
 	node,
 	onNodeClick,
@@ -49,108 +109,16 @@ const TreeNode = ( {
 					isEmptyMessage ? { cursor: 'default', opacity: 0.6 } : {}
 				}
 			>
-				{ shouldShowArrow &&
-					! isEmptyMessage &&
-					( isLoading ? (
-						<svg
-							className="ceros-block__item-icon -loading"
-							xmlns="http://www.w3.org/2000/svg"
-							width="24"
-							height="24"
-							viewBox="0 0 24 24"
-							fill="none"
-							stroke="currentColor"
-							strokeWidth="2"
-							strokeLinecap="round"
-							strokeLinejoin="round"
-						>
-							<path d="M21 12a9 9 0 1 1-6.219-8.56"></path>
-						</svg>
-					) : isExpanded ? (
-						<svg
-							className="ceros-block__item-icon -arrow"
-							xmlns="http://www.w3.org/2000/svg"
-							width="24"
-							height="24"
-							viewBox="0 0 24 24"
-							fill="none"
-							stroke="currentColor"
-							strokeWidth="2"
-							strokeLinecap="round"
-							strokeLinejoin="round"
-						>
-							<path d="m6 9 6 6 6-6"></path>
-						</svg>
-					) : (
-						<svg
-							className="ceros-block__item-icon -arrow"
-							xmlns="http://www.w3.org/2000/svg"
-							width="24"
-							height="24"
-							viewBox="0 0 24 24"
-							fill="none"
-							stroke="currentColor"
-							strokeWidth="2"
-							strokeLinecap="round"
-							strokeLinejoin="round"
-						>
-							<path d="m9 18 6-6-6-6"></path>
-						</svg>
-					) ) }
-				{ isEmptyMessage ? (
-					<svg
-						className="ceros-block__item-icon -file"
-						xmlns="http://www.w3.org/2000/svg"
-						width="24"
-						height="24"
-						viewBox="0 0 24 24"
-						fill="none"
-						stroke="currentColor"
-						strokeWidth="2"
-						strokeLinecap="round"
-						strokeLinejoin="round"
-					>
-						<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"></path>
-						<path d="M14 2v4a2 2 0 0 0 2 2h4"></path>
-						<path d="M10 9H8"></path>
-						<path d="M16 13H8"></path>
-						<path d="M16 17H8"></path>
-					</svg>
-				) : node.isExperience ? (
-					<svg
-						className="ceros-block__item-icon -file"
-						xmlns="http://www.w3.org/2000/svg"
-						width="24"
-						height="24"
-						viewBox="0 0 24 24"
-						fill="none"
-						stroke="currentColor"
-						strokeWidth="2"
-						strokeLinecap="round"
-						strokeLinejoin="round"
-					>
-						<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"></path>
-						<path d="M14 2v4a2 2 0 0 0 2 2h4"></path>
-						<path d="M10 9H8"></path>
-						<path d="M16 13H8"></path>
-						<path d="M16 17H8"></path>
-					</svg>
-				) : (
-					<svg
-						className="ceros-block__item-icon -folder"
-						xmlns="http://www.w3.org/2000/svg"
-						width="24"
-						height="24"
-						viewBox="0 0 24 24"
-						fill="none"
-						stroke="currentColor"
-						strokeWidth="2"
-						strokeLinecap="round"
-						strokeLinejoin="round"
-					>
-						<path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"></path>
-					</svg>
+				{ shouldShowArrow && ! isEmptyMessage && (
+					<DisclosureIcon
+						isLoading={ isLoading }
+						isExpanded={ isExpanded }
+					/>
 				) }
+				<NodeIcon
+					isEmptyMessage={ isEmptyMessage }
+					isExperience={ node.isExperience }
+				/>
 				<span className="ceros-block__item-name">{ node.name }</span>
 			</div>
 			{ isExpanded && hasChildren && (
