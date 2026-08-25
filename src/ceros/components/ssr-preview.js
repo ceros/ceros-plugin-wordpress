@@ -73,6 +73,7 @@ export function SsrPreview( { attributes, postId } ) {
 		attributes.storedAt,
 		attributes.manifestUrl,
 		attributes.selectedOption,
+		attributes.includeCustomHtml,
 		postId,
 	] );
 

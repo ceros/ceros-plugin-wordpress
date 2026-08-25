@@ -8,7 +8,12 @@
 
 import { __ } from '@wordpress/i18n';
 import { InspectorControls } from '@wordpress/block-editor';
-import { PanelBody, BaseControl, Button } from '@wordpress/components';
+import {
+	PanelBody,
+	BaseControl,
+	Button,
+	ToggleControl,
+} from '@wordpress/components';
 import {
 	ACTION_TYPES,
 	EMBED_OPTIONS,
@@ -22,7 +27,7 @@ import { StoreControls } from './store-controls';
  *
  * @param {Object}   props
  * @param {string}   props.selectedExperienceName - Name of the selected experience
- * @param {Object}   props.attributes             - Block attributes
+ * @param {Object}   props.attributes             - Block attributes (reads `includeCustomHtml`)
  * @param {string}   props.selectedEmbedOption    - Currently selected embed option ('full' or 'scroll')
  * @param {boolean}  props.hasFullHeight          - Whether full height embed code is available
  * @param {boolean}  props.hasScrolling           - Whether scrolling embed code is available
@@ -232,6 +237,28 @@ export function SidebarControls( {
 							attributes?.storedFlexVersion || ''
 						}
 						setAttributes={ setAttributes }
+					/>
+				</PanelBody>
+			) }
+			{ deliveryMode === DELIVERY_MODES.SSR && (
+				<PanelBody
+					title={ __( 'Custom code', 'ceros' ) }
+					initialOpen={ true }
+				>
+					<ToggleControl
+						__nextHasNoMarginBottom
+						label={ __(
+							'Include custom body HTML/scripts',
+							'ceros'
+						) }
+						help={ __(
+							'Some experiences include custom code — for example answer tracking, scoring, or page navigation — that must load with the experience for it to work. Leave this on unless you know the experience does not need it. Custom head HTML is never included.',
+							'ceros'
+						) }
+						checked={ attributes?.includeCustomHtml !== false }
+						onChange={ ( value ) =>
+							setAttributes( { includeCustomHtml: value } )
+						}
 					/>
 				</PanelBody>
 			) }

@@ -132,6 +132,11 @@ function ceros_store_flex_manifest( $manifest_url, $post_id ) {
 		}
 		unset( $rewritten['assetRewrites'] );
 
+		// The server-side rewrite does not cover `importMap`, so mirror what it
+		// names and repoint it; otherwise a stored bundle still fetches those
+		// modules remotely.
+		$rewritten = ceros_store_localize_import_map( $rewritten, $abs_base, $url_base, $seen );
+
 		$rel = 'pages/' . ceros_store_slug_filename( $slug ) . '.json';
 		if ( ceros_store_write_file( $abs_base . '/' . $rel, wp_json_encode( $rewritten ) ) ) {
 			$page_index[ $slug ] = $rel;
@@ -259,6 +264,123 @@ function ceros_store_download_asset( $from, $abs_base, $path, &$seen ) {
 	}
 	$seen[ $rel ] = true;
 	return true;
+}
+
+/**
+ * Local path a mapped import-map module is mirrored at.
+ *
+ * The `?baseUrl=` rewrite returns an explicit `path` for every asset it
+ * relabels; import-map targets get none, so one is derived here. The hash keeps
+ * two modules that share a basename apart, and the alphabet is narrow on purpose
+ * (unlike {@see ceros_store_safe_rel_path}, which has to accept real Ceros keys)
+ * because this name is generated rather than given, so it can also go into a URL
+ * with no percent-encoding.
+ *
+ * @param string $url The absolute module URL from the import map.
+ * @return string Relative path under the version directory, or '' when unusable.
+ */
+function ceros_store_import_map_rel_path( $url ) {
+	$url = (string) $url;
+	if ( '' === $url ) {
+		return '';
+	}
+
+	$path     = (string) wp_parse_url( $url, PHP_URL_PATH );
+	$basename = '' === $path ? '' : basename( $path );
+	$basename = preg_replace( '/[^A-Za-z0-9._-]/', '-', $basename );
+	$basename = trim( (string) $basename, '.-' );
+	if ( '' === $basename ) {
+		$basename = 'module.js';
+	}
+	if ( strlen( $basename ) > 64 ) {
+		$basename = substr( $basename, -64 );
+	}
+
+	return 'import-map/' . substr( sha1( $url ), 0, 8 ) . '-' . $basename;
+}
+
+/**
+ * Repoint an import map at modules mirrored into the local bundle.
+ *
+ * Pure: the downloads happen in {@see ceros_store_localize_import_map}, which
+ * hands the results in via `$localized`. A specifier whose module could not be
+ * mirrored keeps its original URL, so the experience still works from the CDN
+ * rather than resolving to a file that is not there.
+ *
+ * `integrity` is keyed by URL, so an entry for a mirrored module is rekeyed to
+ * its new URL. The bytes are copied unchanged, so the hash still matches.
+ *
+ * @param array  $manifest  The rewritten manifest.
+ * @param string $url_base  Public root the bundle is served under (no trailing slash).
+ * @param array  $localized Map of original URL => relative path, for mirrored modules.
+ * @return array The manifest with its import map repointed.
+ */
+function ceros_store_rewrite_import_map( $manifest, $url_base, $localized ) {
+	if ( ! isset( $manifest['importMap']['imports'] ) || ! is_array( $manifest['importMap']['imports'] ) ) {
+		return $manifest;
+	}
+
+	$url_base  = rtrim( (string) $url_base, '/' );
+	$integrity = isset( $manifest['importMap']['integrity'] ) && is_array( $manifest['importMap']['integrity'] )
+		? $manifest['importMap']['integrity']
+		: [];
+
+	foreach ( $manifest['importMap']['imports'] as $specifier => $url ) {
+		if ( ! is_string( $url ) || ! isset( $localized[ $url ] ) ) {
+			continue;
+		}
+		$local = $url_base . '/' . $localized[ $url ];
+
+		$manifest['importMap']['imports'][ $specifier ] = $local;
+
+		if ( isset( $integrity[ $url ] ) ) {
+			$integrity[ $local ] = $integrity[ $url ];
+			unset( $integrity[ $url ] );
+		}
+	}
+
+	if ( ! empty( $integrity ) ) {
+		$manifest['importMap']['integrity'] = $integrity;
+	}
+
+	return $manifest;
+}
+
+/**
+ * Mirror every Ceros-hosted module an import map names, and repoint the map.
+ *
+ * Only the modules the map names directly are mirrored. A module that imports
+ * further modules by relative URL still resolves against the local copy, but one
+ * that reaches a Ceros URL of its own is not followed — the same limitation the
+ * asset mirror has for anything the rewrite map does not enumerate.
+ *
+ * @param array  $manifest The rewritten manifest.
+ * @param string $abs_base Absolute version directory.
+ * @param string $url_base Public root the bundle is served under.
+ * @param array  $seen     Relative paths already written this run (by reference).
+ * @return array The manifest with its import map repointed at local copies.
+ */
+function ceros_store_localize_import_map( $manifest, $abs_base, $url_base, &$seen ) {
+	if ( ! is_array( $manifest ) || ! isset( $manifest['importMap']['imports'] )
+		|| ! is_array( $manifest['importMap']['imports'] ) ) {
+		return $manifest;
+	}
+
+	$localized = [];
+	foreach ( $manifest['importMap']['imports'] as $url ) {
+		if ( ! is_string( $url ) || isset( $localized[ $url ] ) ) {
+			continue;
+		}
+		$rel = ceros_store_import_map_rel_path( $url );
+		if ( '' === $rel ) {
+			continue;
+		}
+		if ( ceros_store_download_asset( $url, $abs_base, $rel, $seen ) ) {
+			$localized[ $url ] = $rel;
+		}
+	}
+
+	return ceros_store_rewrite_import_map( $manifest, $url_base, $localized );
 }
 
 /**
@@ -456,10 +578,12 @@ function ceros_store_rrmdir( $dir, $depth = 0 ) {
 /**
  * Render a stored experience bundle (no network calls).
  *
- * @param string $index_rel_path Path to index.json, relative to the uploads basedir.
+ * @param string $index_rel_path      Path to index.json, relative to the uploads basedir.
+ * @param bool   $include_custom_html Whether to append the experience's authored
+ *                                    custom Body HTML.
  * @return string Rendered HTML, or '' when the bundle is missing/unreadable.
  */
-function ceros_render_flex_ssr_stored( $index_rel_path ) {
+function ceros_render_flex_ssr_stored( $index_rel_path, $include_custom_html = true ) {
 	$index_rel_path = ltrim( (string) $index_rel_path, '/' );
 	// Confine to our storage root.
 	if ( false !== strpos( $index_rel_path, '..' ) || 0 !== strpos( $index_rel_path, 'ceros-flex/' ) ) {
@@ -494,7 +618,7 @@ function ceros_render_flex_ssr_stored( $index_rel_path ) {
 		return '';
 	}
 
-	return ceros_flex_ssr_render_manifest( $served_manifest, $url_dir . '/' . $served_rel );
+	return ceros_flex_ssr_render_manifest( $served_manifest, $url_dir . '/' . $served_rel, $include_custom_html );
 }
 
 /**
