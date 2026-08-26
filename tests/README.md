@@ -8,6 +8,11 @@ PHP: `composer test`. JavaScript: `npm run test:js`.
 | --- | --- | --- | --- |
 | PHP `unit` | nothing | milliseconds | pre-push hook + CI |
 | JS (`tests/js`) | happy-dom | under a second | pre-push hook + CI |
+| Shell (`tests/shell`) | bash, jq | about a second | CI |
+
+The shell suite covers `tools/check-tested-upto.sh`. It stubs the WordPress
+version API on `PATH` rather than calling it, so it makes no network request,
+and every case names the guard it covers.
 
 The `unit` suite runs with **no WordPress loaded** — no Docker, no database, no
 network. That is what makes it safe to run from `.githooks/pre-push`.
