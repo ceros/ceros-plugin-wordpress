@@ -24,6 +24,9 @@ list is closed:
   `plugin_basename`).
 - **Translation passthrough** (`__`), which is what WordPress itself returns
   with no textdomain loaded.
+- **Filter passthrough** (`apply_filters`), which is what WordPress returns when
+  no filter is added — and the no-op `add_filter` above means none ever is. Like
+  `__`, this is core's own behaviour rather than a stand-in for it.
 
 ## What does not belong here
 
@@ -57,6 +60,17 @@ Currently deferred to that suite:
   crypto underneath them *is* covered here.
 - The REST handlers — real `WP_REST_Request` objects.
 
+Covered here on top of the URL, sanitizer, store and crypto cases:
+
+- `ceros_get_friendly_error_message` — the cURL-error-to-advice map. Substring
+  matching over an ordered array, so the tests pin both the mapping and the
+  order that keeps a specific pattern ahead of the generic `curl error` one.
+- `ceros_get_allowed_embed_html` — the `wp_kses` allowlist. Pure data, but
+  anything missing from it is stripped on save, which is how an embed ends up
+  rendering dead. The tests name the attributes that carry a feature
+  (`data-flex-manifest-url`, the legacy `scrolling`) and pin the tag list closed.
+  How `wp_kses` *interprets* the list is still integration-suite work.
+
 ## Required of the integration suite
 
 **Re-run the URL cases from `CerosOwnedUrlTest` and `PublicUrlResolverTest`
@@ -79,12 +93,21 @@ Deliberate, so they are not silently missing:
   the integration suite. It guards a deliberate fail-closed decision, so it is
   worth covering there.
 
+And one branch that is unreachable by mistake rather than by choice.
+`ceros_get_friendly_error_message`'s third pattern is commented "cURL error 28:
+Operation timeout" but reads `timeout`, while cURL emits "Operation timed out",
+so a plugin timeout gets the generic connection advice instead. The test named
+`test_curl_28_does_not_reach_the_timeout_message` pins the current behaviour and
+says to delete itself once the pattern is fixed.
+
 
 ## The JavaScript suite
 
-Vitest with happy-dom, in `tests/js`. It covers the block editor code that
-imports no `@wordpress/*` package, since those are webpack externals mapped to
-`window.wp.*` at build time and are not installed:
+Vitest with happy-dom, in `tests/js`. The `@wordpress/*` packages are webpack
+externals mapped to `window.wp.*` at build time and are not installed, so what
+the suite can reach is decided by which of them a file imports.
+
+Covered:
 
 - `constants.js` — `manifestUrlFromInline()`, the editor-side fallback for
   recovering a manifest URL from a snippet the plugin already sanitized. It is
@@ -93,15 +116,44 @@ imports no `@wordpress/*` package, since those are webpack externals mapped to
   contract and say why, and cover the entity decoding the two do share. Plus the
   option and delivery-mode values, which are persisted on the block and read by
   the PHP renderer.
-- `tree-view`, `embed-options`, `delivery-options`, `modal-header`.
+- `tree-view`, `embed-options`, `delivery-options`, `modal-header`, `modal-body`.
+- `modal-footer` — the delivery/sizing branching, and the `setAttributes`
+  payload. That payload is the contract `render.php` reads, so the commit test
+  asserts the whole object rather than individual keys: a dropped attribute
+  fails here instead of rendering a dead embed.
+- `preview` — the fallback chain that picks which embed variant to show, and the
+  effect that rebuilds `<script>` tags because scripts assigned via `innerHTML`
+  never run.
+- `modal` — that the overlay is portalled to `document.body` rather than left in
+  the block's DOM, and that the backdrop closes while the panel does not.
+- `error-boundary` — the fallback, the log, and the retry.
+- `save` — returns `null`. The block is dynamic, so markup here would have the
+  editor validate serialized HTML against the PHP render.
 
-Anything importing `@wordpress/components`, `block-editor`, `data` or
-`api-fetch` is out of scope until those are installed as devDependencies — a
-decision worth making on evidence rather than up front, since
-`@wordpress/components` is a large tree and only `edit.js` and the control
-panels need it.
+Out of scope: anything importing `@wordpress/components`, `block-editor`, `data`
+or `api-fetch` — `edit.js`, `sidebar-controls`, `store-controls`,
+`paste-url-panel` and `ssr-preview`. Installing them is a decision worth making
+on evidence rather than up front, since `@wordpress/components` is a large tree.
 
-### Two things about the setup
+### The two stand-in modules
+
+`tests/js/stubs/` holds replacements for the two externals that are
+passthroughs rather than implementations, aliased in `vitest.config.mjs`. Same
+rule as `tests/bootstrap.php`: a stand-in is allowed only where it *is* what the
+real thing does, not an approximation of it.
+
+- `wp-element.js` re-exports React, which is exactly what `@wordpress/element`
+  does. `createPortal` comes from react-dom, which is why this is a module and
+  not a plain alias to `react`. The package's own additions (`RawHTML`,
+  `renderToString`) are deliberately absent.
+- `wp-i18n.js` returns its input, which is what the real package does with no
+  translations loaded. `sprintf` is deliberately absent: it is a real
+  implementation, so stubbing it would mean asserting against the stub.
+
+Anything needing a missing export fails with a missing-export error, which is
+the signal to install the package rather than grow the stub.
+
+### Three things about the setup
 
 `vitest.config.mjs` carries a small `ceros:jsx-in-js` plugin. The sources are
 `.js` files containing JSX, Vite picks its loader from the file extension, and
@@ -114,3 +166,11 @@ name.
 self-registers when a global `afterEach` exists, and this suite uses explicit
 imports rather than Vitest globals, so without it every render stays in the
 document and later queries match earlier tests' DOM.
+
+`environmentOptions.happyDOM` turns off script, stylesheet and child-frame
+loading. The embed snippets under test carry real `view.ceros.com` URLs and
+happy-dom would otherwise fetch them, which would put the network in the
+pre-push path and break the suite wherever those hosts are unreachable. Nothing
+asserts on a loaded resource; the `preview` tests check that a rebuilt script
+kept its attributes, not that it ran. Note that happy-dom disables JavaScript
+evaluation by default, so a test cannot assert a script executed.

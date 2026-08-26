@@ -1,3 +1,4 @@
+import { fileURLToPath } from 'node:url';
 import { transformWithEsbuild } from 'vite';
 import { defineConfig } from 'vitest/config';
 
@@ -22,8 +23,39 @@ export default defineConfig( {
 			},
 		},
 	],
+	// The @wordpress/* packages are webpack externals mapped to window.wp.* at
+	// build time, so they are not installed. These two are stood in for because
+	// they are passthroughs rather than real implementations — see the stub files
+	// and tests/README.md. Anything else stays out of scope.
+	resolve: {
+		alias: {
+			'@wordpress/element': fileURLToPath(
+				new URL( './tests/js/stubs/wp-element.js', import.meta.url )
+			),
+			'@wordpress/i18n': fileURLToPath(
+				new URL( './tests/js/stubs/wp-i18n.js', import.meta.url )
+			),
+		},
+	},
 	test: {
 		environment: 'happy-dom',
+		// The embed snippets under test carry real iframe and script URLs, and
+		// happy-dom would otherwise fetch them — putting the network in the
+		// pre-push path and making the suite fail wherever view.ceros.com is
+		// unreachable. Nothing here asserts on a loaded resource.
+		environmentOptions: {
+			happyDOM: {
+				settings: {
+					disableJavaScriptFileLoading: true,
+					disableCSSFileLoading: true,
+					handleDisabledFileLoadingAsSuccess: true,
+					navigation: {
+						disableChildFrameNavigation: true,
+						disableChildPageNavigation: true,
+					},
+				},
+			},
+		},
 		include: [ 'tests/js/**/*.test.{js,jsx}' ],
 		setupFiles: [ './tests/js/setup.js' ],
 		passWithNoTests: false,
