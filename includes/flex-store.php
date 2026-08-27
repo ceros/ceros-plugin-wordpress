@@ -287,13 +287,14 @@ function ceros_store_import_map_rel_path( $url ) {
 
 	$path     = (string) wp_parse_url( $url, PHP_URL_PATH );
 	$basename = '' === $path ? '' : basename( $path );
-	$basename = preg_replace( '/[^A-Za-z0-9._-]/', '-', $basename );
-	$basename = trim( (string) $basename, '.-' );
-	if ( '' === $basename ) {
-		$basename = 'module.js';
-	}
+	$basename = (string) preg_replace( '/[^A-Za-z0-9._-]/', '-', $basename );
+	// Truncated before trimming, so the cut cannot leave a dot or dash exposed.
 	if ( strlen( $basename ) > 64 ) {
 		$basename = substr( $basename, -64 );
+	}
+	$basename = trim( $basename, '.-' );
+	if ( '' === $basename ) {
+		$basename = 'module.js';
 	}
 
 	return 'import-map/' . substr( sha1( $url ), 0, 8 ) . '-' . $basename;

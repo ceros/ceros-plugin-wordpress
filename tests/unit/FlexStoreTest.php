@@ -273,11 +273,26 @@ final class FlexStoreTest extends TestCase {
 		$this->assertLessThanOrEqual( 64, strlen( $m[1] ) );
 	}
 
+	public function test_import_map_path_keeps_the_end_of_a_long_name() {
+		// The cap takes the tail, so the extension survives it.
+		$path = ceros_store_import_map_rel_path( 'https://assets.ceros.site/js/' . str_repeat( 'a', 300 ) . '.chunk.js' );
+
+		$this->assertStringEndsWith( '.chunk.js', $path );
+	}
+
 	public function names_needing_tidying() {
+		// The last two names are over the 64-character cap, positioned so the
+		// character the cut would expose sits exactly at it.
+		$base   = 'https://assets.ceros.site/js/';
+		$prefix = str_repeat( 'a', 10 );
+		$suffix = str_repeat( 'b', 63 );
+
 		return [
-			'dots only'     => [ 'https://assets.ceros.site/js/...' ],
-			'dashes around' => [ 'https://assets.ceros.site/js/-x-' ],
-			'leading dot'   => [ 'https://assets.ceros.site/js/.hidden.' ],
+			'dots only'       => [ $base . '...' ],
+			'dashes around'   => [ $base . '-x-' ],
+			'leading dot'     => [ $base . '.hidden.' ],
+			'dot at the cut'  => [ $base . $prefix . '.' . $suffix ],
+			'dash at the cut' => [ $base . $prefix . '-' . $suffix ],
 		];
 	}
 
@@ -289,6 +304,7 @@ final class FlexStoreTest extends TestCase {
 
 		$this->assertNotEmpty( $m, $url );
 		$this->assertSame( trim( $m[1], '.-' ), $m[1] );
+		$this->assertLessThanOrEqual( 64, strlen( $m[1] ) );
 	}
 
 	public function test_two_specifiers_sharing_one_module_are_both_rewritten() {
