@@ -93,7 +93,9 @@ that map and emitting its own on that basis. Under a block theme the page must
 carry one map, WordPress's, holding every block's specifiers; under a classic
 theme, one per block, each above that block's `type="module"` scripts. Every
 specifier must resolve in the browser, which is the part no markup assertion
-covers.
+covers. Run it on the oldest WordPress in `Requires at least` as well as the
+newest: the map is assembled by core, and which mechanisms feed it has changed
+between releases.
 
 ## Known-untested branches
 

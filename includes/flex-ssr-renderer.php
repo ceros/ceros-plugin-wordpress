@@ -278,15 +278,16 @@ function ceros_flex_ssr_import_map( $manifest, $custom_body_html ) {
  *
  * A document may hold only one import map and WordPress prints its own in the
  * head under a block theme, so there the specifiers are added to that one rather
- * than emitted separately. A module reaches it by being declared a dependency of
- * an enqueued script.
+ * than emitted separately. WordPress maps the dependencies of an enqueued script
+ * module, so they travel as the dependencies of one that does nothing else.
  *
  * @param array  $manifest         The manifest.
  * @param string $custom_body_html The custom body HTML about to be emitted.
  * @return void
  */
 function ceros_flex_ssr_register_import_map( $manifest, $custom_body_html ) {
-	static $specifiers = [];
+	static $carried = [];
+	static $anchors = 0;
 
 	$map = ceros_flex_ssr_import_map( $manifest, $custom_body_html );
 	if ( empty( $map ) ) {
@@ -297,18 +298,24 @@ function ceros_flex_ssr_register_import_map( $manifest, $custom_body_html ) {
 		// A null version leaves the manifest's URL untouched. A specifier
 		// already registered by an earlier block keeps its first URL.
 		wp_register_script_module( $specifier, $url, [], null );
-		$specifiers[ $specifier ] = true;
 	}
 
-	// Carries the declaration and prints nothing of its own.
-	if ( ! wp_script_is( 'ceros-flex-import-map', 'registered' ) ) {
-		// phpcs:ignore WordPress.WP.EnqueuedResourceParameters.MissingVersion -- no src, so nothing is fetched or cached.
-		wp_register_script( 'ceros-flex-import-map', false, [], null, true );
-		wp_enqueue_script( 'ceros-flex-import-map' );
+	// An anchor's dependencies are fixed once it is registered, so a block
+	// naming specifiers no earlier one carried gets an anchor of its own.
+	$fresh = array_values( array_diff( array_keys( $map['imports'] ), $carried ) );
+	if ( empty( $fresh ) ) {
+		return;
 	}
 
-	// Replaces rather than appends, so every specifier seen so far is re-sent.
-	wp_scripts()->add_data( 'ceros-flex-import-map', 'module_dependencies', array_keys( $specifiers ) );
+	++$anchors;
+	$carried = array_merge( $carried, $fresh );
+
+	wp_enqueue_script_module(
+		'ceros-flex-import-map-' . $anchors,
+		plugin_dir_url( CEROS_PLUGIN_FILE ) . 'public/import-map-anchor.js',
+		$fresh,
+		null
+	);
 }
 
 /**
