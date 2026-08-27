@@ -91,13 +91,12 @@ function ceros_flex_ssr_render_manifest( $manifest, $served_url, $include_custom
 	// A page joins the import map WordPress already prints, which under a block
 	// theme is in the head. A classic theme prints it below the content, after
 	// the module scripts, and the block renderer behind the editor preview emits
-	// no page head at all; both take an inline map, which has to precede those
-	// scripts. A document holds one map, so a later block joins WordPress's.
+	// no page head at all; both take an inline map instead, which has to precede
+	// those scripts.
 	$import_map = '';
 	if ( wp_is_rest_endpoint() || ! wp_is_block_theme() ) {
 		$import_map = ceros_flex_ssr_import_map_tag( $manifest, $custom_body );
-	}
-	if ( '' === $import_map ) {
+	} else {
 		ceros_flex_ssr_register_import_map( $manifest, $custom_body );
 	}
 
@@ -316,20 +315,15 @@ function ceros_flex_ssr_register_import_map( $manifest, $custom_body_html ) {
  * Build a standalone `<script type="importmap">` tag, or '' when none is needed.
  *
  * For renders where WordPress's own map lands after the module scripts or is not
- * printed at all. At most one is emitted per request, since a document may hold
- * a single import map.
+ * printed at all. Each block emits its own, immediately ahead of the modules
+ * that read it, so a page carrying several of them resolves all of their
+ * specifiers.
  *
  * @param array  $manifest         The manifest.
  * @param string $custom_body_html The custom body HTML about to be emitted.
  * @return string The <script> tag, or ''.
  */
 function ceros_flex_ssr_import_map_tag( $manifest, $custom_body_html ) {
-	static $emitted = false;
-
-	if ( $emitted ) {
-		return '';
-	}
-
 	$map = ceros_flex_ssr_import_map( $manifest, $custom_body_html );
 	if ( empty( $map ) ) {
 		return '';
@@ -339,8 +333,6 @@ function ceros_flex_ssr_import_map_tag( $manifest, $custom_body_html ) {
 	if ( ! is_string( $json ) ) {
 		return '';
 	}
-
-	$emitted = true;
 
 	// Escape "<" so no URL in the map can close the script element it sits in
 	// ("</script>", "<!--"). \u003c is valid JSON and parses back to "<", so

@@ -86,11 +86,14 @@ core — those tests would stay green while the plugin was wrong.
 but only real WordPress can prove the behaviour matches.
 
 **Render an SSR block whose custom body HTML imports by bare specifier under
-both a block theme and a classic theme.** WordPress prints its own import map in
-the head under one and below the content under the other, and
-`ceros_flex_ssr_render_manifest()` picks between joining that map and emitting
-its own on that basis. View-source must show exactly one map, above every
-`type="module"` script, in both cases.
+both a block theme and a classic theme, on a page with one block and with two.**
+WordPress prints its own import map in the head under one and below the content
+under the other, and `ceros_flex_ssr_render_manifest()` picks between joining
+that map and emitting its own on that basis. Under a block theme the page must
+carry one map, WordPress's, holding every block's specifiers; under a classic
+theme, one per block, each above that block's `type="module"` scripts. Every
+specifier must resolve in the browser, which is the part no markup assertion
+covers.
 
 ## Known-untested branches
 
