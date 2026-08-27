@@ -290,22 +290,15 @@ function ceros_flex_ssr_register_import_map( $manifest, $custom_body_html ) {
 	static $specifiers = [];
 
 	$map = ceros_flex_ssr_import_map( $manifest, $custom_body_html );
-	if ( empty( $map['imports'] ) || ! is_array( $map['imports'] ) ) {
+	if ( empty( $map ) ) {
 		return;
 	}
 
 	foreach ( $map['imports'] as $specifier => $url ) {
-		if ( ! is_string( $specifier ) || '' === $specifier || ! is_string( $url ) || '' === $url ) {
-			continue;
-		}
 		// A null version leaves the manifest's URL untouched. A specifier
 		// already registered by an earlier block keeps its first URL.
 		wp_register_script_module( $specifier, $url, [], null );
 		$specifiers[ $specifier ] = true;
-	}
-
-	if ( empty( $specifiers ) ) {
-		return;
 	}
 
 	// Carries the declaration and prints nothing of its own.
