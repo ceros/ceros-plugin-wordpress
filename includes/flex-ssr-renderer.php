@@ -88,13 +88,16 @@ function ceros_flex_ssr_render_manifest( $manifest, $served_url, $include_custom
 	// emitted verbatim so any <script> in it runs as authored.
 	$custom_body = $include_custom_html ? ceros_flex_ssr_custom_body_html( $manifest ) : '';
 
-	// A full page joins the import map WordPress already prints. The block
-	// renderer behind the editor preview emits no page head, so there it gets
-	// an inline map, which has to precede the module scripts above.
+	// A page joins the import map WordPress already prints, which under a block
+	// theme is in the head. A classic theme prints it below the content, after
+	// the module scripts, and the block renderer behind the editor preview emits
+	// no page head at all; both take an inline map, which has to precede those
+	// scripts. A document holds one map, so a later block joins WordPress's.
 	$import_map = '';
-	if ( wp_is_rest_endpoint() ) {
+	if ( wp_is_rest_endpoint() || ! wp_is_block_theme() ) {
 		$import_map = ceros_flex_ssr_import_map_tag( $manifest, $custom_body );
-	} else {
+	}
+	if ( '' === $import_map ) {
 		ceros_flex_ssr_register_import_map( $manifest, $custom_body );
 	}
 
@@ -274,9 +277,10 @@ function ceros_flex_ssr_import_map( $manifest, $custom_body_html ) {
 /**
  * Register the experience's import map with WordPress.
  *
- * A document may hold only one import map and WordPress prints its own, so the
- * specifiers are added to that one rather than emitted separately. A module
- * reaches it by being declared a dependency of an enqueued script.
+ * A document may hold only one import map and WordPress prints its own in the
+ * head under a block theme, so there the specifiers are added to that one rather
+ * than emitted separately. A module reaches it by being declared a dependency of
+ * an enqueued script.
  *
  * @param array  $manifest         The manifest.
  * @param string $custom_body_html The custom body HTML about to be emitted.
@@ -318,8 +322,9 @@ function ceros_flex_ssr_register_import_map( $manifest, $custom_body_html ) {
 /**
  * Build a standalone `<script type="importmap">` tag, or '' when none is needed.
  *
- * Only for renders that produce no page head of their own. At most one is
- * emitted per request, since a document may hold a single import map.
+ * For renders where WordPress's own map lands after the module scripts or is not
+ * printed at all. At most one is emitted per request, since a document may hold
+ * a single import map.
  *
  * @param array  $manifest         The manifest.
  * @param string $custom_body_html The custom body HTML about to be emitted.

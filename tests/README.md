@@ -66,6 +66,13 @@ core — those tests would stay green while the plugin was wrong.
 `BootstrapShimTest` pins the shim's behaviour so a change to it fails loudly,
 but only real WordPress can prove the behaviour matches.
 
+**Render an SSR block whose custom body HTML imports by bare specifier under
+both a block theme and a classic theme.** WordPress prints its own import map in
+the head under one and below the content under the other, and
+`ceros_flex_ssr_render_manifest()` picks between joining that map and emitting
+its own on that basis. View-source must show exactly one map, above every
+`type="module"` script, in both cases.
+
 ## Known-untested branches
 
 Deliberate, so they are not silently missing:
@@ -78,6 +85,9 @@ Deliberate, so they are not silently missing:
   absent. Constants cannot be undefined once set, so this needs a subprocess or
   the integration suite. It guards a deliberate fail-closed decision, so it is
   worth covering there.
+- The import-map branch in `ceros_flex_ssr_render_manifest()`. It turns on
+  `wp_is_block_theme()` and `wp_is_rest_endpoint()`, neither of which the closed
+  shim list above admits, and the branch is only meaningful against a real theme.
 
 
 ## The JavaScript suite
