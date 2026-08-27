@@ -268,6 +268,7 @@ This will:
 | `npm run start` | Start development mode with file watching |
 | `npm run build` | Create production build |
 | `npm run plugin-zip` | Create distributable ZIP file |
+| `npm run check:tested-upto` | Check `readme.txt` against the current WordPress release |
 | `npm run format` | Format code using WordPress coding standards |
 | `npm run lint:js` | Lint JavaScript files |
 | `npm run lint:css` | Lint CSS/SCSS files |
@@ -299,6 +300,46 @@ The `plugin-zip` command automatically:
 - Includes only necessary files (excludes `node_modules/`, `.git/`, etc.)
 - Uses the plugin slug from `package.json` as the filename
 - Creates proper directory structure for WordPress
+
+### Releasing
+
+`readme.txt` carries a `Tested up to:` header naming the WordPress version this
+plugin has been verified against. WordPress requires it to be the current major
+release before the plugin can be listed in the plugin directory, and it goes
+stale when WordPress ships rather than when anything here changes.
+
+A weekly workflow checks it and turns red when it falls behind. That check
+blocks nothing, so a red run is a prompt rather than a stop.
+
+The header is a claim about what was actually tested, so raising it is the last
+step of release prep, not the first:
+
+1. Check where things stand:
+
+   ```bash
+   npm run check:tested-upto
+   ```
+
+2. If the header is behind, bring the local environment up on the current
+   WordPress release and exercise the plugin against it: the block in the
+   editor, the settings page, and a front-end render at minimum.
+
+   ```bash
+   npm run env:destroy
+   npx wp-env start --update
+   ```
+
+   `--update` matters here. `.wp-env.json` sets `core` to `null`, so a plain
+   start can reuse whatever WordPress version the existing containers already
+   hold.
+
+3. Once it works, set `Tested up to:` to the major version you tested. Use
+   `7.1`, not `7.1.2`; the directory fills in the minor version itself. Then
+   re-run the check.
+
+4. Bump the version in `package.json`, update `CHANGELOG.md`, and push the
+   matching `vX.Y.Z` tag. The release workflow verifies the tag against
+   `package.json` before it publishes.
 
 ### Manual ZIP Creation
 
