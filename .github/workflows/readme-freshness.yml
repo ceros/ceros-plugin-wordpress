@@ -1,0 +1,26 @@
+name: Readme freshness
+
+# The "Tested up to" header goes stale when WordPress ships a release, not when
+# anything here changes, so nothing triggered by a push or a pull request will
+# notice. This runs on a clock instead.
+#
+# It gates nothing. A red run means the header needs attention before the
+# plugin is listed in the directory; it is not a reason to hold a build.
+
+on:
+  schedule:
+    - cron: '0 9 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  tested-upto:
+    name: Tested up to freshness
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Check the readme against the current WordPress release
+        run: bash tools/check-tested-upto.sh
