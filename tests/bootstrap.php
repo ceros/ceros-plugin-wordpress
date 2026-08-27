@@ -97,6 +97,15 @@ function add_filter( $hook, $callback, $priority = 10, $args = 1 ) {
 }
 
 /**
+ * Passthrough: with no filters added, WordPress returns the value unchanged,
+ * and the no-op add_filter() above means none ever are. Same reasoning as the
+ * __() shim — this is what core does, not a stand-in for what core does.
+ */
+function apply_filters( $hook, $value ) {
+	return $value;
+}
+
+/**
  * Only used at file scope to build a filter name.
  */
 function plugin_basename( $file ) {
