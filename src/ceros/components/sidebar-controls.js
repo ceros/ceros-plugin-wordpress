@@ -104,11 +104,15 @@ export function SidebarControls( {
 									checked={
 										deliveryMode === DELIVERY_MODES.IFRAME
 									}
-									onChange={ () =>
+									onChange={ () => {
+										dispatch( {
+											type: ACTION_TYPES.SET_DELIVERY_MODE,
+											payload: DELIVERY_MODES.IFRAME,
+										} );
 										setAttributes( {
 											deliveryMode: DELIVERY_MODES.IFRAME,
-										} )
-									}
+										} );
+									} }
 								/>
 								<div className="ceros-sidebar__radio-content">
 									<span className="ceros-sidebar__radio-title">
@@ -139,6 +143,10 @@ export function SidebarControls( {
 									disabled={ ! hasInline }
 									onChange={ () => {
 										if ( hasInline ) {
+											dispatch( {
+												type: ACTION_TYPES.SET_DELIVERY_MODE,
+												payload: DELIVERY_MODES.INLINE,
+											} );
 											// Persist the inline snippet alongside the mode so the
 											// saved block always has what render.php needs, even if
 											// it only existed in live API state until now.
@@ -182,6 +190,10 @@ export function SidebarControls( {
 									disabled={ ! hasInline }
 									onChange={ () => {
 										if ( hasInline ) {
+											dispatch( {
+												type: ACTION_TYPES.SET_DELIVERY_MODE,
+												payload: DELIVERY_MODES.SSR,
+											} );
 											// Persist the manifest URL so render.php
 											// can re-fetch it server-side. Prefer the
 											// value the embed-codes endpoint resolved
