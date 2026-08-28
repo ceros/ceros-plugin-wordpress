@@ -652,6 +652,24 @@ $ceros-border-muted: rgb(226, 232, 240); // button & divider borders
 	line-height: 1.4;
 }
 
+// Shown above the preview when the chosen delivery mode is not the one
+// that will render, so that is visible while authoring rather than only
+// on the published page.
+.ceros-block__preview-warning {
+	margin: 0 0 0.5rem;
+	padding: 0.5rem 0.75rem;
+	border-left: 3px solid rgb(219, 166, 23);
+	border-radius: 0.125rem;
+	background: rgb(254, 249, 231);
+	color: $ceros-text;
+	font-size: 0.75rem;
+	line-height: 1.4;
+}
+
+.ceros-block__preview-warning-reason {
+	color: $ceros-text-muted;
+}
+
 // Empty state (no experience selected / paste-a-URL flow).
 .ceros-block__empty {
 	display: flex;

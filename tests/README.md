@@ -173,10 +173,11 @@ real thing does, not an approximation of it.
 Anything needing a missing export fails with a missing-export error, which is
 the signal to install the package rather than grow the stub.
 
-`@wordpress/api-fetch` is installed for that reason: it is a real request
-client, so a stand-in would mean asserting against the stand-in. Tests that
-reach it call its own `setFetchHandler` to replace the final request step,
-which keeps the package's middleware chain in play and the network out of it.
+`@wordpress/api-fetch` and `@wordpress/url` are installed for that reason:
+both are real implementations, so a stand-in would mean asserting against the
+stand-in. Tests that reach `api-fetch` call its own `setFetchHandler` to replace
+the final request step, which keeps the package's middleware chain in play and
+the network out of it.
 
 ### Three things about the setup
 

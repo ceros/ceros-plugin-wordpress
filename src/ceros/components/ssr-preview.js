@@ -19,6 +19,7 @@ import { __ } from '@wordpress/i18n';
 import { useState, useEffect, useRef } from '@wordpress/element';
 import apiFetch from '@wordpress/api-fetch';
 import { addQueryArgs } from '@wordpress/url';
+import { DELIVERY_MODES } from '../constants';
 
 /**
  * @param {Object} props
@@ -28,7 +29,51 @@ import { addQueryArgs } from '@wordpress/url';
 export function SsrPreview( { attributes, postId } ) {
 	const [ html, setHtml ] = useState( null );
 	const [ error, setError ] = useState( '' );
+	const [ unavailable, setUnavailable ] = useState( '' );
 	const iframeRef = useRef( null );
+
+	// When the manifest cannot be fetched, render.php falls back to whatever the
+	// block can still produce, and that fallback renders successfully, so the
+	// preview alone looks like a working SSR render. Probing the manifest is
+	// what tells the author their chosen delivery mode is not the one in effect.
+	useEffect( () => {
+		let cancelled = false;
+		setUnavailable( '' );
+
+		const rendersFromManifest =
+			DELIVERY_MODES.SSR === attributes.deliveryMode &&
+			attributes.manifestUrl &&
+			! attributes.storedIndexPath;
+
+		if ( ! rendersFromManifest ) {
+			return undefined;
+		}
+
+		( async () => {
+			try {
+				await apiFetch( {
+					path: addQueryArgs( '/ceros/v1/manifest-meta', {
+						url: attributes.manifestUrl,
+					} ),
+				} );
+			} catch ( err ) {
+				if ( ! cancelled ) {
+					setUnavailable(
+						err?.error ||
+							__( 'The manifest could not be read.', 'ceros' )
+					);
+				}
+			}
+		} )();
+
+		return () => {
+			cancelled = true;
+		};
+	}, [
+		attributes.deliveryMode,
+		attributes.manifestUrl,
+		attributes.storedIndexPath,
+	] );
 
 	useEffect( () => {
 		let cancelled = false;
@@ -161,6 +206,17 @@ export function SsrPreview( { attributes, postId } ) {
 
 	return (
 		<div className="ceros-block__preview-section">
+			{ unavailable && (
+				<p className="ceros-block__preview-warning">
+					{ __(
+						'Server rendering is unavailable for this experience, so the preview below is what the page renders instead. Republish the experience in Ceros to generate its manifest.',
+						'ceros'
+					) }{ ' ' }
+					<span className="ceros-block__preview-warning-reason">
+						{ unavailable }
+					</span>
+				</p>
+			) }
 			<p className="ceros-block__preview-note">{ note }</p>
 			<iframe
 				ref={ iframeRef }
