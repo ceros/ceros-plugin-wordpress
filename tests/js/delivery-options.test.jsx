@@ -70,4 +70,91 @@ describe( 'DeliveryOptions', () => {
 			screen.getByText( /SSR — server-rendered \(Beta\)/ )
 		).toBeInTheDocument();
 	} );
+
+	// The checkbox lives here, alongside the radio it belongs to, because both
+	// surfaces that render this picker commit the choice themselves. It is
+	// scoped to SSR because that is the only delivery mode whose output carries
+	// the experience's custom body HTML.
+	describe( 'custom-code checkbox', () => {
+		const CHECKBOX = { name: /include custom body html/i };
+
+		const setupCheckbox = ( props = {} ) => {
+			const setIncludeCustomHtml = vi.fn();
+			render(
+				<DeliveryOptions
+					selectedDeliveryMode={ DELIVERY_MODES.SSR }
+					setSelectedDeliveryMode={ vi.fn() }
+					setIncludeCustomHtml={ setIncludeCustomHtml }
+					{ ...props }
+				/>
+			);
+			return setIncludeCustomHtml;
+		};
+
+		it.each( [ DELIVERY_MODES.IFRAME, DELIVERY_MODES.INLINE ] )(
+			'is absent for the %s delivery mode',
+			( mode ) => {
+				setupCheckbox( { selectedDeliveryMode: mode } );
+
+				expect(
+					screen.queryByRole( 'checkbox', CHECKBOX )
+				).not.toBeInTheDocument();
+			}
+		);
+
+		// block.json defaults the attribute to true, so a caller that has not
+		// tracked the value yet must not render it as though the author had
+		// switched it off.
+		it( 'defaults to on', () => {
+			setupCheckbox();
+
+			expect( screen.getByRole( 'checkbox', CHECKBOX ) ).toBeChecked();
+		} );
+
+		it( 'reflects the setting being off', () => {
+			setupCheckbox( { includeCustomHtml: false } );
+
+			expect(
+				screen.getByRole( 'checkbox', CHECKBOX )
+			).not.toBeChecked();
+		} );
+
+		it( 'reports false when switched off', async () => {
+			const setIncludeCustomHtml = setupCheckbox( {
+				includeCustomHtml: true,
+			} );
+
+			await userEvent.click( screen.getByRole( 'checkbox', CHECKBOX ) );
+
+			expect( setIncludeCustomHtml ).toHaveBeenCalledWith( false );
+		} );
+
+		it( 'reports true when switched back on', async () => {
+			const setIncludeCustomHtml = setupCheckbox( {
+				includeCustomHtml: false,
+			} );
+
+			await userEvent.click( screen.getByRole( 'checkbox', CHECKBOX ) );
+
+			expect( setIncludeCustomHtml ).toHaveBeenCalledWith( true );
+		} );
+
+		it( 'does not change the delivery mode', async () => {
+			const setSelected = vi.fn();
+			const setIncludeCustomHtml = vi.fn();
+			render(
+				<DeliveryOptions
+					selectedDeliveryMode={ DELIVERY_MODES.SSR }
+					setSelectedDeliveryMode={ setSelected }
+					includeCustomHtml={ true }
+					setIncludeCustomHtml={ setIncludeCustomHtml }
+				/>
+			);
+
+			await userEvent.click( screen.getByRole( 'checkbox', CHECKBOX ) );
+
+			expect( setIncludeCustomHtml ).toHaveBeenCalledTimes( 1 );
+			expect( setSelected ).not.toHaveBeenCalled();
+		} );
+	} );
 } );

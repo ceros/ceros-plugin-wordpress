@@ -142,10 +142,46 @@ describe( 'CerosModalFooter', () => {
 				experienceResourceId: 'abc123',
 				inlineEmbedCode: FLEX_EMBED_CODES.inlineEmbedCode,
 				deliveryMode: DELIVERY_MODES.INLINE,
+				includeCustomHtml: true,
 				manifestUrl: FLEX_EMBED_CODES.manifestUrl,
 				experienceUrl: FLEX_EMBED_CODES.viewUrl,
 			} );
 			expect( onClose ).toHaveBeenCalledTimes( 1 );
+		} );
+
+		// The picker is one of the two places the choice can be made, so the
+		// value it was showing has to reach the block rather than falling back
+		// to the block.json default once the experience is added.
+		it( 'commits the custom-code choice made in the picker', async () => {
+			const { setAttributes } = renderFooter( {
+				currentEmbedCodes: FLEX_EMBED_CODES,
+				selectedDeliveryMode: DELIVERY_MODES.SSR,
+				includeCustomHtml: false,
+			} );
+
+			await userEvent.click(
+				screen.getByRole( 'button', { name: 'Add Experience' } )
+			);
+
+			expect( setAttributes ).toHaveBeenCalledWith(
+				expect.objectContaining( {
+					deliveryMode: DELIVERY_MODES.SSR,
+					includeCustomHtml: false,
+				} )
+			);
+		} );
+
+		it( 'shows the custom-code checkbox for a Flex experience in SSR mode', () => {
+			renderFooter( {
+				currentEmbedCodes: FLEX_EMBED_CODES,
+				selectedDeliveryMode: DELIVERY_MODES.SSR,
+			} );
+
+			expect(
+				screen.getByRole( 'checkbox', {
+					name: /include custom body html/i,
+				} )
+			).toBeChecked();
 		} );
 
 		it( 'commits iframe delivery for an experience with no inline snippet', async () => {

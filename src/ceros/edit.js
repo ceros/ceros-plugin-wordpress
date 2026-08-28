@@ -162,6 +162,7 @@ const initialState = ( attributes ) => ( {
 		},
 		selectedEmbedOption: attributes.selectedOption || 'full',
 		selectedDeliveryMode: attributes.deliveryMode || DELIVERY_MODES.IFRAME,
+		includeCustomHtml: false !== attributes.includeCustomHtml,
 	},
 	modal: {
 		isOpen: false,
@@ -442,6 +443,15 @@ function cerosReducer( state, action ) {
 				},
 			};
 
+		case ACTION_TYPES.SET_INCLUDE_CUSTOM_HTML:
+			return {
+				...state,
+				selection: {
+					...state.selection,
+					includeCustomHtml: action.payload,
+				},
+			};
+
 		case ACTION_TYPES.OPEN_MODAL:
 			return {
 				...state,
@@ -499,6 +509,7 @@ export default function Edit( { attributes, setAttributes } ) {
 			currentEmbedCodes,
 			selectedEmbedOption,
 			selectedDeliveryMode,
+			includeCustomHtml,
 		},
 		modal: { isOpen: isModalOpen },
 	} = state;
@@ -1151,6 +1162,13 @@ export default function Edit( { attributes, setAttributes } ) {
 	// Opening the experience picker requires an API key. Without one, reset the
 	// block back to the empty state so the author can paste a different URL.
 	const handleOpenPicker = () => {
+		// The picker offers this choice and commits what it shows, so reopening
+		// it has to start from what the block holds rather than from whatever a
+		// previous, possibly cancelled, visit left in state.
+		dispatch( {
+			type: ACTION_TYPES.SET_INCLUDE_CUSTOM_HTML,
+			payload: false !== attributes.includeCustomHtml,
+		} );
 		if ( IS_API_KEY_CONFIGURED ) {
 			dispatch( { type: ACTION_TYPES.OPEN_MODAL } );
 			return;
@@ -1478,6 +1496,7 @@ export default function Edit( { attributes, setAttributes } ) {
 								currentEmbedCodes={ currentEmbedCodes }
 								selectedDeliveryMode={ selectedDeliveryMode }
 								selectedEmbedOption={ selectedEmbedOption }
+								includeCustomHtml={ includeCustomHtml }
 							/>
 						)
 					) }
@@ -1507,6 +1526,12 @@ export default function Edit( { attributes, setAttributes } ) {
 						dispatch( {
 							type: ACTION_TYPES.SET_DELIVERY_MODE,
 							payload: mode,
+						} ),
+					includeCustomHtml,
+					setIncludeCustomHtml: ( value ) =>
+						dispatch( {
+							type: ACTION_TYPES.SET_INCLUDE_CUSTOM_HTML,
+							payload: value,
 						} ),
 					setAttributes,
 					selectedExperienceName,

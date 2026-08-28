@@ -256,9 +256,13 @@ export function SidebarControls( {
 							'ceros'
 						) }
 						checked={ attributes?.includeCustomHtml !== false }
-						onChange={ ( value ) =>
-							setAttributes( { includeCustomHtml: value } )
-						}
+						onChange={ ( value ) => {
+							dispatch( {
+								type: ACTION_TYPES.SET_INCLUDE_CUSTOM_HTML,
+								payload: value,
+							} );
+							setAttributes( { includeCustomHtml: value } );
+						} }
 					/>
 				</PanelBody>
 			) }

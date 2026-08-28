@@ -9,6 +9,8 @@ export const CerosModalFooter = ( {
 	setSelectedEmbedOption,
 	selectedDeliveryMode,
 	setSelectedDeliveryMode,
+	includeCustomHtml = true,
+	setIncludeCustomHtml,
 	selectedNodeId,
 	setAttributes,
 	selectedExperienceName,
@@ -36,6 +38,8 @@ export const CerosModalFooter = ( {
 				<DeliveryOptions
 					selectedDeliveryMode={ effectiveDeliveryMode }
 					setSelectedDeliveryMode={ setSelectedDeliveryMode }
+					includeCustomHtml={ includeCustomHtml }
+					setIncludeCustomHtml={ setIncludeCustomHtml }
 				/>
 			) }
 			{ isIframe && (
@@ -74,6 +78,7 @@ export const CerosModalFooter = ( {
 								// Commit the delivery mode chosen in the picker
 								// (forced back to iframe for non-Flex experiences).
 								deliveryMode: effectiveDeliveryMode,
+								includeCustomHtml,
 								// Manifest URL drives the Flex/SSR live preview and the
 								// server-side render. Prefer the clean value resolved
 								// by the embed-codes endpoint; fall back to scraping

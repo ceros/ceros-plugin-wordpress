@@ -213,6 +213,46 @@ $ceros-border-muted: rgb(226, 232, 240); // button & divider borders
 			line-height: 1.45;
 		}
 
+		// The custom-code checkbox belongs to the SSR radio above it, so it is
+		// indented past the radio column rather than reading as a fourth option.
+		&-label--nested {
+			margin-left: 1.375rem;
+		}
+
+		input[type="checkbox"] {
+			appearance: none;
+			border-radius: 0.125rem;
+			height: 1rem;
+			width: 1rem;
+			min-width: 1rem;
+			background: #fff;
+			border: 1px solid rgb(15, 23, 42);
+			box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1);
+			cursor: pointer;
+			display: inline-block;
+			margin: 0 0.25rem 0 0;
+			outline: 0;
+			padding: 0 !important;
+			vertical-align: middle;
+			transition: 0.05s border-color ease-in-out;
+
+			&:checked {
+				background: rgb(15, 23, 42);
+				border-color: rgb(15, 23, 42);
+			}
+
+			&:checked::before {
+				content: "";
+				display: block;
+				width: 0.3125rem;
+				height: 0.5625rem;
+				margin: 0.0625rem 0 0 0.3125rem;
+				border: solid #fff;
+				border-width: 0 2px 2px 0;
+				transform: rotate(45deg);
+			}
+		}
+
 		input[type="radio"] {
 			appearance: none;
 			border-radius: 50%;
