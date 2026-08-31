@@ -25,6 +25,13 @@ function ceros_render_block( $attributes ) {
 
 	$delivery_mode = $attributes['deliveryMode'] ?? 'iframe';
 
+	// Defaults on: WordPress merges the block.json default in before calling
+	// this, so a block saved before the toggle existed arrives as true. Compared
+	// against false rather than tested for truthiness because a hand-authored
+	// block comment can carry the string "false", which core passes through
+	// unchanged and which is truthy — that fails open, the safe direction here.
+	$include_custom_html = false !== ( $attributes['includeCustomHtml'] ?? true );
+
 	$missing_experience_markup = '<div class="ceros-missing-experience" style="font-family: sans-serif;background-color:#000;color:#fff;min-height:700px;display:flex;align-items:center;justify-content:center;text-align:center;padding:2rem;">
 			<div>
 				<h2 style="font-size:2.5rem;margin:0 0 1rem;font-weight:600;">' . esc_html__( 'Experience not found', 'ceros' ) . '</h2>
@@ -52,7 +59,7 @@ function ceros_render_block( $attributes ) {
 	if ( 'ssr' === $delivery_mode ) {
 		// Store mode: render fully from the locally-persisted bundle (no CDN).
 		if ( ! empty( $attributes['storedIndexPath'] ) && function_exists( 'ceros_render_flex_ssr_stored' ) ) {
-			$stored_html = ceros_render_flex_ssr_stored( $attributes['storedIndexPath'] );
+			$stored_html = ceros_render_flex_ssr_stored( $attributes['storedIndexPath'], $include_custom_html );
 			if ( '' !== $stored_html ) {
 				return $stored_html;
 			}
@@ -60,7 +67,7 @@ function ceros_render_block( $attributes ) {
 
 		// Live mode: fetch the manifest server-side and render inline.
 		if ( ! empty( $attributes['manifestUrl'] ) && function_exists( 'ceros_render_flex_ssr' ) ) {
-			$ssr_html = ceros_render_flex_ssr( $attributes['manifestUrl'] );
+			$ssr_html = ceros_render_flex_ssr( $attributes['manifestUrl'], $include_custom_html );
 			if ( '' !== $ssr_html ) {
 				return $ssr_html;
 			}

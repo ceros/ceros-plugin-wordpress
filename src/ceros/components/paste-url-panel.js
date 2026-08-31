@@ -40,6 +40,7 @@ function experienceNameFromUrl( url ) {
  * @param {Object}   props.currentEmbedCodes    Resolved embed codes (from state).
  * @param {string}   props.selectedDeliveryMode Current delivery mode.
  * @param {string}   props.selectedEmbedOption  Current iframe size option.
+ * @param {boolean}  props.includeCustomHtml    Whether to include the experience's custom body HTML.
  * @param {boolean}  props.apiKeyConfigured     Whether the API key is configured.
  */
 export function PasteUrlPanel( {
@@ -49,6 +50,7 @@ export function PasteUrlPanel( {
 	currentEmbedCodes,
 	selectedDeliveryMode,
 	selectedEmbedOption,
+	includeCustomHtml = true,
 	apiKeyConfigured,
 } ) {
 	const [ url, setUrl ] = useState( '' );
@@ -133,6 +135,7 @@ export function PasteUrlPanel( {
 			deliveryMode: hasInline
 				? selectedDeliveryMode
 				: DELIVERY_MODES.IFRAME,
+			includeCustomHtml,
 			// Manifest URL drives the SSR delivery mode's server-side fetch.
 			manifestUrl: resolved?.manifestUrl || '',
 			// Canonical (Ceros-owned) view URL. Lets render.php rebuild a legacy
@@ -234,6 +237,13 @@ export function PasteUrlPanel( {
 									dispatch( {
 										type: ACTION_TYPES.SET_DELIVERY_MODE,
 										payload: mode,
+									} )
+								}
+								includeCustomHtml={ includeCustomHtml }
+								setIncludeCustomHtml={ ( value ) =>
+									dispatch( {
+										type: ACTION_TYPES.SET_INCLUDE_CUSTOM_HTML,
+										payload: value,
 									} )
 								}
 							/>

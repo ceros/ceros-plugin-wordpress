@@ -31,12 +31,68 @@ const state = ( over = {} ) => ( {
 	setSelectedEmbedOption: () => {},
 	selectedDeliveryMode: DELIVERY_MODES.IFRAME,
 	setSelectedDeliveryMode: () => {},
+	includeCustomHtml: true,
+	setIncludeCustomHtml: () => {},
 	setAttributes: () => {},
 	selectedExperienceName: 'Acme Experience',
 	...over,
 } );
 
 describe( 'CerosModal', () => {
+	// The footer receives each prop by name, so these two pin the custom-code
+	// pair to the value the reducer is holding.
+	it( 'passes the custom-code setting through to the footer', () => {
+		render(
+			<CerosModal
+				isOpen
+				onClose={ () => {} }
+				state={ state( {
+					currentEmbedCodes: {
+						fullHeightEmbedCode: '<iframe title="full"></iframe>',
+						scrollableEmbedCode: '<iframe title="scroll"></iframe>',
+						inlineEmbedCode: '<div data-flex-inline></div>',
+					},
+					selectedDeliveryMode: DELIVERY_MODES.SSR,
+					includeCustomHtml: false,
+				} ) }
+			/>
+		);
+
+		expect(
+			screen.getByRole( 'checkbox', {
+				name: /include custom body html/i,
+			} )
+		).not.toBeChecked();
+	} );
+
+	it( 'passes the custom-code setter through to the footer', async () => {
+		const setIncludeCustomHtml = vi.fn();
+		render(
+			<CerosModal
+				isOpen
+				onClose={ () => {} }
+				state={ state( {
+					currentEmbedCodes: {
+						fullHeightEmbedCode: '<iframe title="full"></iframe>',
+						scrollableEmbedCode: '<iframe title="scroll"></iframe>',
+						inlineEmbedCode: '<div data-flex-inline></div>',
+					},
+					selectedDeliveryMode: DELIVERY_MODES.SSR,
+					includeCustomHtml: true,
+					setIncludeCustomHtml,
+				} ) }
+			/>
+		);
+
+		await userEvent.click(
+			screen.getByRole( 'checkbox', {
+				name: /include custom body html/i,
+			} )
+		);
+
+		expect( setIncludeCustomHtml ).toHaveBeenCalledWith( false );
+	} );
+
 	it( 'renders nothing while closed', () => {
 		render(
 			<CerosModal

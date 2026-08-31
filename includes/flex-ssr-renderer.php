@@ -23,11 +23,14 @@ if ( ! defined( 'ABSPATH' ) ) {
 /**
  * Render a Flex experience server-side from its manifest URL.
  *
- * @param string $manifest_url The experience's manifest URL (stored on the block).
+ * @param string $manifest_url        The experience's manifest URL (stored on the block).
+ * @param bool   $include_custom_html Whether to append the experience's authored
+ *                                    custom Body HTML. Defaults true, matching the
+ *                                    block attribute default.
  * @return string Rendered HTML, or '' when the manifest could not be fetched
  *                (the caller should fall back to another delivery mode).
  */
-function ceros_render_flex_ssr( $manifest_url ) {
+function ceros_render_flex_ssr( $manifest_url, $include_custom_html = true ) {
 	$manifest = ceros_fetch_flex_manifest( $manifest_url );
 	if ( is_wp_error( $manifest ) || ! is_array( $manifest ) ) {
 		return '';
@@ -36,7 +39,7 @@ function ceros_render_flex_ssr( $manifest_url ) {
 	// Follow a deep link (?cer_<slug>=<page>) to the requested page when present.
 	$resolved = ceros_flex_ssr_resolve_page( $manifest, $manifest_url );
 
-	return ceros_flex_ssr_render_manifest( $resolved['manifest'], $resolved['url'] );
+	return ceros_flex_ssr_render_manifest( $resolved['manifest'], $resolved['url'], $include_custom_html );
 }
 
 /**
@@ -45,12 +48,15 @@ function ceros_render_flex_ssr( $manifest_url ) {
  * Shared by the live path (after fetching) and the Store path (after reading a
  * locally-persisted, URL-rewritten manifest), so both emit identical markup.
  *
- * @param array  $manifest   The parsed manifest (URLs may be remote or local).
- * @param string $served_url The manifest URL to advertise on the wrapper for
- *                           the SPA router (deep-link nav). May be ''.
+ * @param array  $manifest            The parsed manifest (URLs may be remote or local).
+ * @param string $served_url          The manifest URL to advertise on the wrapper for
+ *                                    the SPA router (deep-link nav). May be ''.
+ * @param bool   $include_custom_html Whether to append the experience's authored
+ *                                    custom Body HTML (and the import map its
+ *                                    module scripts need).
  * @return string Rendered HTML, or '' when there is nothing renderable.
  */
-function ceros_flex_ssr_render_manifest( $manifest, $served_url ) {
+function ceros_flex_ssr_render_manifest( $manifest, $served_url, $include_custom_html = true ) {
 	if ( ! is_array( $manifest ) ) {
 		return '';
 	}
@@ -78,7 +84,23 @@ function ceros_flex_ssr_render_manifest( $manifest, $served_url ) {
 		. $html_body
 		. '</div>';
 
-	return $styles . $head_scripts . $content . $body_scripts;
+	// Appended after the experience markup and the hydration runtime, and
+	// emitted verbatim so any <script> in it runs as authored.
+	$custom_body = $include_custom_html ? ceros_flex_ssr_custom_body_html( $manifest ) : '';
+
+	// A page joins the import map WordPress already prints, which under a block
+	// theme is in the head. A classic theme prints it below the content, after
+	// the module scripts, and the block renderer behind the editor preview emits
+	// no page head at all; both take an inline map instead, which has to precede
+	// those scripts.
+	$import_map = '';
+	if ( wp_is_rest_endpoint() || ! wp_is_block_theme() ) {
+		$import_map = ceros_flex_ssr_import_map_tag( $manifest, $custom_body );
+	} else {
+		ceros_flex_ssr_register_import_map( $manifest, $custom_body );
+	}
+
+	return $import_map . $styles . $head_scripts . $content . $body_scripts . $custom_body;
 }
 
 /**
@@ -182,6 +204,147 @@ function ceros_flex_ssr_html_body( $manifest ) {
 		}
 	}
 	return '';
+}
+
+/**
+ * Extract the experience's authored custom Body HTML.
+ *
+ * Lives in `displayMetadata` rather than `assets[]`. This is whatever the
+ * author entered in the experience's Custom HTML settings.
+ *
+ * @param array $manifest The manifest.
+ * @return string The custom body HTML, or '' when absent.
+ */
+function ceros_flex_ssr_custom_body_html( $manifest ) {
+	$display = isset( $manifest['displayMetadata'] ) ? $manifest['displayMetadata'] : [];
+	$html    = isset( $display['customBodyHtml'] ) ? $display['customBodyHtml'] : '';
+	return is_string( $html ) ? $html : '';
+}
+
+/**
+ * The experience's import map, or [] when the page needs none.
+ *
+ * Custom body HTML may import a module by bare specifier, which only resolves
+ * against an import map. The manifest carries one; SSR deliveries are not
+ * served it automatically, so the consumer supplies it.
+ *
+ * Returned verbatim, and only when the custom body HTML names one of its
+ * specifiers, so a page that needs no map is left alone.
+ *
+ * @param array  $manifest         The manifest.
+ * @param string $custom_body_html The custom body HTML about to be emitted.
+ * @return array The import map, or [] when none should be emitted.
+ */
+function ceros_flex_ssr_import_map( $manifest, $custom_body_html ) {
+	if ( ! is_string( $custom_body_html ) || '' === $custom_body_html ) {
+		return [];
+	}
+
+	$map     = isset( $manifest['importMap'] ) ? $manifest['importMap'] : [];
+	$imports = isset( $map['imports'] ) ? $map['imports'] : [];
+	if ( ! is_array( $imports ) || empty( $imports ) ) {
+		return [];
+	}
+
+	// An entry that is not a specifier/URL pair of strings would make the whole
+	// map invalid, so drop it rather than pass it on.
+	$clean = [];
+	foreach ( $imports as $specifier => $url ) {
+		if ( is_string( $specifier ) && '' !== $specifier && is_string( $url ) && '' !== $url ) {
+			$clean[ $specifier ] = $url;
+		}
+	}
+	$used = false;
+	foreach ( array_keys( $clean ) as $specifier ) {
+		if ( false !== strpos( $custom_body_html, $specifier ) ) {
+			$used = true;
+			break;
+		}
+	}
+	if ( ! $used ) {
+		return [];
+	}
+
+	$map['imports'] = $clean;
+	if ( isset( $map['integrity'] ) && ! is_array( $map['integrity'] ) ) {
+		unset( $map['integrity'] );
+	}
+
+	return $map;
+}
+
+/**
+ * Register the experience's import map with WordPress.
+ *
+ * A document may hold only one import map and WordPress prints its own in the
+ * head under a block theme, so there the specifiers are added to that one rather
+ * than emitted separately. WordPress maps the dependencies of an enqueued script
+ * module, so they travel as the dependencies of one that does nothing else.
+ *
+ * @param array  $manifest         The manifest.
+ * @param string $custom_body_html The custom body HTML about to be emitted.
+ * @return void
+ */
+function ceros_flex_ssr_register_import_map( $manifest, $custom_body_html ) {
+	static $carried = [];
+	static $anchors = 0;
+
+	$map = ceros_flex_ssr_import_map( $manifest, $custom_body_html );
+	if ( empty( $map ) ) {
+		return;
+	}
+
+	foreach ( $map['imports'] as $specifier => $url ) {
+		// A null version leaves the manifest's URL untouched. A specifier
+		// already registered by an earlier block keeps its first URL.
+		wp_register_script_module( $specifier, $url, [], null );
+	}
+
+	// An anchor's dependencies are fixed once it is registered, so a block
+	// naming specifiers no earlier one carried gets an anchor of its own.
+	$fresh = array_values( array_diff( array_keys( $map['imports'] ), $carried ) );
+	if ( empty( $fresh ) ) {
+		return;
+	}
+
+	++$anchors;
+	$carried = array_merge( $carried, $fresh );
+
+	wp_enqueue_script_module(
+		'ceros-flex-import-map-' . $anchors,
+		plugin_dir_url( CEROS_PLUGIN_FILE ) . 'public/import-map-anchor.js',
+		$fresh,
+		null
+	);
+}
+
+/**
+ * Build a standalone `<script type="importmap">` tag, or '' when none is needed.
+ *
+ * For renders where WordPress's own map lands after the module scripts or is not
+ * printed at all. Each block emits its own, immediately ahead of the modules
+ * that read it, so a page carrying several of them resolves all of their
+ * specifiers.
+ *
+ * @param array  $manifest         The manifest.
+ * @param string $custom_body_html The custom body HTML about to be emitted.
+ * @return string The <script> tag, or ''.
+ */
+function ceros_flex_ssr_import_map_tag( $manifest, $custom_body_html ) {
+	$map = ceros_flex_ssr_import_map( $manifest, $custom_body_html );
+	if ( empty( $map ) ) {
+		return '';
+	}
+
+	$json = wp_json_encode( $map );
+	if ( ! is_string( $json ) ) {
+		return '';
+	}
+
+	// Escape "<" so no URL in the map can close the script element it sits in
+	// ("</script>", "<!--"). \u003c is valid JSON and parses back to "<", so
+	// the map the browser reads is unchanged.
+	return '<script type="importmap">' . str_replace( '<', '\\u003c', $json ) . '</script>' . "\n";
 }
 
 /**

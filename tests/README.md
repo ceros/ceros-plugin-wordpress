@@ -85,6 +85,18 @@ core — those tests would stay green while the plugin was wrong.
 `BootstrapShimTest` pins the shim's behaviour so a change to it fails loudly,
 but only real WordPress can prove the behaviour matches.
 
+**Render an SSR block whose custom body HTML imports by bare specifier under
+both a block theme and a classic theme, on a page with one block and with two.**
+WordPress prints its own import map in the head under one and below the content
+under the other, and `ceros_flex_ssr_render_manifest()` picks between joining
+that map and emitting its own on that basis. Under a block theme the page must
+carry one map, WordPress's, holding every block's specifiers; under a classic
+theme, one per block, each above that block's `type="module"` scripts. Every
+specifier must resolve in the browser, which is the part no markup assertion
+covers. Run it on the oldest WordPress in `Requires at least` as well as the
+newest: the map is assembled by core, and which mechanisms feed it has changed
+between releases.
+
 ## Known-untested branches
 
 Deliberate, so they are not silently missing:
@@ -97,6 +109,9 @@ Deliberate, so they are not silently missing:
   absent. Constants cannot be undefined once set, so this needs a subprocess or
   the integration suite. It guards a deliberate fail-closed decision, so it is
   worth covering there.
+- The import-map branch in `ceros_flex_ssr_render_manifest()`. It turns on
+  `wp_is_block_theme()` and `wp_is_rest_endpoint()`, neither of which the closed
+  shim list above admits, and the branch is only meaningful against a real theme.
 
 And one branch that is unreachable by mistake rather than by choice.
 `ceros_get_friendly_error_message`'s third pattern is commented "cURL error 28:
@@ -157,6 +172,12 @@ real thing does, not an approximation of it.
 
 Anything needing a missing export fails with a missing-export error, which is
 the signal to install the package rather than grow the stub.
+
+`@wordpress/api-fetch` and `@wordpress/url` are installed for that reason:
+both are real implementations, so a stand-in would mean asserting against the
+stand-in. Tests that reach `api-fetch` call its own `setFetchHandler` to replace
+the final request step, which keeps the package's middleware chain in play and
+the network out of it.
 
 ### Three things about the setup
 

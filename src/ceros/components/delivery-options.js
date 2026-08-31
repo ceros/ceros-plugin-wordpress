@@ -8,10 +8,14 @@ import { DELIVERY_MODES } from '../constants';
  * @param {Object}   props                         Component props.
  * @param {string}   props.selectedDeliveryMode    Currently selected delivery mode.
  * @param {Function} props.setSelectedDeliveryMode Sets the delivery mode.
+ * @param {boolean}  props.includeCustomHtml       Whether to include the experience's custom body HTML.
+ * @param {Function} props.setIncludeCustomHtml    Sets whether to include it.
  */
 export const DeliveryOptions = ( {
 	selectedDeliveryMode,
 	setSelectedDeliveryMode,
+	includeCustomHtml = true,
+	setIncludeCustomHtml,
 } ) => (
 	<div className="ceros-block__embed-options">
 		<div>
@@ -64,6 +68,27 @@ export const DeliveryOptions = ( {
 					</span>
 				</span>
 			</label>
+			{ selectedDeliveryMode === DELIVERY_MODES.SSR && (
+				<label className="ceros-block__embed-options-label ceros-block__embed-options-label--nested">
+					<input
+						type="checkbox"
+						checked={ includeCustomHtml }
+						onChange={ ( event ) =>
+							setIncludeCustomHtml( event.target.checked )
+						}
+					/>
+					<span>
+						<span>Include custom body HTML/scripts</span>
+						<span className="ceros-block__embed-options-description">
+							Some experiences include custom code — for example
+							answer tracking, scoring, or page navigation — that
+							must load with the experience for it to work. Leave
+							this on unless you know the experience does not need
+							it. Custom head HTML is never included.
+						</span>
+					</span>
+				</label>
+			) }
 		</div>
 	</div>
 );

@@ -26,6 +26,8 @@ export const CerosModal = ( { isOpen, onClose, state } ) => {
 		setSelectedEmbedOption,
 		selectedDeliveryMode,
 		setSelectedDeliveryMode,
+		includeCustomHtml,
+		setIncludeCustomHtml,
 		setAttributes,
 		selectedExperienceName,
 	} = state;
@@ -58,6 +60,8 @@ export const CerosModal = ( { isOpen, onClose, state } ) => {
 					setSelectedEmbedOption={ setSelectedEmbedOption }
 					selectedDeliveryMode={ selectedDeliveryMode }
 					setSelectedDeliveryMode={ setSelectedDeliveryMode }
+					includeCustomHtml={ includeCustomHtml }
+					setIncludeCustomHtml={ setIncludeCustomHtml }
 					selectedNodeId={ selectedNodeId }
 					setAttributes={ setAttributes }
 					selectedExperienceName={ selectedExperienceName }
