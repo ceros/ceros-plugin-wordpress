@@ -1,3 +1,5 @@
+[![Readme freshness](https://github.com/ceros/ceros-plugin-wordpress/actions/workflows/readme-freshness.yml/badge.svg)](https://github.com/ceros/ceros-plugin-wordpress/actions/workflows/readme-freshness.yml)
+
 # Ceros WordPress Plugin
 
 A WordPress block plugin that integrates with the Ceros API to embed interactive Ceros experiences directly into your WordPress posts and pages.
