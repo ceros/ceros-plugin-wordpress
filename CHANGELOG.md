@@ -5,7 +5,7 @@ All notable changes to the Ceros WordPress Plugin will be documented in this fil
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.32.0] - 2026-08-26
+## [0.32.0] - 2026-08-31
 
 ### Added
 - **Include custom body HTML**: the Flex SSR (Beta) delivery mode now injects the experience's custom Body HTML alongside the server-rendered markup, so experiences that drive interactivity through the Ceros Flex Experience SDK (answer tracking, scoring, page navigation) work without switching to the iframe embed. An **Include custom body HTML/scripts** checkbox sits with the delivery-mode choice, in the block sidebar and in both places an experience is added, and is on by default, so existing SSR blocks pick it up on upgrade with no editor action. Content is included exactly as authored. Custom head HTML is not included: it is authored for the document head and routinely carries Ceros-site-specific tags and analytics pixels that would duplicate what the host site already has. The iframe and inline (iframeless) delivery modes are unaffected.
