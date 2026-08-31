@@ -517,7 +517,7 @@ Error messages are environment-aware. In **Production**, messages are user-frien
 
 See [CHANGELOG.md](CHANGELOG.md) for detailed version history.
 
-**Current Version: 0.30.0**
+**Current Version: 0.32.0**
 
 ---
 
