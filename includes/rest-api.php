@@ -225,6 +225,27 @@ function ceros_handle_api_response( $result ) {
 		);
 	}
 
+	// Ahead of the generic branch below: a version rejection is a 400 and would
+	// otherwise surface as an opaque "Ceros API error (400)".
+	if ( isset( $result['code'] ) && isset( $result['body'] ) ) {
+		$raw_body = is_string( $result['body'] ) ? $result['body'] : wp_json_encode( $result['body'] );
+		if ( ceros_is_api_version_rejection( $result['code'], (string) $raw_body ) ) {
+			$failure = ceros_api_failure_report( $result['code'], (string) $raw_body );
+
+			return new WP_REST_Response(
+				[
+					'code'       => 400,
+					'error'      => ceros_format_error(
+						sprintf( 'HTTP 400 — %s', $raw_body ),
+						$failure['message']
+					),
+					'error_code' => $failure['error_code'],
+				],
+				400
+			);
+		}
+	}
+
 	// Check for other HTTP error responses (4xx and 5xx).
 	if ( isset( $result['code'] ) && $result['code'] >= 400 ) {
 		$api_message   = isset( $result['body']['message'] ) ? $result['body']['message'] : 'Unknown error';

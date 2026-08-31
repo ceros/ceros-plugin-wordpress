@@ -18,8 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * @return string The plugin version.
  */
 function ceros_get_version() {
-	$plugin_data = get_file_data( CEROS_PLUGIN_FILE, [ 'Version' => 'Version' ] );
-	return $plugin_data['Version'] ?? '0.31.0';
+	return CEROS_PLUGIN_VERSION;
 }
 
 /**
@@ -77,18 +76,19 @@ function ceros_is_api_configured() {
 /**
  * Build the standard headers for outgoing Ceros API requests.
  *
- * Includes authentication, content negotiation, and identification
- * headers so the Ceros API can identify the plugin and version.
+ * Carries authentication, content negotiation, the pinned API version, and the
+ * plugin's own version, so a call can be traced back to the build that made it.
  *
  * @param string $api_key The API key (Bearer token).
  * @return array Associative array of HTTP headers.
  */
 function ceros_get_api_headers( $api_key ) {
 	return [
-		'Authorization'       => 'Bearer ' . $api_key,
-		'Accept'              => 'application/json',
-		'X-Ceros-Api-Version' => CEROS_API_VERSION,
-		'X-Ceros-Plugin'      => CEROS_PLUGIN_IDENTIFIER,
+		'Authorization'          => 'Bearer ' . $api_key,
+		'Accept'                 => 'application/json',
+		'X-Ceros-Api-Version'    => CEROS_API_VERSION,
+		'X-Ceros-Plugin'         => CEROS_PLUGIN_IDENTIFIER,
+		'X-Ceros-Plugin-Version' => CEROS_PLUGIN_VERSION,
 	];
 }
 
@@ -184,6 +184,67 @@ function ceros_get_friendly_error_message( $error_message ) {
 
 	// Default fallback message if no pattern matches.
 	return __( 'An error occurred while connecting to the Ceros API. Please try again later or contact support if the problem persists.', 'ceros' );
+}
+
+/**
+ * Detect the Ceros API rejecting the version this plugin is pinned to.
+ *
+ * The API rejects an unknown version with a 400 whose body message is "Invalid
+ * API version". Matching the message rather than the envelope shape keeps this
+ * working across error-format changes.
+ *
+ * @param int    $code HTTP status code from the response.
+ * @param string $body Raw response body.
+ * @return bool True when the response is a version rejection.
+ */
+function ceros_is_api_version_rejection( $code, $body ) {
+	if ( 400 !== (int) $code ) {
+		return false;
+	}
+
+	return false !== strpos( strtolower( (string) $body ), 'invalid api version' );
+}
+
+/**
+ * The message shown when the API rejects this plugin's pinned version.
+ *
+ * Names both numbers needed to act: the pin the plugin sends, and the plugin
+ * version carrying it. Says nothing about the API key.
+ *
+ * @return string The message to display.
+ */
+function ceros_api_version_rejection_message() {
+	return sprintf(
+		/* translators: 1: pinned API version, 2: plugin version */
+		__( 'This version of the Ceros plugin is too old for the Ceros API. It requests API version %1$s, which the API no longer supports. Update the Ceros plugin, currently %2$s, to the latest release.', 'ceros' ),
+		CEROS_API_VERSION,
+		CEROS_PLUGIN_VERSION
+	);
+}
+
+/**
+ * Choose how to report a failed Ceros API call on the key-verification path.
+ *
+ * The choice lives here rather than at the call sites so it can be tested. A
+ * version rejection and a bad key are indistinguishable from the HTTP status
+ * alone.
+ *
+ * @param int    $code HTTP status code from the response.
+ * @param string $body Raw response body.
+ * @return array{error_code: string, message: string} The code and message to report.
+ */
+function ceros_api_failure_report( $code, $body ) {
+	if ( ceros_is_api_version_rejection( $code, $body ) ) {
+		return [
+			'error_code' => 'ceros_api_version_unsupported',
+			'message'    => ceros_api_version_rejection_message(),
+		];
+	}
+
+	return [
+		'error_code' => 'ceros_api_key_invalid',
+		'message'    => __( 'The API key could not be verified. Please check that the key is correct and try again.', 'ceros' ),
+	];
 }
 
 /**

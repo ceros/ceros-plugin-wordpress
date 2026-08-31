@@ -120,13 +120,12 @@ function ceros_sanitize_and_encrypt_api_key( $value ) {
 	if ( $code < 200 || $code >= 300 ) {
 		$body          = wp_remote_retrieve_body( $response );
 		$technical_msg = sprintf( 'HTTP %d — %s', $code, $body );
+		$failure       = ceros_api_failure_report( $code, $body );
+
 		add_settings_error(
 			'ceros_api_key',
-			'ceros_api_key_invalid',
-			ceros_format_error(
-				$technical_msg,
-				__( 'The API key could not be verified. Please check that the key is correct and try again.', 'ceros' )
-			),
+			$failure['error_code'],
+			ceros_format_error( $technical_msg, $failure['message'] ),
 			'error'
 		);
 		return '';
