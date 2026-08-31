@@ -121,7 +121,36 @@ jobs:
       # Needs only bash, curl and jq, all present on the runner. The version
       # API is stubbed on PATH, so this makes no network request.
       - name: Run shell tests
-        run: bash tests/shell/check-tested-upto.test.sh
+        run: |
+          bash tests/shell/check-tested-upto.test.sh
+          bash tests/shell/check-versions.test.sh
+          bash tests/shell/check-pin-bump.test.sh
+          bash tests/shell/check-changelog.test.sh
+
+  versions:
+    name: Version declarations
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      # Needs bash only, so this is the cheapest job here and the first to fail
+      # when a bump misses one of the places the version is declared.
+      - name: Check the version declarations agree
+        run: bash tools/check-versions.sh
+
+  api-pin:
+    name: API pin bump
+    runs-on: ubuntu-latest
+    # Only meaningful against a base branch, so it does not run on push to main.
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          # The default single-commit checkout has no merge base to diff against.
+          fetch-depth: 0
+
+      - name: Check a pin change ships as a release
+        run: bash tools/check-pin-bump.sh "origin/${{ github.base_ref }}"
 
   js:
     name: JS build
