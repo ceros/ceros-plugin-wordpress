@@ -7,6 +7,9 @@
 # package.json. A release where those differ ships an install whose behaviour
 # cannot be identified from the number it reports.
 #
+# block.json's version stamps the block's editor and front-end scripts, so a
+# stale one leaves an upgraded install serving the previous build from cache.
+#
 # package.json is the reference, because the release workflow names both the tag
 # and the ZIP from it.
 #
@@ -26,14 +29,15 @@ fail() {
 	FAILED=1
 }
 
-for f in package.json readme.txt ceros.php README.md; do
+for f in package.json readme.txt ceros.php README.md src/ceros/block.json; do
 	[ -f "$f" ] || { echo "check-versions: $f not found, run this from the repository root." >&2; exit 1; }
 done
 
-pkg=$(sed -n 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' package.json | head -n 1)
+pkg=$(sed -n 's/^[[:space:]]*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' package.json | head -n 1)
 stable=$(sed -n 's/^Stable tag:[[:space:]]*\([^[:space:]]*\).*/\1/p' readme.txt | head -n 1)
 header=$(sed -n 's/^[[:space:]]*\*[[:space:]]*Version:[[:space:]]*\([^[:space:]]*\).*/\1/p' ceros.php | head -n 1)
 readme_md=$(sed -n 's/^\*\*Current Version:[[:space:]]*\([^*[:space:]]*\).*/\1/p' README.md | head -n 1)
+block=$(sed -n 's/^[[:space:]]*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' src/ceros/block.json | head -n 1)
 
 if [ -z "$pkg" ]; then
 	echo "check-versions: no version found in package.json." >&2
@@ -52,6 +56,7 @@ check() {
 check 'readme.txt Stable tag' "$stable"
 check 'ceros.php Version' "$header"
 check 'README.md Current Version' "$readme_md"
+check 'src/ceros/block.json' "$block"
 
 if [ "$FAILED" -ne 0 ]; then
 	echo >&2
@@ -60,4 +65,4 @@ if [ "$FAILED" -ne 0 ]; then
 	exit 1
 fi
 
-echo "check-versions: package.json, readme.txt, ceros.php and README.md all declare $pkg."
+echo "check-versions: package.json, readme.txt, ceros.php, README.md and src/ceros/block.json all declare $pkg."
