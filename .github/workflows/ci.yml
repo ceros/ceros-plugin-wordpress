@@ -139,7 +139,7 @@ jobs:
         run: bash tools/check-versions.sh
 
   api-pin:
-    name: API pin bump
+    name: API pin record
     runs-on: ubuntu-latest
     # Only meaningful against a base branch, so it does not run on push to main.
     if: github.event_name == 'pull_request'
@@ -149,7 +149,7 @@ jobs:
           # The default single-commit checkout has no merge base to diff against.
           fetch-depth: 0
 
-      - name: Check a pin change ships as a release
+      - name: Check a pin change has a changelog entry
         run: bash tools/check-pin-bump.sh "origin/${{ github.base_ref }}"
 
   js:
