@@ -527,12 +527,12 @@ function ceros_rest_test_connection( WP_REST_Request $request ) {
 	$body          = wp_remote_retrieve_body( $response );
 	$technical_msg = sprintf( 'HTTP %d — %s', $code, $body );
 
+	$failure = ceros_connection_test_failure( $code, $body );
+
 	return new WP_REST_Response(
 		[
-			'message' => ceros_format_error(
-				$technical_msg,
-				__( 'Connection test failed. Please check the URL and API key.', 'ceros' )
-			),
+			'message'    => ceros_format_error( $technical_msg, $failure['message'] ),
+			'error_code' => $failure['error_code'],
 		],
 		$code
 	);

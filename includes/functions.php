@@ -248,6 +248,28 @@ function ceros_api_failure_report( $code, $body ) {
 }
 
 /**
+ * Report a failed connection test.
+ *
+ * The connection test exercises the staging URL as well as the key, so its
+ * generic advice names both. A version rejection is neither, and saying so is
+ * the whole point of telling the two apart.
+ *
+ * @param int    $code HTTP status code from the response.
+ * @param string $body Raw response body.
+ * @return array{error_code: string, message: string}
+ */
+function ceros_connection_test_failure( $code, $body ) {
+	if ( ceros_is_api_version_rejection( $code, $body ) ) {
+		return ceros_api_failure_report( $code, $body );
+	}
+
+	return [
+		'error_code' => 'ceros_connection_test_failed',
+		'message'    => __( 'Connection test failed. Please check the URL and API key.', 'ceros' ),
+	];
+}
+
+/**
  * Format an error message based on the active environment.
  *
  * - Staging: returns the full technical message (useful for debugging).

@@ -556,11 +556,12 @@ function ceros_render_options_page() {
 				})
 				.then( function( result ) {
 					var message = ( result.data && result.data.message ) ? result.data.message : '';
-					if ( result.ok ) {
-						resultEl.innerHTML = '<span class="dashicons dashicons-yes-alt" style="color: #46b450;"></span> ' + message;
-					} else {
-						resultEl.innerHTML = '<span class="dashicons dashicons-warning" style="color: #d63638;"></span> ' + message;
-					}
+					// On staging the message carries the remote response body verbatim, so
+					// it is appended as text. Only the icon is markup.
+					resultEl.innerHTML = result.ok
+						? '<span class="dashicons dashicons-yes-alt" style="color: #46b450;"></span> '
+						: '<span class="dashicons dashicons-warning" style="color: #d63638;"></span> ';
+					resultEl.appendChild( document.createTextNode( message ) );
 				})
 				.catch( function() {
 					resultEl.innerHTML = '<span class="dashicons dashicons-warning" style="color: #d63638;"></span> <?php echo esc_js( __( 'Request failed. Please try again.', 'ceros' ) ); ?>';
