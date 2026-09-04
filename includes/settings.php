@@ -120,13 +120,12 @@ function ceros_sanitize_and_encrypt_api_key( $value ) {
 	if ( $code < 200 || $code >= 300 ) {
 		$body          = wp_remote_retrieve_body( $response );
 		$technical_msg = sprintf( 'HTTP %d — %s', $code, $body );
+		$failure       = ceros_api_failure_report( $code, $body );
+
 		add_settings_error(
 			'ceros_api_key',
-			'ceros_api_key_invalid',
-			ceros_format_error(
-				$technical_msg,
-				__( 'The API key could not be verified. Please check that the key is correct and try again.', 'ceros' )
-			),
+			$failure['error_code'],
+			ceros_format_error( $technical_msg, $failure['message'] ),
 			'error'
 		);
 		return '';
@@ -557,11 +556,12 @@ function ceros_render_options_page() {
 				})
 				.then( function( result ) {
 					var message = ( result.data && result.data.message ) ? result.data.message : '';
-					if ( result.ok ) {
-						resultEl.innerHTML = '<span class="dashicons dashicons-yes-alt" style="color: #46b450;"></span> ' + message;
-					} else {
-						resultEl.innerHTML = '<span class="dashicons dashicons-warning" style="color: #d63638;"></span> ' + message;
-					}
+					// On staging the message carries the remote response body verbatim, so
+					// it is appended as text. Only the icon is markup.
+					resultEl.innerHTML = result.ok
+						? '<span class="dashicons dashicons-yes-alt" style="color: #46b450;"></span> '
+						: '<span class="dashicons dashicons-warning" style="color: #d63638;"></span> ';
+					resultEl.appendChild( document.createTextNode( message ) );
 				})
 				.catch( function() {
 					resultEl.innerHTML = '<span class="dashicons dashicons-warning" style="color: #d63638;"></span> <?php echo esc_js( __( 'Request failed. Please try again.', 'ceros' ) ); ?>';
