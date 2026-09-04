@@ -14,6 +14,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Import map for bare-specifier imports**: custom Body HTML often imports the Ceros Flex Experience SDK, or another Ceros runtime module, by bare specifier, which only resolves against an import map. Under a block theme, SSR renders add the experience's specifiers to the import map WordPress already prints in the head, so the page carries a single map. A classic theme prints that map below the page content, too late for the modules that need it, so there each block emits its own map immediately ahead of them. Specifiers are added only when the injected HTML actually names one. Experiences published before the manifest carried this data need republishing for those imports to resolve.
 - **Store mode keeps those modules local**: storing an experience now mirrors the modules its import map names and repoints the map at the local copies, so a stored page no longer fetches them remotely while serving every other asset from the site. A module that cannot be mirrored keeps its original URL rather than resolving to a file that is not there.
 
+## [0.31.0] - 2026-08-20
+
+### Added
+- **Flex delivery modes**: an experience can render as Flex Inline (iframeless, Beta) or Flex SSR (Beta) rather than in an iframe, so it becomes part of the page instead of a framed document alongside it.
+- **Store mode (Beta)**: under Flex SSR delivery, copies an experience and its assets into the site's uploads directory and serves them from there, so the page renders without fetching them remotely. The block reports when a newer version of a stored experience is available.
+- **Embed without an API key**: pasting a public experience URL embeds it directly. Pasting an editor or preview URL warns that a published URL is needed, since those addresses do not resolve for a visitor.
+
 ## [0.30.0] - 2026-04-08
 
 ### Security

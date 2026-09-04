@@ -118,8 +118,8 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      # Needs only bash, curl and jq, all present on the runner. The version
-      # API is stubbed on PATH, so this makes no network request.
+      # Needs only bash, curl, jq and git, all present on the runner. The
+      # version API is stubbed on PATH, so this makes no network request.
       - name: Run shell tests
         run: |
           bash tests/shell/check-tested-upto.test.sh
@@ -137,6 +137,17 @@ jobs:
       # when a bump misses one of the places the version is declared.
       - name: Check the version declarations agree
         run: bash tools/check-versions.sh
+
+  changelog:
+    name: Changelog entry and headings
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      # The release workflow runs this too, but a bad heading should fail here
+      # rather than once the tag is already pushed.
+      - name: Check the changelog entry and heading order
+        run: bash tools/check-changelog.sh
 
   api-pin:
     name: API pin record

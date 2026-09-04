@@ -115,8 +115,8 @@ The appearance is controlled by the Ceros experience itself. The plugin provides
 * Store mode mirrors the modules that HTML depends on, so a stored page renders without fetching them remotely.
 
 = 0.31.0 =
-* Flex Inline (iframeless) and Flex SSR (Beta) delivery modes.
-* Store mode, which copies an experience and its assets into the site's uploads directory.
+* Flex Inline (iframeless, Beta) and Flex SSR (Beta) delivery modes.
+* Store mode (Beta), under Flex SSR delivery, which copies an experience and its assets into the site's uploads directory.
 * Paste a public experience URL to embed without an API key.
 
 = 0.30.0 =

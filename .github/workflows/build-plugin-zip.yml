@@ -30,7 +30,7 @@ jobs:
       - name: Check the version declarations agree
         run: bash tools/check-versions.sh
 
-      - name: Check the changelog has a dated entry
+      - name: Check the changelog entry and heading order
         run: bash tools/check-changelog.sh
 
       - name: Setup Node
