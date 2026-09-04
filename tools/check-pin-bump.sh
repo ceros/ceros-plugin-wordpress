@@ -49,8 +49,10 @@ bullets() {
 # Bullets under the Unreleased heading, and under any version heading named in
 # $2, which is where a release pull request moves them.
 pending_bullets_at() {
-	changelog_at "$1" | awk -v fresh="$2" '
-		BEGIN { split(fresh, f, "\n"); for (i in f) if (f[i] != "") moved[f[i]] = 1 }
+	# Through the environment, not -v: the value is a newline-separated list, and
+	# a literal newline in a -v assignment is rejected by BSD awk.
+	changelog_at "$1" | FRESH="$2" awk '
+		BEGIN { split(ENVIRON["FRESH"], f, "\n"); for (i in f) if (f[i] != "") moved[f[i]] = 1 }
 		/^## \[/ {
 			heading = $0
 			sub(/^## \[/, "", heading)
