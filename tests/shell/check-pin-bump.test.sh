@@ -15,6 +15,31 @@ SCRIPT_ABS=$PWD/$SCRIPT
 WORK=$(mktemp -d)
 trap 'rm -rf "$WORK"' EXIT
 
+# Stub awk. BSD awk rejects a literal newline in a -v assignment and GNU awk
+# accepts it, so without this the guard below only holds on a BSD platform.
+# Resolved before the stub exists, or the stub would exec itself.
+REAL_AWK=$(command -v awk)
+mkdir -p "$WORK/bin"
+cat > "$WORK/bin/awk" <<STUB
+#!/usr/bin/env bash
+nl='
+'
+prev=
+for arg in "\$@"; do
+	case \$prev:\$arg in
+		-v:*"\$nl"*) echo "awk: newline in string" >&2; exit 2 ;;
+	esac
+	# The value can also ride on the flag as one argument. No awk program text
+	# begins with -v, so this cannot match a real one.
+	case \$arg in
+		-v?*"\$nl"*) echo "awk: newline in string" >&2; exit 2 ;;
+	esac
+	prev=\$arg
+done
+exec "$REAL_AWK" "\$@"
+STUB
+chmod +x "$WORK/bin/awk"
+
 PASS=0
 FAIL=0
 
@@ -90,7 +115,7 @@ case_() {
 	fi
 
 	local out got
-	out=$( cd "$dir" && bash "$SCRIPT_ABS" main 2>&1 )
+	out=$( cd "$dir" && PATH="$WORK/bin:$PATH" bash "$SCRIPT_ABS" main 2>&1 )
 	got=$?
 
 	if [ "$got" = "$want_exit" ] && [[ $out == *"$want_text"* ]]; then
@@ -140,6 +165,14 @@ case_ 'pin moved and an old release date was corrected' \
 
 case_ 'pin moved and an old release was renumbered' \
 	2025-12-10-09-11 --none 2026-08-06-09-00 --none 1 'no changelog entry for it' \
+	"if ( ! defined( 'CEROS_API_VERSION' ) ) {" --renumber
+
+# Two new version headings at once: the release heading plus an older one
+# renumbered. The list of them reaches awk as a multi-line value, which a -v
+# assignment rejects, leaving the bullets empty so a documented pin reads as
+# undocumented.
+case_ 'pin moved with two new version headings' \
+	2025-12-10-09-11 'Earlier work.' 2026-08-06-09-00 --released 0 'has a changelog entry' \
 	"if ( ! defined( 'CEROS_API_VERSION' ) ) {" --renumber
 
 case_ 'pin moved, entries pruned, record added' \
