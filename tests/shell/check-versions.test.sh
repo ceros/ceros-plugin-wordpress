@@ -27,7 +27,7 @@ FAIL=0
 # JSON declarations also take --nested and --minified, the same document
 # indented and on one line, both carrying a second and deeper "version".
 tree() {
-	local dir=$1 pkg=$2 stable=$3 header=$4 readme_md=$5 block=$6
+	local dir=$1 pkg=$2 stable=$3 header=$4 readme_md=$5 block=$6 lock=${7:-} lock_self=${8:-}
 	rm -rf "$dir"; mkdir -p "$dir/src/ceros"
 
 	# The shaped fixtures below declare whatever the reference declares, so they
@@ -51,6 +51,19 @@ tree() {
 			printf '{\n\t"name": "ceros",\n\t"version": "%s"\n}\n' "$pkg" > "$dir/package.json"
 			;;
 	esac
+
+	# npm keeps the root version and the "" self-entry in step, so the fixture
+	# carries both. Agrees with the reference unless a case overrides it.
+	# Either declaration can be omitted on its own, and a dependency always
+	# follows the "" entry, so a read that overshoots its object is visible.
+	local lock_root=${lock:-$ref} lock_entry=${lock_self:-$ref}
+	{
+		printf '{\n\t"name": "ceros",\n'
+		[ "$lock_root" != "--omit" ] && printf '\t"version": "%s",\n' "$lock_root"
+		printf '\t"packages": {\n\t\t"": {\n'
+		[ "$lock_entry" != "--omit" ] && printf '\t\t\t"version": "%s"\n' "$lock_entry"
+		printf '\t\t},\n\t\t"node_modules/example": {\n\t\t\t"version": "9.9.9"\n\t\t}\n\t}\n}\n'
+	} > "$dir/package-lock.json"
 
 	{
 		printf '=== Ceros ===\n'
@@ -96,11 +109,11 @@ tree() {
 	esac
 }
 
-# case_ <name> <pkg> <stable> <header> <readme_md> <block> <want_exit> <want_text>
+# case_ <name> <pkg> <stable> <header> <readme_md> <block> <want_exit> <want_text> [lock] [lock_self]
 case_() {
-	local name=$1 pkg=$2 stable=$3 header=$4 readme_md=$5 block=$6 want_exit=$7 want_text=$8
+	local name=$1 pkg=$2 stable=$3 header=$4 readme_md=$5 block=$6 want_exit=$7 want_text=$8 lock=${9:-} lock_self=${10:-}
 	local dir="$WORK/case"
-	tree "$dir" "$pkg" "$stable" "$header" "$readme_md" "$block"
+	tree "$dir" "$pkg" "$stable" "$header" "$readme_md" "$block" "$lock" "$lock_self"
 
 	local out got
 	out=$( cd "$dir" && bash "$SCRIPT_ABS" 2>&1 )
@@ -117,7 +130,7 @@ case_() {
 }
 
 # The passing case. Drops if the script stops reading any one declaration.
-case_ 'all five agree' 0.32.0 0.32.0 0.32.0 0.32.0 0.32.0 0 'all declare 0.32.0'
+case_ 'all six agree' 0.32.0 0.32.0 0.32.0 0.32.0 0.32.0 0 'all declare 0.32.0'
 
 # One case per declaration. Each drops if that file stops being compared, which
 # is the exact failure this script exists to prevent.
@@ -146,6 +159,7 @@ case_ 'package.json written on one line' \
 
 # Two at once reports both, so fixing one does not hide the other.
 case_ 'two behind at once' 0.32.0 0.31.0 0.31.0 0.32.0 0.32.0 1 'ceros.php Version says 0.31.0'
+case_ 'lockfile behind'    0.32.0 0.32.0 0.32.0 0.32.0 0.32.0 1 'package-lock.json says 0.31.0' 0.31.0
 
 # Fails closed. A missing declaration must not read as agreement.
 case_ 'package.json has no version' --omit 0.32.0 0.32.0 0.32.0 0.32.0 1 'no version found in package.json'
@@ -153,6 +167,9 @@ case_ 'readme.txt has no stable tag' 0.32.0 --omit 0.32.0 0.32.0 0.32.0 1 'no ve
 case_ 'plugin header missing'        0.32.0 0.32.0 --omit 0.32.0 0.32.0 1 'no version found in ceros.php Version'
 case_ 'README.md marker missing'     0.32.0 0.32.0 0.32.0 --omit 0.32.0 1 'no version found in README.md Current Version'
 case_ 'block.json version missing'   0.32.0 0.32.0 0.32.0 0.32.0 --omit 1 'no version found in src/ceros/block.json'
+case_ 'lockfile version missing'     0.32.0 0.32.0 0.32.0 0.32.0 0.32.0 1 'no version found in package-lock.json' --omit
+case_ 'lockfile self entry behind'   0.32.0 0.32.0 0.32.0 0.32.0 0.32.0 1 'package-lock.json self entry says 0.31.0' '' 0.31.0
+case_ 'lockfile self entry missing'  0.32.0 0.32.0 0.32.0 0.32.0 0.32.0 1 'no version found in package-lock.json self entry' '' --omit
 
 # Both files shaped at once. Drops if a shaped fixture goes back to declaring
 # the reference argument, which is a sentinel here and not a version.

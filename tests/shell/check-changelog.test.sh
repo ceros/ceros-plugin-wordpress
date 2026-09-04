@@ -29,7 +29,21 @@ case_() {
 	local dir="$WORK/case"
 	rm -rf "$dir"; mkdir -p "$dir"
 
-	printf '{\n\t"version": "%s"\n}\n' "$version" > "$dir/package.json"
+	# --nested and --minified are the same document, indented and on one line,
+	# both carrying a second and deeper "version", as check-versions.test.sh
+	# shapes them.
+	case $version in
+		--nested)
+			printf '{\n\t"version": "0.33.0",\n\t"volta": {\n\t\t"version": "9.9.9"\n\t}\n}\n' \
+				> "$dir/package.json"
+			;;
+		--minified)
+			printf '{"version":"0.33.0","volta":{"version":"9.9.9"}}\n' > "$dir/package.json"
+			;;
+		*)
+			printf '{\n\t"version": "%s"\n}\n' "$version" > "$dir/package.json"
+			;;
+	esac
 	printf '# Changelog\n\n%s\n\n### Added\n- something\n' "$block" > "$dir/CHANGELOG.md"
 
 	local out got
@@ -76,6 +90,15 @@ case_ 'dots are not wildcards' 0.33.0 '## [0033.0] - 2026-09-14' 1 'no dated ent
 case_ 'unreleased above a real entry' 0.33.0 '## [Unreleased]
 
 ## [0.33.0] - 2026-09-14' 0 'has a dated entry for 0.33.0'
+
+# The first "version" in the file is the one read. Depth is not what decides it:
+# sed is line based, so a key nested on its own line reads like a top-level one,
+# and this passes because the real key comes first.
+case_ 'the first version in the file wins' --nested '## [0.33.0] - 2026-09-14' 0 'has a dated entry for 0.33.0'
+
+# What the anchor is for: on one line it stops the read reaching past the real
+# key to a trailing one, coming back empty so an unreadable version fails closed.
+case_ 'one-line package.json fails closed' --minified '## [0.33.0] - 2026-09-14' 1 'no version found in package.json'
 
 # A heading for a version nothing else declares: a release that cannot be built.
 case_ 'entry ahead of package.json' 0.32.0 '## [0.33.0] - 2026-09-14

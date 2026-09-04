@@ -15,6 +15,31 @@ SCRIPT_ABS=$PWD/$SCRIPT
 WORK=$(mktemp -d)
 trap 'rm -rf "$WORK"' EXIT
 
+# Stub awk. BSD awk rejects a literal newline in a -v assignment and GNU awk
+# accepts it, so without this the guard below only holds on a BSD platform.
+# Resolved before the stub exists, or the stub would exec itself.
+REAL_AWK=$(command -v awk)
+mkdir -p "$WORK/bin"
+cat > "$WORK/bin/awk" <<STUB
+#!/usr/bin/env bash
+nl='
+'
+prev=
+for arg in "\$@"; do
+	case \$prev:\$arg in
+		-v:*"\$nl"*) echo "awk: newline in string" >&2; exit 2 ;;
+	esac
+	# The value can also ride on the flag as one argument. No awk program text
+	# begins with -v, so this cannot match a real one.
+	case \$arg in
+		-v?*"\$nl"*) echo "awk: newline in string" >&2; exit 2 ;;
+	esac
+	prev=\$arg
+done
+exec "$REAL_AWK" "\$@"
+STUB
+chmod +x "$WORK/bin/awk"
+
 PASS=0
 FAIL=0
 
@@ -29,8 +54,8 @@ FAIL=0
 # older section's bullet is constant, so --renumber changes a heading and
 # nothing else.
 write_files() {
-	local dir=$1 pin=$2 entry=$3 unrelated=$4 released_extra=$5 guard=${6:-"if ( ! defined( 'CEROS_API_VERSION' ) ) {"}
-	printf '<?php\n%s\ndefine( '"'"'CEROS_API_VERSION'"'"', '"'"'%s'"'"' );\n}\n' "$guard" "$pin" > "$dir/ceros.php"
+	local dir=$1 pin=$2 entry=$3 unrelated=$4 released_extra=$5 guard=${6:-"if ( ! defined( 'CEROS_API_VERSION' ) ) {"} indent=${7:-}
+	printf '<?php\n%s\n%sdefine( '"'"'CEROS_API_VERSION'"'"', '"'"'%s'"'"' );\n}\n' "$guard" "$indent" "$pin" > "$dir/ceros.php"
 	printf '{\n\t"version": "0.32.0"\n}\n' > "$dir/package.json"
 
 	# The released section carries <unrelated>, so every case has a CHANGELOG.md
@@ -64,7 +89,7 @@ write_files() {
 	fi
 }
 
-# case_ <name> <base_pin> <base_entry> <head_pin> <head_entry> <want_exit> <want_text> [head_guard] [head_released_extra] [uncommitted]
+# case_ <name> <base_pin> <base_entry> <head_pin> <head_entry> <want_exit> <want_text> [head_guard] [head_released_extra] [uncommitted] [head_indent]
 case_() {
 	local name=$1 base_pin=$2 base_entry=$3 head_pin=$4 head_entry=$5 want_exit=$6 want_text=$7
 	local dir="$WORK/case"
@@ -78,7 +103,7 @@ case_() {
 	git -C "$dir" commit -qm base
 
 	git -C "$dir" switch -qc feature
-	write_files "$dir" "$head_pin" "$head_entry" changed "${9:-}" "${8:-}"
+	write_files "$dir" "$head_pin" "$head_entry" changed "${9:-}" "${8:-}" "${11:-}"
 	git -C "$dir" add -A
 	git -C "$dir" commit -qm change
 
@@ -90,7 +115,7 @@ case_() {
 	fi
 
 	local out got
-	out=$( cd "$dir" && bash "$SCRIPT_ABS" main 2>&1 )
+	out=$( cd "$dir" && PATH="$WORK/bin:$PATH" bash "$SCRIPT_ABS" main 2>&1 )
 	got=$?
 
 	if [ "$got" = "$want_exit" ] && [[ $out == *"$want_text"* ]]; then
@@ -142,6 +167,14 @@ case_ 'pin moved and an old release was renumbered' \
 	2025-12-10-09-11 --none 2026-08-06-09-00 --none 1 'no changelog entry for it' \
 	"if ( ! defined( 'CEROS_API_VERSION' ) ) {" --renumber
 
+# Two new version headings at once: the release heading plus an older one
+# renumbered. The list of them reaches awk as a multi-line value, which a -v
+# assignment rejects, leaving the bullets empty so a documented pin reads as
+# undocumented.
+case_ 'pin moved with two new version headings' \
+	2025-12-10-09-11 'Earlier work.' 2026-08-06-09-00 --released 0 'has a changelog entry' \
+	"if ( ! defined( 'CEROS_API_VERSION' ) ) {" --renumber
+
 case_ 'pin moved, entries pruned, record added' \
 	2025-12-10-09-11 "$( printf 'Stale one.\n- Stale two.\n- Stale three.' )" \
 	2026-08-06-09-00 'Talk to the newer Ceros API.' 0 'has a changelog entry'
@@ -164,6 +197,12 @@ case_ 'pin moved with the entry left uncommitted' \
 
 case_ 'pin did not move' \
 	2026-08-06-09-00 --none 2026-08-06-09-00 --none 0 'no API pin change in this diff'
+
+# The define itself reindented, value untouched. Counting diff lines reads that
+# as a pin change and demands a changelog entry for a pin that did not move.
+case_ 'the define line is reindented' \
+	2026-08-06-09-00 --none 2026-08-06-09-00 --none 0 'no API pin change in this diff' \
+	"if ( ! defined( 'CEROS_API_VERSION' ) ) {" '' '' '	'
 
 case_ 'the defined() guard line is reformatted' \
 	2026-08-06-09-00 --none 2026-08-06-09-00 --none 0 'no API pin change in this diff' \
