@@ -23,7 +23,7 @@ for f in package.json CHANGELOG.md; do
 	[ -f "$f" ] || { echo "check-changelog: $f not found, run this from the repository root." >&2; exit 1; }
 done
 
-version=$(sed -n 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' package.json | head -n 1)
+version=$(sed -n 's/^[[:space:]]*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' package.json | head -n 1)
 [ -n "$version" ] || { echo "check-changelog: no version found in package.json." >&2; exit 1; }
 
 # The version is a literal: escaping the dots stops 0.33.0 matching 0033x0.

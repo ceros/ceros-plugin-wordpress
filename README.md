@@ -313,13 +313,18 @@ Entries accumulate under `## [Unreleased]` in `CHANGELOG.md` as work merges.
 
 To cut a release:
 
-1. Open a release pull request that does exactly three things:
+1. Open a release pull request that does exactly these things:
 
    - Renames `## [Unreleased]` to `## [X.Y.Z] - YYYY-MM-DD`, dated the day you
      will tag.
    - Sets the version to `X.Y.Z` everywhere it is declared. Run
      `npm run check:versions` rather than working from a list here: it names
      every site it compares, and it is the same check that gates the release.
+     `package-lock.json` is one of those sites and moves with `npm install`
+     after `package.json`, not by hand: it declares the version twice.
+   - Adds `= X.Y.Z =` to `readme.txt` under `== Changelog ==`, and an
+     `== Upgrade Notice ==` entry when the release needs one. These are the
+     notes the plugin directory shows an installer, and no check covers them.
    - Nothing else.
 
    ```bash
@@ -337,9 +342,13 @@ To cut a release:
 
    ```bash
    git switch main && git pull
-   git tag vX.Y.Z
+   git tag vX.Y.Z <merge-sha>
    git push origin vX.Y.Z
    ```
+
+   Name the merge commit rather than letting the tag land on whatever `main`
+   points at: anything merged in between would otherwise ship inside the
+   release, under a version that says it is not there.
 
    The tag triggers the build, which packages
    `ceros-wordpress-plugin-X.Y.Z.zip` and publishes it on a GitHub Release. A
@@ -358,6 +367,13 @@ front-end render.
 
 ```bash
 npm run check:tested-upto
+```
+
+That reads the header and reports. Only when it is behind, and you are ready to
+test against the newer WordPress, rebuild the environment. `env:destroy`
+discards its database and uploads.
+
+```bash
 npm run env:destroy
 npx wp-env start --update
 ```

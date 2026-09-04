@@ -7,8 +7,9 @@
 # package.json. A release where those differ ships an install whose behaviour
 # cannot be identified from the number it reports.
 #
-# block.json's version stamps the block's editor and front-end scripts, so a
-# stale one leaves an upgraded install serving the previous build from cache.
+# block.json's version is the ?ver= on the block's stylesheets, which have no
+# generated asset file to supply one the way its scripts do, so a stale one
+# leaves an upgraded install serving the previous CSS from cache.
 #
 # package.json is the reference, because the release workflow names both the tag
 # and the ZIP from it.
@@ -16,7 +17,8 @@
 # Fails closed: a declaration that is missing or unparseable exits non-zero
 # rather than reading as agreement.
 #
-# Needs bash only, so the pre-push hook can run it without node or composer.
+# Needs bash, sed, awk and coreutils, so the pre-push hook can run it without
+# node or composer.
 # Run from the repository root:
 #   bash tools/check-versions.sh
 
@@ -45,7 +47,7 @@ php_code() {
 		| sed '\%^[[:space:]]*/\*%,\%\*/%d'
 }
 
-for f in package.json readme.txt ceros.php README.md src/ceros/block.json tests/bootstrap.php; do
+for f in package.json package-lock.json readme.txt ceros.php README.md src/ceros/block.json tests/bootstrap.php; do
 	[ -f "$f" ] || { echo "check-versions: $f not found, run this from the repository root." >&2; exit 1; }
 done
 
@@ -56,6 +58,20 @@ readme_md=$(sed -n 's/^\*\*Current Version:[[:space:]]*\([^*[:space:]]*\).*/\1/p
 block=$(sed -n 's/^[[:space:]]*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' src/ceros/block.json | head -n 1)
 constant=$(php_code ceros.php | sed -n "s/^[[:space:]]*define( 'CEROS_PLUGIN_VERSION', '\([^']*\)' ).*/\1/p" | head -n 1)
 bootstrap=$(php_code tests/bootstrap.php | sed -n "s/^[[:space:]]*define( 'CEROS_PLUGIN_VERSION', '\([^']*\)' ).*/\1/p" | head -n 1)
+# npm rewrites the lockfile's version on the next install, so a stale one turns
+# up as noise in whichever pull request runs it. It declares this package twice,
+# at the root and again in the "" self entry, and both have to move.
+#
+# Each read is bounded to the object that owns it. The root read stops at
+# "packages" and the self read stops where that entry closes, so neither can
+# reach a dependency's version and report it as this package's.
+lock=$(sed -n '/^[[:space:]]*"packages"[[:space:]]*:/q
+	s/^[[:space:]]*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' package-lock.json | head -n 1)
+lock_self=$(awk '
+	/^[[:space:]]*""[[:space:]]*:[[:space:]]*\{/ { inside = 1; next }
+	inside && /^[[:space:]]*("[^"]*"[[:space:]]*:[[:space:]]*\{|\})/ { inside = 0 }
+	inside && /^[[:space:]]*"version"[[:space:]]*:/ {
+		sub(/^[^:]*:[[:space:]]*"/, ""); sub(/".*/, ""); print; exit }' package-lock.json)
 
 if [ -z "$pkg" ]; then
 	echo "check-versions: no version found in package.json." >&2
@@ -77,6 +93,8 @@ check 'README.md Current Version' "$readme_md"
 check 'src/ceros/block.json' "$block"
 check 'ceros.php CEROS_PLUGIN_VERSION' "$constant"
 check 'tests/bootstrap.php CEROS_PLUGIN_VERSION' "$bootstrap"
+check 'package-lock.json' "$lock"
+check 'package-lock.json self entry' "$lock_self"
 
 # The pin is declared twice as well. It is not a plugin version, so it is
 # compared against ceros.php rather than package.json: a stale copy in the

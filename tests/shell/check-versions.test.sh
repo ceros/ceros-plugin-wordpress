@@ -31,7 +31,7 @@ FAIL=0
 # that cares about pin drift has to mention it.
 tree() {
 	local dir=$1 pkg=$2 stable=$3 header=$4 readme_md=$5 constant=$6 bootstrap=$7 block=$8
-	local bootstrap_pin=${9:-2026-08-06-09-00}
+	local bootstrap_pin=${9:-2026-08-06-09-00} lock=${10:-} lock_self=${11:-}
 	local leftover_php= leftover_bootstrap= wrap_php=
 	rm -rf "$dir"; mkdir -p "$dir/tests" "$dir/src/ceros"
 
@@ -56,6 +56,18 @@ tree() {
 			printf '{\n\t"name": "ceros",\n\t"version": "%s"\n}\n' "$pkg" > "$dir/package.json"
 			;;
 	esac
+
+	# npm keeps the root version and the "" self entry in step, so the fixture
+	# carries both and either can be omitted alone. A dependency always follows
+	# the "" entry, so a read that overshoots its object is visible.
+	local lock_root=${lock:-$ref} lock_entry=${lock_self:-$ref}
+	{
+		printf '{\n\t"name": "ceros",\n'
+		[ "$lock_root" != "--omit" ] && printf '\t"version": "%s",\n' "$lock_root"
+		printf '\t"packages": {\n\t\t"": {\n'
+		[ "$lock_entry" != "--omit" ] && printf '\t\t\t"version": "%s"\n' "$lock_entry"
+		printf '\t\t},\n\t\t"node_modules/example": {\n\t\t\t"version": "9.9.9"\n\t\t}\n\t}\n}\n'
+	} > "$dir/package-lock.json"
 
 	{
 		printf '=== Ceros ===\n'
@@ -164,13 +176,13 @@ tree() {
 	fi
 }
 
-# case_ <name> <pkg> <stable> <header> <readme_md> <constant> <bootstrap> <block> <want_exit> <want_text> [bootstrap_pin]
+# case_ <name> <pkg> <stable> <header> <readme_md> <constant> <bootstrap> <block> <want_exit> <want_text> [bootstrap_pin] [lock] [lock_self]
 case_() {
 	local name=$1 pkg=$2 stable=$3 header=$4 readme_md=$5 constant=$6 bootstrap=$7 block=$8
 	local want_exit=$9 want_text=${10}
-	local bootstrap_pin=${11:-2026-08-06-09-00}
+	local bootstrap_pin=${11:-2026-08-06-09-00} lock=${12:-} lock_self=${13:-}
 	local dir="$WORK/case"
-	tree "$dir" "$pkg" "$stable" "$header" "$readme_md" "$constant" "$bootstrap" "$block" "$bootstrap_pin"
+	tree "$dir" "$pkg" "$stable" "$header" "$readme_md" "$constant" "$bootstrap" "$block" "$bootstrap_pin" "$lock" "$lock_self"
 
 	local out got
 	out=$( cd "$dir" && bash "$SCRIPT_ABS" 2>&1 )
@@ -187,7 +199,7 @@ case_() {
 }
 
 # The passing case. Drops if the script stops reading any one declaration.
-case_ 'all seven agree' 0.32.0 0.32.0 0.32.0 0.32.0 0.32.0 0.32.0 0.32.0 0 'every version declaration agrees at 0.32.0, and the API pin matches'
+case_ 'every declaration agrees' 0.32.0 0.32.0 0.32.0 0.32.0 0.32.0 0.32.0 0.32.0 0 'every version declaration agrees at 0.32.0, and the API pin matches'
 
 # Stale declarations above the live ones, in each of the three shapes a PHP file
 # comments something out with. Each drops if a PHP read stops telling a comment
@@ -214,6 +226,8 @@ case_ 'README.md marker behind'        0.32.0 0.32.0 0.32.0 0.30.0 0.32.0 0.32.0
 case_ 'plugin version constant behind' 0.32.0 0.32.0 0.32.0 0.32.0 0.31.0 0.32.0 0.32.0 1 'ceros.php CEROS_PLUGIN_VERSION says 0.31.0'
 case_ 'test bootstrap constant behind' 0.32.0 0.32.0 0.32.0 0.32.0 0.32.0 0.31.0 0.32.0 1 'tests/bootstrap.php CEROS_PLUGIN_VERSION says 0.31.0'
 case_ 'block.json behind'              0.32.0 0.32.0 0.32.0 0.32.0 0.32.0 0.32.0 0.31.0 1 'src/ceros/block.json says 0.31.0'
+case_ 'lockfile behind'                0.32.0 0.32.0 0.32.0 0.32.0 0.32.0 0.32.0 0.32.0 1 'package-lock.json says 0.31.0' '' 0.31.0
+case_ 'lockfile self entry behind'     0.32.0 0.32.0 0.32.0 0.32.0 0.32.0 0.32.0 0.32.0 1 'package-lock.json self entry says 0.31.0' '' '' 0.31.0
 
 # Two at once reports both, so fixing one does not hide the other.
 case_ 'two behind at once' 0.32.0 0.31.0 0.31.0 0.32.0 0.32.0 0.32.0 0.32.0 1 'ceros.php Version says 0.31.0'
@@ -226,6 +240,8 @@ case_ 'README.md marker missing'         0.32.0 0.32.0 0.32.0 --omit 0.32.0 0.32
 case_ 'plugin version constant missing'  0.32.0 0.32.0 0.32.0 0.32.0 --omit 0.32.0 0.32.0 1 'no version found in ceros.php CEROS_PLUGIN_VERSION'
 case_ 'bootstrap constant missing'       0.32.0 0.32.0 0.32.0 0.32.0 0.32.0 --omit 0.32.0 1 'no version found in tests/bootstrap.php CEROS_PLUGIN_VERSION'
 case_ 'block.json version missing'       0.32.0 0.32.0 0.32.0 0.32.0 0.32.0 0.32.0 --omit 1 'no version found in src/ceros/block.json'
+case_ 'lockfile version missing'         0.32.0 0.32.0 0.32.0 0.32.0 0.32.0 0.32.0 0.32.0 1 'no version found in package-lock.json' '' --omit
+case_ 'lockfile self entry missing'      0.32.0 0.32.0 0.32.0 0.32.0 0.32.0 0.32.0 0.32.0 1 'no version found in package-lock.json self entry' '' '' --omit
 
 # The pin is compared against ceros.php rather than package.json, so its cases
 # move the bootstrap's copy rather than a version.
