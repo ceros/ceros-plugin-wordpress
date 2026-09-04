@@ -54,8 +54,8 @@ FAIL=0
 # older section's bullet is constant, so --renumber changes a heading and
 # nothing else.
 write_files() {
-	local dir=$1 pin=$2 entry=$3 unrelated=$4 released_extra=$5 guard=${6:-"if ( ! defined( 'CEROS_API_VERSION' ) ) {"}
-	printf '<?php\n%s\ndefine( '"'"'CEROS_API_VERSION'"'"', '"'"'%s'"'"' );\n}\n' "$guard" "$pin" > "$dir/ceros.php"
+	local dir=$1 pin=$2 entry=$3 unrelated=$4 released_extra=$5 guard=${6:-"if ( ! defined( 'CEROS_API_VERSION' ) ) {"} indent=${7:-}
+	printf '<?php\n%s\n%sdefine( '"'"'CEROS_API_VERSION'"'"', '"'"'%s'"'"' );\n}\n' "$guard" "$indent" "$pin" > "$dir/ceros.php"
 	printf '{\n\t"version": "0.32.0"\n}\n' > "$dir/package.json"
 
 	# The released section carries <unrelated>, so every case has a CHANGELOG.md
@@ -89,7 +89,7 @@ write_files() {
 	fi
 }
 
-# case_ <name> <base_pin> <base_entry> <head_pin> <head_entry> <want_exit> <want_text> [head_guard] [head_released_extra] [uncommitted]
+# case_ <name> <base_pin> <base_entry> <head_pin> <head_entry> <want_exit> <want_text> [head_guard] [head_released_extra] [uncommitted] [head_indent]
 case_() {
 	local name=$1 base_pin=$2 base_entry=$3 head_pin=$4 head_entry=$5 want_exit=$6 want_text=$7
 	local dir="$WORK/case"
@@ -103,7 +103,7 @@ case_() {
 	git -C "$dir" commit -qm base
 
 	git -C "$dir" switch -qc feature
-	write_files "$dir" "$head_pin" "$head_entry" changed "${9:-}" "${8:-}"
+	write_files "$dir" "$head_pin" "$head_entry" changed "${9:-}" "${8:-}" "${11:-}"
 	git -C "$dir" add -A
 	git -C "$dir" commit -qm change
 
@@ -197,6 +197,12 @@ case_ 'pin moved with the entry left uncommitted' \
 
 case_ 'pin did not move' \
 	2026-08-06-09-00 --none 2026-08-06-09-00 --none 0 'no API pin change in this diff'
+
+# The define itself reindented, value untouched. Counting diff lines reads that
+# as a pin change and demands a changelog entry for a pin that did not move.
+case_ 'the define line is reindented' \
+	2026-08-06-09-00 --none 2026-08-06-09-00 --none 0 'no API pin change in this diff' \
+	"if ( ! defined( 'CEROS_API_VERSION' ) ) {" '' '' '	'
 
 case_ 'the defined() guard line is reformatted' \
 	2026-08-06-09-00 --none 2026-08-06-09-00 --none 0 'no API pin change in this diff' \

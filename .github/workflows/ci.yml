@@ -160,8 +160,12 @@ jobs:
           # The default single-commit checkout has no merge base to diff against.
           fetch-depth: 0
 
+      # Through env, not interpolated into the script: an expression is pasted
+      # in before the shell parses, so a ref name would be read as code.
       - name: Check a pin change has a changelog entry
-        run: bash tools/check-pin-bump.sh "origin/${{ github.base_ref }}"
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: bash tools/check-pin-bump.sh "origin/$BASE_REF"
 
   js:
     name: JS build
