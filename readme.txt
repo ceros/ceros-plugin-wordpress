@@ -90,7 +90,7 @@ The plugin works with the WordPress block editor. For other page builders, you m
 
 = How do I update the plugin? =
 
-The plugin includes automatic update functionality. Updates will be available through the WordPress admin plugins screen.
+Download the latest release ZIP from the Ceros plugin repository and upload it under Plugins > Add Plugin > Upload Plugin. WordPress replaces the installed copy in place and your settings are kept.
 
 = What if my experiences don't load? =
 
@@ -109,21 +109,28 @@ The appearance is controlled by the Ceros experience itself. The plugin provides
 
 == Changelog ==
 
+= 0.32.0 =
+* Server-rendered embeds include the experience's custom Body HTML, so interactivity built with the Ceros Flex Experience SDK works without switching to the iframe embed.
+* Imports by bare specifier in that HTML resolve through an import map, under both block and classic themes.
+* Store mode mirrors the modules that HTML depends on, so a stored page renders without fetching them remotely.
+
+= 0.31.0 =
+* Flex Inline (iframeless, Beta) and Flex SSR (Beta) delivery modes.
+* Store mode (Beta), under Flex SSR delivery, which copies an experience and its assets into the site's uploads directory.
+* Paste a public experience URL to embed without an API key.
+
+= 0.30.0 =
+* Explicit timeouts on outgoing Ceros API calls.
+* Private and loopback addresses rejected as staging API URLs.
+* API key encryption fails closed when the site's salts are missing.
+
 = 0.1.0 =
-* Initial release
-* WordPress block integration
-* Ceros API integration
-* Admin settings panel
-* Folder tree navigation
-* Experience embedding functionality
-* REST API endpoints
-* Error handling and validation
-* Plugin update checker integration
+* Initial release.
 
 == Upgrade Notice ==
 
-= 0.1.0 =
-Initial release of the Ceros plugin for WordPress.
+= 0.32.0 =
+Adds custom Body HTML support to server-rendered embeds. Existing blocks pick it up with no editor action.
 
 == Support ==
 
@@ -137,4 +144,3 @@ This plugin is actively maintained and developed. Contributions are welcome! Ple
 
 * Built with WordPress block editor APIs
 * Integrates with Ceros REST API
-* Uses WordPress Plugin Update Checker for automatic updates

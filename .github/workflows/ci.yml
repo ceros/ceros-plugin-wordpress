@@ -118,10 +118,54 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      # Needs only bash, curl and jq, all present on the runner. The version
-      # API is stubbed on PATH, so this makes no network request.
+      # Needs only bash, curl, jq and git, all present on the runner. The
+      # version API is stubbed on PATH, so this makes no network request.
       - name: Run shell tests
-        run: bash tests/shell/check-tested-upto.test.sh
+        run: |
+          bash tests/shell/check-tested-upto.test.sh
+          bash tests/shell/check-versions.test.sh
+          bash tests/shell/check-pin-bump.test.sh
+          bash tests/shell/check-changelog.test.sh
+
+  versions:
+    name: Version declarations
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      # Needs bash only, so this is the cheapest job here and the first to fail
+      # when a bump misses one of the places the version is declared.
+      - name: Check the version declarations agree
+        run: bash tools/check-versions.sh
+
+  changelog:
+    name: Changelog entry and headings
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      # The release workflow runs this too, but a bad heading should fail here
+      # rather than once the tag is already pushed.
+      - name: Check the changelog entry and heading order
+        run: bash tools/check-changelog.sh
+
+  api-pin:
+    name: API pin record
+    runs-on: ubuntu-latest
+    # Only meaningful against a base branch, so it does not run on push to main.
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          # The default single-commit checkout has no merge base to diff against.
+          fetch-depth: 0
+
+      # Through env, not interpolated into the script: an expression is pasted
+      # in before the shell parses, so a ref name would be read as code.
+      - name: Check a pin change has a changelog entry
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: bash tools/check-pin-bump.sh "origin/$BASE_REF"
 
   js:
     name: JS build

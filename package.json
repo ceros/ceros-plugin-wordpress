@@ -13,6 +13,8 @@
 		"packages-update": "wp-scripts packages-update",
 		"plugin-zip": "wp-scripts plugin-zip",
 		"check:tested-upto": "bash tools/check-tested-upto.sh",
+		"check:versions": "bash tools/check-versions.sh",
+		"check:changelog": "bash tools/check-changelog.sh",
 		"start": "wp-scripts start --blocks-manifest",
 		"env": "wp-env",
 		"env:start": "wp-env start",

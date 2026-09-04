@@ -1,21 +1,18 @@
 name: Build Plugin ZIP
 
-# Builds the Ceros plugin ZIP and publishes it as a GitHub Release.
+# Builds the Ceros plugin ZIP.
 #
-# Runs automatically when a version tag (e.g. v0.31.0) is pushed, and can be
-# triggered manually from the Actions tab. On a manual run the version is read
-# from package.json; enable "prerelease" to mark the release as a pre-release.
+# A version tag (e.g. v0.32.0) publishes it as a GitHub Release. A manual run
+# from the Actions tab builds the same ZIP and leaves it as a workflow artifact
+# without publishing, for handing someone a build before a release exists.
+#
+# The version comes from package.json, and a tag has to match it.
 
 on:
   push:
     tags:
       - 'v*'
   workflow_dispatch:
-    inputs:
-      prerelease:
-        description: 'Mark the release as a pre-release'
-        type: boolean
-        default: false
 
 permissions:
   contents: write # required to create the release and upload assets
@@ -26,6 +23,15 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      # Ahead of the install so a mismatched tree fails in seconds. Neither is
+      # conditional: a release with disagreeing declarations or an undated
+      # changelog entry cannot be identified afterwards.
+      - name: Check the version declarations agree
+        run: bash tools/check-versions.sh
+
+      - name: Check the changelog entry and heading order
+        run: bash tools/check-changelog.sh
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -47,7 +53,7 @@ jobs:
         run: echo "version=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
 
       - name: Verify tag matches package.json version
-        if: startsWith(github.ref, 'refs/tags/v')
+        if: github.event_name == 'push'
         run: |
           tag_version="${GITHUB_REF_NAME#v}"
           pkg_version="${{ steps.version.outputs.version }}"
@@ -65,11 +71,15 @@ jobs:
           name: ceros-wordpress-plugin-${{ steps.version.outputs.version }}
           path: ceros-wordpress-plugin-${{ steps.version.outputs.version }}.zip
 
+      # Only a tag push publishes, and the condition says so rather than testing
+      # ref_type: a manual run can be dispatched against a tag, which would
+      # otherwise republish over an existing release. A manual run stops at the
+      # artifact above.
       - name: Create GitHub Release
+        if: github.event_name == 'push'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ steps.version.outputs.version }}
           name: v${{ steps.version.outputs.version }}
-          prerelease: ${{ inputs.prerelease || false }}
           generate_release_notes: true
           files: ceros-wordpress-plugin-${{ steps.version.outputs.version }}.zip
