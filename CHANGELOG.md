@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 ## [0.33.0] - 2026-08-31
-
+- an arbitary entry to mitigate pin issue
 
 ## [0.32.0] - 2026-08-31
 
