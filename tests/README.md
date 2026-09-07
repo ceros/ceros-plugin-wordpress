@@ -9,6 +9,10 @@ PHP: `composer test`. JavaScript: `npm run test:js`.
 | PHP `unit` | nothing | milliseconds | pre-push hook + CI |
 | JS (`tests/js`) | happy-dom | under a second | pre-push hook + CI |
 | Shell (`tests/shell`) | bash, jq | about a second | CI |
+| Playwright (`tests/e2e`) | wp-env, Docker, Chrome | seconds to minutes | neither — local only |
+
+The Playwright suite drives a real WordPress instance, so it runs neither in the
+pre-push hook nor in CI. See `tests/e2e/README.md`.
 
 The shell suite covers `tools/check-tested-upto.sh`. It stubs the WordPress
 version API on `PATH` rather than calling it, so it makes no network request,
