@@ -1,0 +1,25 @@
+{
+  "name": "ceros-block-e2e",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Playwright end-to-end tests for the Ceros block in the WordPress editor and on the published page.",
+  "license": "GPL-2.0-or-later",
+  "scripts": {
+    "test": "playwright test",
+    "type-check": "tsc --noEmit",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.57.0",
+    "@types/node": "^22.0.0",
+    "dotenv": "^16.4.7",
+    "eslint": "^9.19.0",
+    "eslint-plugin-playwright": "^2.2.0",
+    "playwright-core": "^1.57.0",
+    "prettier": "^3.4.2",
+    "typescript": "^5.7.0",
+    "typescript-eslint": "^8.24.0"
+  }
+}

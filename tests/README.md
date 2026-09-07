@@ -4,11 +4,16 @@ PHP: `composer test`. JavaScript: `npm run test:js`.
 
 ## Suites
 
-| Suite | Needs | Runs in | Where |
-| --- | --- | --- | --- |
-| PHP `unit` | nothing | milliseconds | pre-push hook + CI |
-| JS (`tests/js`) | happy-dom | under a second | pre-push hook + CI |
-| Shell (`tests/shell`) | bash, jq | about a second | CI |
+| Suite                    | Needs                  | Runs in            | Where                        |
+| ------------------------ | ---------------------- | ------------------ | ---------------------------- |
+| PHP `unit`               | nothing                | milliseconds       | pre-push hook + CI           |
+| JS (`tests/js`)          | happy-dom              | under a second     | pre-push hook + CI           |
+| Shell (`tests/shell`)    | bash, jq               | about a second     | CI                           |
+| Playwright (`tests/e2e`) | wp-env, Docker, Chrome | seconds to minutes | CI (`e2e.yml`), not the hook |
+
+The Playwright suite drives a real WordPress instance, so it runs in its own workflow
+rather than the pre-push hook, which rules out anything needing Docker or the network.
+It is not a required check. See `tests/e2e/README.md`.
 
 The shell suite covers `tools/check-tested-upto.sh`. It stubs the WordPress
 version API on `PATH` rather than calling it, so it makes no network request,
@@ -46,7 +51,7 @@ Currently deferred to that suite:
 
 - `ceros_build_flex_iframe_snippet`, `ceros_build_flex_inline_snippet`,
   `ceros_build_flex_embed_codes`, `ceros_build_legacy_embed_codes` — correctness
-  here *is* the escaping.
+  here _is_ the escaping.
 - `ceros_sanitize_embed_code` and friends — wrap `wp_kses` with a custom
   allowlist.
 - `ceros_sanitize_staging_api_url` — `sanitize_text_field`, `esc_url_raw` and
@@ -62,7 +67,7 @@ Currently deferred to that suite:
   `_script_tag` — escaping; `ceros_flex_ssr_requested_slug` — request
   superglobals.
 - `Ceros_Encryption::get_api_key()` / `save_api_key()` — the options table. The
-  crypto underneath them *is* covered here.
+  crypto underneath them _is_ covered here.
 - The REST handlers — real `WP_REST_Request` objects.
 
 Covered here on top of the URL, sanitizer, store and crypto cases:
@@ -74,7 +79,7 @@ Covered here on top of the URL, sanitizer, store and crypto cases:
   anything missing from it is stripped on save, which is how an embed ends up
   rendering dead. The tests name the attributes that carry a feature
   (`data-flex-manifest-url`, the legacy `scrolling`) and pin the tag list closed.
-  How `wp_kses` *interprets* the list is still integration-suite work.
+  How `wp_kses` _interprets_ the list is still integration-suite work.
 
 ## Required of the integration suite
 
@@ -120,7 +125,6 @@ so a plugin timeout gets the generic connection advice instead. The test named
 `test_curl_28_does_not_reach_the_timeout_message` pins the current behaviour and
 says to delete itself once the pattern is fixed.
 
-
 ## The JavaScript suite
 
 Vitest with happy-dom, in `tests/js`. The `@wordpress/*` packages are webpack
@@ -159,7 +163,7 @@ on evidence rather than up front, since `@wordpress/components` is a large tree.
 
 `tests/js/stubs/` holds replacements for the two externals that are
 passthroughs rather than implementations, aliased in `vitest.config.mjs`. Same
-rule as `tests/bootstrap.php`: a stand-in is allowed only where it *is* what the
+rule as `tests/bootstrap.php`: a stand-in is allowed only where it _is_ what the
 real thing does, not an approximation of it.
 
 - `wp-element.js` re-exports React, which is exactly what `@wordpress/element`
