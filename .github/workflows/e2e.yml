@@ -52,9 +52,19 @@ jobs:
       - name: Build the plugin
         run: npm run build
 
-      # The override file is gitignored, so CI writes its own. Two things go in
-      # it. Core is pinned because .wp-env.json leaves it unset, which has
-      # resolved to a version with no tag in the mirror.
+      # The override file is gitignored, so CI writes its own. Three things go
+      # in it.
+      #
+      # Core is pinned because .wp-env.json leaves it unset, which has resolved
+      # to a version with no tag in the mirror.
+      #
+      # PHP is newer than the 7.4 the plugin requires, and than .wp-env.json
+      # uses locally, because wp-env builds its image FROM wordpress:php<v> and
+      # 7.4 lands on Debian bullseye, whose apt pool no longer matches the index
+      # its mirrors serve. Installing git or sudo 404s on a random package. 8.3
+      # is Debian trixie, which is current. These specs assert on the editor and
+      # the render cascade rather than on PHP semantics, and PHP 7.4 support is
+      # covered by the compatibility job in ci.yml.
       #
       # A placeholder API key is required, not optional: with no key configured
       # the block skips the fetch entirely and offers the paste-a-URL flow, so
@@ -66,13 +76,26 @@ jobs:
           cat > .wp-env.override.json <<'JSON'
           {
             "core": "WordPress/WordPress#6.9.6",
+            "phpVersion": "8.3",
             "config": { "CEROS_API_KEY": "e2e-placeholder-not-a-real-key" }
           }
           JSON
           cat .wp-env.override.json
 
+      # Retried because the image build fetches Debian packages and the mirrors
+      # intermittently serve an index the pool no longer matches. A retry hits a
+      # different mirror, and BuildKit keeps the layers that already built.
       - name: Start WordPress
-        run: npm run env:start
+        run: |
+          for attempt in 1 2 3; do
+            if npm run env:start; then
+              exit 0
+            fi
+            echo "::warning title=wp-env::start failed on attempt $attempt"
+            sleep 15
+          done
+          echo "::error title=wp-env::could not start WordPress after 3 attempts"
+          exit 1
 
       - name: Install suite dependencies
         working-directory: tests/e2e
@@ -108,6 +131,7 @@ jobs:
           name: playwright-report
           path: tests/e2e/playwright-report/
           retention-days: 7
+          if-no-files-found: ignore
 
       - name: Upload failure traces
         if: ${{ failure() }}
@@ -116,6 +140,7 @@ jobs:
           name: test-results
           path: tests/e2e/test-results/
           retention-days: 7
+          if-no-files-found: ignore
 
       - name: Show the WordPress log
         if: ${{ failure() }}
