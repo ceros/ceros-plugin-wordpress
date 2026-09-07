@@ -20,11 +20,16 @@ cd "$REPO_ROOT"
 
 env_ensure
 
-# Read from .env so this script and the suite agree on the target.
-BASE_URL="$(env_read BASE_URL)"
+# A real environment variable wins over .env, matching how the suite itself
+# resolves these, so CI can point this at its own instance without a file.
+BASE_URL="${BASE_URL:-$(env_read BASE_URL)}"
 BASE_URL="${BASE_URL:-http://localhost:8894}"
-WP_USER="$(env_read E2E_WP_USER)"
+WP_USER="${E2E_WP_USER:-$(env_read E2E_WP_USER)}"
 WP_USER="${WP_USER:-admin}"
+
+# Persist them so the suite and this script cannot disagree later.
+env_write BASE_URL "$BASE_URL"
+env_write E2E_WP_USER "$WP_USER"
 
 # The username is interpolated into PHP below: wp-env does not forward host
 # environment variables into the container, so getenv() is not an option.
@@ -89,11 +94,10 @@ fi
 # The live specs need a Ceros API key. It is a wp-config constant, not a test
 # variable, so report it rather than setting it: the key must never pass through
 # this script or reach a tracked file.
-KEY_STATE="$(npx wp-env run cli wp eval 'echo defined("CEROS_API_KEY") && CEROS_API_KEY ? "set" : "unset";' 2>&1 | tr -d '\r\n')"
-case "$KEY_STATE" in
-	*set*) [ "${KEY_STATE#*unset}" != "$KEY_STATE" ] && KEY_SET=no || KEY_SET=yes ;;
-	*) KEY_SET=unknown ;;
-esac
+# The marker is split in the PHP so the joined form exists only in the output;
+# wp-env echoes the source back, and a literal would match there too.
+KEY_STATE="$(npx wp-env run cli wp eval 'echo "KEY" . "=" . ( defined("CEROS_API_KEY") && CEROS_API_KEY ? "yes" : "no" );' 2>&1 | tr -d '\r\n')"
+KEY_SET="$(printf '%s' "$KEY_STATE" | grep -oE 'KEY=(yes|no)' | head -1 | cut -d= -f2)"
 
 if [ "$KEY_SET" = yes ]; then
 	echo "CEROS_API_KEY is configured; the live specs can run."

@@ -97,8 +97,15 @@ not extend a shared base class, because at this size it would hold nothing.
 
 ## CI
 
-Nothing here runs in CI yet. The `blob` reporter is already selected when `CI` is set, so
-wiring it up means adding a workflow that installs this package, starts WordPress, and
-runs `npx playwright test`. Both specs need no secrets and no external account, so that
-job is straightforward. It should not become a required check until ownership of a test
-that spans two products is settled.
+`.github/workflows/e2e.yml` runs both specs on every pull request that touches the
+plugin or this suite, and on pushes to the default branch. It needs no secrets: the API
+key it configures is a deliberately invalid placeholder, and the stub rejects by hostname
+so the value never matters.
+
+**A placeholder key is required, not optional.** With no key configured the block skips
+the fetch and offers the paste-a-URL flow instead, so the stub never fires and there is no
+error panel to assert on.
+
+The workflow pins the WordPress version, because `.wp-env.json` leaves it unset and that
+has resolved to a version with no tag in the mirror. It is deliberately **not** a required
+check while ownership of a test that spans two products is unresolved.

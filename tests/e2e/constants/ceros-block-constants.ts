@@ -13,6 +13,7 @@ export const BLOCK_TEXT = {
   replace: 'Replace',
   settingsLink: 'Go to Ceros Settings',
   apiKeyErrorHeading: 'Ceros API Key Required',
+  apiKeyErrorBody: 'Your API key appears to be invalid',
   connectionErrorHeading: 'Ceros connection error',
   notFoundHeading: 'Experience not found',
   notFoundBody: "possibly indicating that it's been deleted in Ceros admin",
