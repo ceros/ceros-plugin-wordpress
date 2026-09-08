@@ -16,6 +16,17 @@ set -euo pipefail
 
 cd "$(git rev-parse --show-toplevel)"
 
+# First, because it needs neither composer nor npm: a mismatch here is cheap to
+# catch and the most common thing a release forgets.
+echo "pre-push: running tools/check-versions.sh…"
+
+if ! bash tools/check-versions.sh; then
+	echo >&2
+	echo "pre-push: the plugin's version declarations disagree. Move them all, or" >&2
+	echo "push regardless: git push --no-verify" >&2
+	exit 1
+fi
+
 for bin in phpcs phpunit; do
 	if [ ! -x "vendor/bin/$bin" ]; then
 		echo "pre-push: vendor/bin/$bin not found — run 'composer install'." >&2

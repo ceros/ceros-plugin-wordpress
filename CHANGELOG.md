@@ -5,12 +5,21 @@ All notable changes to the Ceros WordPress Plugin will be documented in this fil
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
 ## [0.32.0] - 2026-08-31
 
 ### Added
 - **Include custom body HTML**: the Flex SSR (Beta) delivery mode now injects the experience's custom Body HTML alongside the server-rendered markup, so experiences that drive interactivity through the Ceros Flex Experience SDK (answer tracking, scoring, page navigation) work without switching to the iframe embed. An **Include custom body HTML/scripts** checkbox sits with the delivery-mode choice, in the block sidebar and in both places an experience is added, and is on by default, so existing SSR blocks pick it up on upgrade with no editor action. Content is included exactly as authored. Custom head HTML is not included: it is authored for the document head and routinely carries Ceros-site-specific tags and analytics pixels that would duplicate what the host site already has. The iframe and inline (iframeless) delivery modes are unaffected.
 - **Import map for bare-specifier imports**: custom Body HTML often imports the Ceros Flex Experience SDK, or another Ceros runtime module, by bare specifier, which only resolves against an import map. Under a block theme, SSR renders add the experience's specifiers to the import map WordPress already prints in the head, so the page carries a single map. A classic theme prints that map below the page content, too late for the modules that need it, so there each block emits its own map immediately ahead of them. Specifiers are added only when the injected HTML actually names one. Experiences published before the manifest carried this data need republishing for those imports to resolve.
 - **Store mode keeps those modules local**: storing an experience now mirrors the modules its import map names and repoints the map at the local copies, so a stored page no longer fetches them remotely while serving every other asset from the site. A module that cannot be mirrored keeps its original URL rather than resolving to a file that is not there.
+
+## [0.31.0] - 2026-08-20
+
+### Added
+- **Flex delivery modes**: an experience can render as Flex Inline (iframeless, Beta) or Flex SSR (Beta) rather than in an iframe, so it becomes part of the page instead of a framed document alongside it.
+- **Store mode (Beta)**: under Flex SSR delivery, copies an experience and its assets into the site's uploads directory and serves them from there, so the page renders without fetching them remotely. The block reports when a newer version of a stored experience is available.
+- **Embed without an API key**: pasting a public experience URL embeds it directly. Pasting an editor or preview URL warns that a published URL is needed, since those addresses do not resolve for a visitor.
 
 ## [0.30.0] - 2026-04-08
 

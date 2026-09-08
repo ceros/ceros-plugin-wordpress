@@ -305,43 +305,83 @@ The `plugin-zip` command automatically:
 
 ### Releasing
 
+The version is bumped in the release pull request, not while a feature is in
+flight. A number bumped early labels every commit that lands after it, so two
+builds carrying the same version can behave differently.
+
+Entries accumulate under `## [Unreleased]` in `CHANGELOG.md` as work merges.
+
+To cut a release:
+
+1. Open a release pull request that does exactly these things:
+
+   - Renames `## [Unreleased]` to `## [X.Y.Z] - YYYY-MM-DD`, dated the day you
+     will tag.
+   - Sets the version to `X.Y.Z` everywhere it is declared. Run
+     `npm run check:versions` rather than working from a list here: it names
+     every site it compares, and it is the same check that gates the release.
+     `package-lock.json` is one of those sites and moves with `npm install`
+     after `package.json`, not by hand: it declares the version twice.
+   - Adds `= X.Y.Z =` to `readme.txt` under `== Changelog ==`, and an
+     `== Upgrade Notice ==` entry when the release needs one. These are the
+     notes the plugin directory shows an installer, and no check covers them.
+   - Nothing else.
+
+   ```bash
+   npm run check:versions
+   npm run check:changelog
+   ```
+
+   Both run in CI as well, and the release workflow refuses to publish if
+   either fails.
+
+2. Get the approving review and merge it.
+
+3. Tag the merge commit and push the tag. Name the branch in step 1
+   `release-X.Y.Z`, never `vX.Y.Z`, so it cannot collide with the tag.
+
+   ```bash
+   git switch main && git pull
+   git tag vX.Y.Z <merge-sha>
+   git push origin vX.Y.Z
+   ```
+
+   Name the merge commit rather than letting the tag land on whatever `main`
+   points at: anything merged in between would otherwise ship inside the
+   release, under a version that says it is not there.
+
+   The tag triggers the build, which packages
+   `ceros-wordpress-plugin-X.Y.Z.zip` and publishes it on a GitHub Release. A
+   manual run of that workflow builds the same ZIP as an artifact and publishes
+   nothing.
+
+4. Installed copies are not offered the update, so anyone on an earlier version
+   upgrades by uploading the new ZIP.
+
 `readme.txt` carries a `Tested up to:` header naming the WordPress version this
-plugin has been verified against. WordPress requires it to be the current major
-release before the plugin can be listed in the plugin directory, and it goes
-stale when WordPress ships rather than when anything here changes.
+plugin has been verified against. It goes stale when WordPress ships rather than
+when anything here changes, and a weekly workflow reports on it. Raising it
+means testing against that WordPress release first: bring the local environment
+up on it and exercise the block in the editor, the settings page, and a
+front-end render.
 
-A weekly workflow checks it and turns red when it falls behind. That check
-blocks nothing, so a red run is a prompt rather than a stop.
+```bash
+npm run check:tested-upto
+```
 
-The header is a claim about what was actually tested, so raising it is the last
-step of release prep, not the first:
+That reads the header and reports. Only when it is behind, and you are ready to
+test against the newer WordPress, rebuild the environment. `env:destroy`
+discards its database and uploads.
 
-1. Check where things stand:
+```bash
+npm run env:destroy
+npx wp-env start --update
+```
 
-   ```bash
-   npm run check:tested-upto
-   ```
-
-2. If the header is behind, bring the local environment up on the current
-   WordPress release and exercise the plugin against it: the block in the
-   editor, the settings page, and a front-end render at minimum.
-
-   ```bash
-   npm run env:destroy
-   npx wp-env start --update
-   ```
-
-   `--update` matters here. `.wp-env.json` sets `core` to `null`, so a plain
-   start can reuse whatever WordPress version the existing containers already
-   hold.
-
-3. Once it works, set `Tested up to:` to the major version you tested. Use
-   `7.1`, not `7.1.2`; the directory fills in the minor version itself. Then
-   re-run the check.
-
-4. Bump the version in `package.json`, update `CHANGELOG.md`, and push the
-   matching `vX.Y.Z` tag. The release workflow verifies the tag against
-   `package.json` before it publishes.
+`--update` matters. `.wp-env.json` sets `core` to `null`, so a plain start can
+reuse whatever WordPress version the existing containers already hold. Set
+`Tested up to:` to the major version you tested, `7.1` rather than `7.1.2`; the
+directory fills in the minor itself.
 
 ### Manual ZIP Creation
 
