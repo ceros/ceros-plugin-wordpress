@@ -324,6 +324,10 @@ function ceros_render_options_page() {
 	$is_configured  = Ceros_Encryption::is_configured();
 	$using_constant = Ceros_Encryption::is_using_constant();
 
+	// A rejected save already reports a retired version pin through core's
+	// settings errors, so the on-load notice would repeat it.
+	$version_reported = ceros_version_rejection_reported( get_settings_errors( 'ceros_api_key' ) );
+
 	// Never put the key (or a mask) in the value — an empty field means "keep existing key".
 	$placeholder = $is_configured
 		? __( 'Key saved (enter new key to replace)', 'ceros' )
@@ -331,6 +335,11 @@ function ceros_render_options_page() {
 	?>
 	<div class="wrap">
 		<h1><?php esc_html_e( 'Ceros Settings', 'ceros' ); ?></h1>
+		<?php if ( $is_configured && ! $version_reported ) : ?>
+			<div id="ceros-version-notice" class="notice notice-warning" style="display: none;">
+				<p><?php echo esc_html( ceros_api_version_rejection_message() ); ?></p>
+			</div>
+		<?php endif; ?>
 
 		<form action="options.php" method="post">
 			<?php
@@ -569,6 +578,26 @@ function ceros_render_options_page() {
 				.finally( function() {
 					testBtn.disabled = false;
 				});
+			});
+		}
+
+		// A retired version pin only shows up in a real API response, so ask on load.
+		var versionNotice = document.getElementById( 'ceros-version-notice' );
+		if ( versionNotice ) {
+			fetch( '<?php echo esc_js( rest_url( CEROS_REST_NAMESPACE . '/current-account' ) ); ?>', {
+				credentials: 'same-origin',
+				headers: {
+					'X-WP-Nonce': '<?php echo esc_js( wp_create_nonce( 'wp_rest' ) ); ?>',
+				},
+			})
+			.then( function( response ) { return response.json(); } )
+			.then( function( data ) {
+				if ( data && 'ceros_api_version_unsupported' === data.error_code ) {
+					versionNotice.style.display = '';
+				}
+			})
+			.catch( function() {
+				// Save and Test Connection still report the rejection, so stay quiet here.
 			});
 		}
 	})();

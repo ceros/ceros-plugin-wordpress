@@ -223,6 +223,28 @@ function ceros_api_version_rejection_message() {
 }
 
 /**
+ * Whether a settings error already carries the stale-plugin message.
+ *
+ * Matches the message rather than the error code because the code is registered
+ * on both environments while the message survives only on production, where
+ * ceros_format_error() keeps the friendly text.
+ *
+ * @param array $errors Settings errors, as returned by get_settings_errors().
+ * @return bool True when one of them already tells the user to update.
+ */
+function ceros_version_rejection_reported( $errors ) {
+	$message = ceros_api_version_rejection_message();
+
+	foreach ( (array) $errors as $error ) {
+		if ( isset( $error['message'] ) && false !== strpos( (string) $error['message'], $message ) ) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
+/**
  * Choose how to report a failed Ceros API call on the key-verification path.
  *
  * The choice lives here rather than at the call sites so it can be tested. A

@@ -12,8 +12,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   a request if it does not support the API version. Before, the plugin showed a
   message about an incorrect API key. Now the plugin shows the API version that
   it requests and the plugin version that you have installed. The message tells
-  you to update the plugin. This applies when you save the settings, when you
-  load experiences, and when you test the connection.
+  you to update the plugin. The settings page shows the message on load, and
+  it also appears when you save the settings, when you load experiences, and
+  when you test the connection.
 
 ## [0.32.0] - 2026-08-31
 
