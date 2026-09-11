@@ -24,6 +24,10 @@ if ( ! defined( 'CEROS_PLUGIN_FILE' ) ) {
 if ( ! defined( 'CEROS_API_VERSION' ) ) {
 	define( 'CEROS_API_VERSION', '2026-08-06-09-00' );
 }
+if ( ! defined( 'CEROS_PLUGIN_VERSION' ) ) {
+	// Kept in step with the Version header above by tools/check-versions.sh.
+	define( 'CEROS_PLUGIN_VERSION', '0.32.0' );
+}
 if ( ! defined( 'CEROS_REST_NAMESPACE' ) ) {
 	define( 'CEROS_REST_NAMESPACE', 'ceros/v1' );
 }

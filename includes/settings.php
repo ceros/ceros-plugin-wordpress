@@ -120,13 +120,12 @@ function ceros_sanitize_and_encrypt_api_key( $value ) {
 	if ( $code < 200 || $code >= 300 ) {
 		$body          = wp_remote_retrieve_body( $response );
 		$technical_msg = sprintf( 'HTTP %d — %s', $code, $body );
+		$failure       = ceros_api_failure_report( $code, $body );
+
 		add_settings_error(
 			'ceros_api_key',
-			'ceros_api_key_invalid',
-			ceros_format_error(
-				$technical_msg,
-				__( 'The API key could not be verified. Please check that the key is correct and try again.', 'ceros' )
-			),
+			$failure['error_code'],
+			ceros_format_error( $technical_msg, $failure['message'] ),
 			'error'
 		);
 		return '';
@@ -325,6 +324,10 @@ function ceros_render_options_page() {
 	$is_configured  = Ceros_Encryption::is_configured();
 	$using_constant = Ceros_Encryption::is_using_constant();
 
+	// A rejected save already reports a retired version pin through core's
+	// settings errors, so the on-load notice would repeat it.
+	$version_reported = ceros_version_rejection_reported( get_settings_errors( 'ceros_api_key' ) );
+
 	// Never put the key (or a mask) in the value — an empty field means "keep existing key".
 	$placeholder = $is_configured
 		? __( 'Key saved (enter new key to replace)', 'ceros' )
@@ -332,6 +335,11 @@ function ceros_render_options_page() {
 	?>
 	<div class="wrap">
 		<h1><?php esc_html_e( 'Ceros Settings', 'ceros' ); ?></h1>
+		<?php if ( $is_configured && ! $version_reported ) : ?>
+			<div id="ceros-version-notice" class="notice notice-warning" style="display: none;">
+				<p><?php echo esc_html( ceros_api_version_rejection_message() ); ?></p>
+			</div>
+		<?php endif; ?>
 
 		<form action="options.php" method="post">
 			<?php
@@ -557,11 +565,12 @@ function ceros_render_options_page() {
 				})
 				.then( function( result ) {
 					var message = ( result.data && result.data.message ) ? result.data.message : '';
-					if ( result.ok ) {
-						resultEl.innerHTML = '<span class="dashicons dashicons-yes-alt" style="color: #46b450;"></span> ' + message;
-					} else {
-						resultEl.innerHTML = '<span class="dashicons dashicons-warning" style="color: #d63638;"></span> ' + message;
-					}
+					// On staging the message carries the remote response body verbatim, so
+					// it is appended as text. Only the icon is markup.
+					resultEl.innerHTML = result.ok
+						? '<span class="dashicons dashicons-yes-alt" style="color: #46b450;"></span> '
+						: '<span class="dashicons dashicons-warning" style="color: #d63638;"></span> ';
+					resultEl.appendChild( document.createTextNode( message ) );
 				})
 				.catch( function() {
 					resultEl.innerHTML = '<span class="dashicons dashicons-warning" style="color: #d63638;"></span> <?php echo esc_js( __( 'Request failed. Please try again.', 'ceros' ) ); ?>';
@@ -569,6 +578,26 @@ function ceros_render_options_page() {
 				.finally( function() {
 					testBtn.disabled = false;
 				});
+			});
+		}
+
+		// A retired version pin only shows up in a real API response, so ask on load.
+		var versionNotice = document.getElementById( 'ceros-version-notice' );
+		if ( versionNotice ) {
+			fetch( '<?php echo esc_js( rest_url( CEROS_REST_NAMESPACE . '/current-account' ) ); ?>', {
+				credentials: 'same-origin',
+				headers: {
+					'X-WP-Nonce': '<?php echo esc_js( wp_create_nonce( 'wp_rest' ) ); ?>',
+				},
+			})
+			.then( function( response ) { return response.json(); } )
+			.then( function( data ) {
+				if ( data && 'ceros_api_version_unsupported' === data.error_code ) {
+					versionNotice.style.display = '';
+				}
+			})
+			.catch( function() {
+				// Save and Test Connection still report the rejection, so stay quiet here.
 			});
 		}
 	})();
