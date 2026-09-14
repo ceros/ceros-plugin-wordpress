@@ -31,7 +31,23 @@ fail() {
 	FAILED=1
 }
 
-for f in package.json package-lock.json readme.txt ceros.php README.md src/ceros/block.json; do
+# A PHP file with its block comments removed: same-line /* */ first, so a
+# single-line comment cannot open a range that then runs to the end of the file,
+# and the multi-line ones after. Not used for the plugin header, which is itself
+# inside a docblock.
+#
+# The first expression is the standard one for a complete /* ... */, which is
+# what it takes to match a one-line /** doc */ and to stop at the nearest */
+# rather than the last one on the line. The second only opens where /* begins a
+# line, so a /* inside a string or a // comment stays code. The cost is that a
+# block comment opened after code on the same line is not stripped, and telling
+# that apart from a /* inside a string needs a PHP parser rather than sed.
+php_code() {
+	sed 's%/\*[^*]*\*\**\([^/*][^*]*\*\**\)*/%%g' "$1" \
+		| sed '\%^[[:space:]]*/\*%,\%\*/%d'
+}
+
+for f in package.json package-lock.json readme.txt ceros.php README.md src/ceros/block.json tests/bootstrap.php; do
 	[ -f "$f" ] || { echo "check-versions: $f not found, run this from the repository root." >&2; exit 1; }
 done
 
@@ -40,6 +56,8 @@ stable=$(sed -n 's/^Stable tag:[[:space:]]*\([^[:space:]]*\).*/\1/p' readme.txt 
 header=$(sed -n 's/^[[:space:]]*\*[[:space:]]*Version:[[:space:]]*\([^[:space:]]*\).*/\1/p' ceros.php | head -n 1)
 readme_md=$(sed -n 's/^\*\*Current Version:[[:space:]]*\([^*[:space:]]*\).*/\1/p' README.md | head -n 1)
 block=$(sed -n 's/^[[:space:]]*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' src/ceros/block.json | head -n 1)
+constant=$(php_code ceros.php | sed -n "s/^[[:space:]]*define( 'CEROS_PLUGIN_VERSION', '\([^']*\)' ).*/\1/p" | head -n 1)
+bootstrap=$(php_code tests/bootstrap.php | sed -n "s/^[[:space:]]*define( 'CEROS_PLUGIN_VERSION', '\([^']*\)' ).*/\1/p" | head -n 1)
 # npm rewrites the lockfile's version on the next install, so a stale one turns
 # up as noise in whichever pull request runs it. It declares this package twice,
 # at the root and again in the "" self entry, and both have to move.
@@ -73,8 +91,24 @@ check 'readme.txt Stable tag' "$stable"
 check 'ceros.php Version' "$header"
 check 'README.md Current Version' "$readme_md"
 check 'src/ceros/block.json' "$block"
+check 'ceros.php CEROS_PLUGIN_VERSION' "$constant"
+check 'tests/bootstrap.php CEROS_PLUGIN_VERSION' "$bootstrap"
 check 'package-lock.json' "$lock"
 check 'package-lock.json self entry' "$lock_self"
+
+# The pin is declared twice as well. It is not a plugin version, so it is
+# compared against ceros.php rather than package.json: a stale copy in the
+# bootstrap leaves the suite asserting the wrong contract while staying green.
+pin=$(php_code ceros.php | sed -n "s/^[[:space:]]*define( 'CEROS_API_VERSION', '\([^']*\)' ).*/\1/p" | head -n 1)
+pin_bootstrap=$(php_code tests/bootstrap.php | sed -n "s/^[[:space:]]*define( 'CEROS_API_VERSION', '\([^']*\)' ).*/\1/p" | head -n 1)
+
+if [ -z "$pin" ]; then
+	fail "no API version found in ceros.php."
+elif [ -z "$pin_bootstrap" ]; then
+	fail "no API version found in tests/bootstrap.php."
+elif [ "$pin" != "$pin_bootstrap" ]; then
+	fail "tests/bootstrap.php pins API version $pin_bootstrap, ceros.php pins $pin."
+fi
 
 if [ "$FAILED" -ne 0 ]; then
 	echo >&2
@@ -83,4 +117,4 @@ if [ "$FAILED" -ne 0 ]; then
 	exit 1
 fi
 
-echo "check-versions: package.json, package-lock.json, readme.txt, ceros.php, README.md and src/ceros/block.json all declare $pkg."
+echo "check-versions: every version declaration agrees at $pkg, and the API pin matches."

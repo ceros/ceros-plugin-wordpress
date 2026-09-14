@@ -70,6 +70,11 @@ Covered here on top of the URL, sanitizer, store and crypto cases:
 - `ceros_get_friendly_error_message` — the cURL-error-to-advice map. Substring
   matching over an ordered array, so the tests pin both the mapping and the
   order that keeps a specific pattern ahead of the generic `curl error` one.
+- `ceros_connection_test_failure` — which advice a failed connection test gives.
+  The handler around it is deferred with the other REST handlers, so this covers
+  the choice rather than the wiring: a version rejection must not be answered
+  with the key-and-URL advice, and every other failure must keep it, because
+  that flow tests a staging URL the caller just typed as well as the key.
 - `ceros_get_allowed_embed_html` — the `wp_kses` allowlist. Pure data, but
   anything missing from it is stripped on save, which is how an embed ends up
   rendering dead. The tests name the attributes that carry a feature
