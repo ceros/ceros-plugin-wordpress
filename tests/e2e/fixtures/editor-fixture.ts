@@ -10,7 +10,10 @@ export interface EditorFixture {
 export const editorFixture = wpPostFixture.extend<EditorFixture>({
   editor: async ({ page, post }, use, testInfo) => {
     try {
-      const editor = await BlockEditorActions.for(page).logInAndOpenEditor(post.id)
+      // The page is already authenticated from the saved session (the `auth`
+      // setup project plus the storageState project option), so just open the
+      // editor rather than driving wp-login on every test.
+      const editor = await BlockEditorActions.for(page).openEditor(post.id)
       await use(editor)
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error)

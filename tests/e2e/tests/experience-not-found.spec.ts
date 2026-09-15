@@ -10,6 +10,11 @@ import { TAGS } from '@utils/test-tags'
  * and it covers a state the block has regressed into before.
  */
 test.describe('Published post rendering', { tag: [TAGS.cerosBlock, TAGS.rendered] }, () => {
+  // A real reader is anonymous. The wordpress project reuses a saved admin
+  // session by default; render this published page logged out, exactly as this
+  // test did before the suite started reusing sessions.
+  test.use({ storageState: { cookies: [], origins: [] } })
+
   test.use({
     postOptions: {
       title: 'unresolvable experience',

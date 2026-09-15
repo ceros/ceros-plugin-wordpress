@@ -29,9 +29,4 @@ export class BlockEditorActions {
 
     return this.editor
   }
-
-  async logInAndOpenEditor(postId: number): Promise<BlockEditorPage> {
-    await this.logIn()
-    return this.openEditor(postId)
-  }
 }
