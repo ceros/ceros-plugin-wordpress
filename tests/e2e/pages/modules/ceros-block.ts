@@ -16,6 +16,10 @@ export class CerosBlock {
   readonly emptyState: Locator
   readonly browseExperiencesButton: Locator
   readonly pasteUrlInput: Locator
+  readonly pasteLoadButton: Locator
+  readonly pasteAddButton: Locator
+  readonly pasteResult: Locator
+  readonly pasteError: Locator
 
   readonly preview: Locator
   readonly previewNote: Locator
@@ -34,6 +38,14 @@ export class CerosBlock {
       .getByRole('button', { name: 'Browse Experiences' })
       .describe('browse experiences button')
     this.pasteUrlInput = root.locator('.ceros-block__paste-input').describe('paste url input')
+    this.pasteLoadButton = root
+      .getByRole('button', { name: 'Load experience' })
+      .describe('load experience button')
+    this.pasteAddButton = root
+      .getByRole('button', { name: 'Add experience' })
+      .describe('add experience button')
+    this.pasteResult = root.locator('.ceros-block__paste-result').describe('paste url result panel')
+    this.pasteError = root.locator('.ceros-block__paste-error').describe('paste url error')
 
     this.preview = root.locator('.ceros-block__preview').describe('ceros block preview')
     this.previewNote = root.locator('.ceros-block__preview-note').describe('preview note')
@@ -59,6 +71,10 @@ export class CerosBlock {
 
   async waitForPreview(): Promise<void> {
     await this.preview.waitFor({ timeout: TIMEOUTS.LONG })
+  }
+
+  async waitForPasteResult(): Promise<void> {
+    await this.pasteResult.waitFor({ timeout: TIMEOUTS.LONG })
   }
 
   async waitForErrorPanel(): Promise<void> {

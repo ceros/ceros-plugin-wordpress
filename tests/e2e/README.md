@@ -27,8 +27,10 @@ npm install                    # here
 bash scripts/bootstrap-wp.sh   # here; creates .env and mints the app password
 ```
 
-A Ceros API key in `.wp-env.override.json` (gitignored) — the positive specs call the real
-Ceros API and need it. The not-found spec runs without it.
+The paste-a-public-URL specs call the real Ceros API to resolve a public experience — **no
+API key needed** — but the machine running them must reach the experience host (defaults to
+the `latest` dev env). A Ceros API key in `.wp-env.override.json` (gitignored) is only needed
+for the browse-picker specs.
 
 The suite provisions nothing — it reads a URL and credentials from the environment, so
 the same specs run against local `wp-env`, another WordPress, or one built by CI.
@@ -58,12 +60,14 @@ own values without `.env` interfering.
 only, so the account password returns 401. It is generated per install, which is why it
 has no default and `bootstrap-wp.sh` mints it.
 
-| Variable                          | Default                     | Purpose                                                                     |
-| --------------------------------- | --------------------------- | --------------------------------------------------------------------------- |
-| `BASE_URL`                        | `http://localhost:8894`     | The WordPress instance. `http`, not `https` — wp-env serves plain HTTP.     |
-| `E2E_WP_USER` / `E2E_WP_PASSWORD` | `admin` / `password`        | Browser login. wp-env's documented defaults.                                |
-| `E2E_WP_APP_PASSWORD`             | —                           | Application password for REST calls. Required; `bootstrap-wp.sh` writes it. |
-| `E2E_TIMEOUT_*`                   | see `constants/timeouts.ts` | Override any timeout tier, in milliseconds.                                 |
+| Variable                          | Default                                   | Purpose                                                                                           |
+| --------------------------------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| `BASE_URL`                        | `http://localhost:8894`                   | The WordPress instance. `http`, not `https` — wp-env serves plain HTTP.                           |
+| `E2E_WP_USER` / `E2E_WP_PASSWORD` | `admin` / `password`                      | Browser login. wp-env's documented defaults.                                                      |
+| `E2E_WP_APP_PASSWORD`             | —                                         | Application password for REST calls. Required; `bootstrap-wp.sh` writes it.                       |
+| `E2E_CEROS_BASE_URL`              | `https://automation.latest.cerosdev.site` | Origin of the public experience the paste-URL specs resolve; the account and env are in the host. |
+| `E2E_CEROS_EXPERIENCE_PATH`       | `/inclusion-and-leadership`               | Path to that experience, composed with the base into the pasted URL.                              |
+| `E2E_TIMEOUT_*`                   | see `constants/timeouts.ts`               | Override any timeout tier, in milliseconds.                                                       |
 
 ## Conventions
 

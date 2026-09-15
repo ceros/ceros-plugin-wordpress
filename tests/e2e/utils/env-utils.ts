@@ -43,3 +43,25 @@ export const wpAppPassword = (): string => {
 export const restUrl = (path = '') => `${BASE_URL}${WP_ROUTES.restPosts}${path}`
 export const postEditUrl = (postId: number) => `${BASE_URL}${WP_ROUTES.postEdit(postId)}`
 export const permalink = (postId: number) => `${BASE_URL}${WP_ROUTES.permalink(postId)}`
+
+/**
+ * The public Ceros experience the paste-a-public-URL specs resolve, composed
+ * from a base origin and a path. The host carries the account and environment
+ * (`<account>.<env>.cerosdev.site`), so the base is the full origin and only
+ * the path changes per experience. Defaults to a durable experience on the
+ * shared `latest` dev env; override either half for another env or experience.
+ */
+export const CEROS_EXPERIENCE_BASE_URL = 'https://automation.latest.cerosdev.site'
+export const CEROS_EXPERIENCE_PATH = '/inclusion-and-leadership'
+
+export const cerosExperienceBaseUrl = (): string =>
+  (process.env.E2E_CEROS_BASE_URL?.trim() || CEROS_EXPERIENCE_BASE_URL).replace(/\/+$/, '')
+
+export const cerosExperiencePath = (): string => {
+  const path = process.env.E2E_CEROS_EXPERIENCE_PATH?.trim() || CEROS_EXPERIENCE_PATH
+  return path.startsWith('/') ? path : `/${path}`
+}
+
+/** The full public experience URL an author pastes into the block. */
+export const cerosExperienceUrl = (): string =>
+  `${cerosExperienceBaseUrl()}${cerosExperiencePath()}`

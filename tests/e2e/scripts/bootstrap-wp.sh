@@ -80,7 +80,7 @@ fi
 env_write E2E_WP_APP_PASSWORD "$APP_PASSWORD"
 echo "wrote E2E_WP_APP_PASSWORD to .env (label: $APP_PASSWORD_LABEL)"
 
-# The positive specs need a Ceros API key. It is a wp-config constant, not a test
+# The browse-picker specs need a Ceros API key. It is a wp-config constant, not a test
 # variable, so report it rather than setting it: the key must never pass through
 # this script or reach a tracked file.
 # The marker is split in the PHP so the joined form exists only in the output;
@@ -89,8 +89,8 @@ KEY_STATE="$(npx wp-env run cli wp eval 'echo "KEY" . "=" . ( defined("CEROS_API
 KEY_SET="$(printf '%s' "$KEY_STATE" | grep -oE 'KEY=(yes|no)' | head -1 | cut -d= -f2)"
 
 if [ "$KEY_SET" = yes ]; then
-	echo "CEROS_API_KEY is configured; the positive specs can run."
+	echo "CEROS_API_KEY is configured; the browse-picker specs can run."
 else
-	echo "CEROS_API_KEY is not configured. The not-found spec still runs."
-	echo "The positive specs need it: add it to .wp-env.override.json (gitignored) and restart wp-env."
+	echo "CEROS_API_KEY is not configured. The not-found and paste-URL specs still run."
+	echo "The browse-picker specs need it: add it to .wp-env.override.json (gitignored) and restart wp-env."
 fi
