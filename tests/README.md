@@ -9,7 +9,7 @@ PHP: `composer test`. JavaScript: `npm run test:js`.
 | PHP `unit`               | nothing                | milliseconds       | pre-push hook + CI           |
 | JS (`tests/js`)          | happy-dom              | under a second     | pre-push hook + CI           |
 | Shell (`tests/shell`)    | bash, jq               | about a second     | CI                           |
-| Playwright (`tests/e2e`) | wp-env, Docker, Chrome | seconds to minutes | CI (`e2e.yml`), not the hook |
+| Playwright (`tests/e2e`) | wp-env, Docker, Chrome | seconds to minutes | CI (`e2e-tests.yml`), not the hook |
 
 The Playwright suite drives a real WordPress instance, so it runs in its own workflow
 rather than the pre-push hook, which rules out anything needing Docker or the network.

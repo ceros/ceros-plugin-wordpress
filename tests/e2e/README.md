@@ -97,7 +97,7 @@ not extend a shared base class, because at this size it would hold nothing.
 
 ## CI
 
-`.github/workflows/e2e.yml` runs both specs on every pull request that touches the
+`.github/workflows/e2e-tests.yml` runs both specs on every pull request that touches the
 plugin or this suite, and on pushes to the default branch. It needs no secrets: the API
 key it configures is a deliberately invalid placeholder, and the stub rejects by hostname
 so the value never matters.
