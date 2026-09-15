@@ -15,6 +15,12 @@ export const wpAuthFixture = base.extend<NonNullable<unknown>, WpAuthFixture>({
       const secret = wpAppPassword()
       const context = await playwright.request.newContext({
         baseURL: BASE_URL,
+        // Start from an empty jar rather than inheriting the project's
+        // storageState: those cookies carry the admin's logged-in session, and
+        // WordPress would then authenticate the REST write by cookie — which
+        // needs an X-WP-Nonce this context has no way to send — and reject it
+        // 401, ignoring the application-password header entirely.
+        storageState: { cookies: [], origins: [] },
         extraHTTPHeaders: {
           Authorization: `Basic ${Buffer.from(`${wpUser()}:${secret}`).toString('base64')}`,
         },
