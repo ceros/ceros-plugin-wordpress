@@ -15,7 +15,6 @@ fixtures/    the fixture chain and the barrel every spec imports
 pages/       page objects: locators and readiness waits, no assertions
 actions/     multi-step workflows composed from page objects
 utils/       REST client, block serializer, environment helpers
-rig/         switches the plugin between a stubbed and a live Ceros API
 tests/       specs
 ```
 
@@ -28,7 +27,8 @@ npm install                    # here
 bash scripts/bootstrap-wp.sh   # here; creates .env and mints the app password
 ```
 
-A Ceros API key in `.wp-env.override.json` (gitignored) if you want the live half.
+A Ceros API key in `.wp-env.override.json` (gitignored) — the positive specs call the real
+Ceros API and need it. The not-found spec runs without it.
 
 The suite provisions nothing — it reads a URL and credentials from the environment, so
 the same specs run against local `wp-env`, another WordPress, or one built by CI.
@@ -44,16 +44,6 @@ npx playwright test --grep @rendered
 npm run type-check
 npm run lint
 ```
-
-Switch the Ceros API between stubbed and live, and export what it prints:
-
-```bash
-bash rig/mode.sh reject   # every Ceros call returns 403
-bash rig/mode.sh live     # talk to the real API
-```
-
-The container state and `E2E_API_MODE` are separate things and a spec trusts the variable.
-Set them together, or a spec runs against the wrong rig and fails on a missing locator.
 
 ## Environment variables
 
@@ -73,8 +63,6 @@ has no default and `bootstrap-wp.sh` mints it.
 | `BASE_URL`                        | `http://localhost:8894`     | The WordPress instance. `http`, not `https` — wp-env serves plain HTTP.     |
 | `E2E_WP_USER` / `E2E_WP_PASSWORD` | `admin` / `password`        | Browser login. wp-env's documented defaults.                                |
 | `E2E_WP_APP_PASSWORD`             | —                           | Application password for REST calls. Required; `bootstrap-wp.sh` writes it. |
-| `E2E_API_MODE`                    | `live`                      | `reject` or `live`. Must match `rig/mode.sh`.                               |
-| `E2E_PLUGIN_ENV`                  | `production`                | The plugin's configured environment, which changes the error text.          |
 | `E2E_TIMEOUT_*`                   | see `constants/timeouts.ts` | Override any timeout tier, in milliseconds.                                 |
 
 ## Conventions
@@ -97,15 +85,11 @@ not extend a shared base class, because at this size it would hold nothing.
 
 ## CI
 
-`.github/workflows/e2e-tests.yml` runs both specs on every pull request that touches the
-plugin or this suite, and on pushes to the default branch. It needs no secrets: the API
-key it configures is a deliberately invalid placeholder, and the stub rejects by hostname
-so the value never matters.
+The suite is not wired into CI in this PR. A separate `.github/workflows/e2e-tests.yml`
+(its own pull request) runs it on pull requests that touch the plugin or this suite, and on
+pushes to the default branch. Because the specs call the real Ceros API, that workflow needs
+a real `CEROS_API_KEY` (a repository secret) and network access to Ceros — not a placeholder.
 
-**A placeholder key is required, not optional.** With no key configured the block skips
-the fetch and offers the paste-a-URL flow instead, so the stub never fires and there is no
-error panel to assert on.
-
-The workflow pins the WordPress version, because `.wp-env.json` leaves it unset and that
-has resolved to a version with no tag in the mirror. It is deliberately **not** a required
-check while ownership of a test that spans two products is unresolved.
+The workflow pins the WordPress version, because `.wp-env.json` leaves it unset and that has
+resolved to a version with no tag in the mirror. It is deliberately **not** a required check
+while ownership of a test that spans two products is unresolved.

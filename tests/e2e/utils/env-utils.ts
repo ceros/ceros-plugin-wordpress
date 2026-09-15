@@ -43,15 +43,3 @@ export const wpAppPassword = (): string => {
 export const restUrl = (path = '') => `${BASE_URL}${WP_ROUTES.restPosts}${path}`
 export const postEditUrl = (postId: number) => `${BASE_URL}${WP_ROUTES.postEdit(postId)}`
 export const permalink = (postId: number) => `${BASE_URL}${WP_ROUTES.permalink(postId)}`
-
-/**
- * `reject` installs a mu-plugin that 403s every Ceros call, reproducing a
- * rejected API key without swapping the key. `live` talks to the real API.
- */
-export type ApiMode = 'live' | 'reject'
-export const apiMode = (): ApiMode => (process.env.E2E_API_MODE === 'reject' ? 'reject' : 'live')
-
-/** The plugin's configured environment changes which error text reaches the editor. */
-export type PluginEnv = 'production' | 'staging'
-export const pluginEnv = (): PluginEnv =>
-  process.env.E2E_PLUGIN_ENV === 'staging' ? 'staging' : 'production'
