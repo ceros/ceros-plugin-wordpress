@@ -45,23 +45,33 @@ export const postEditUrl = (postId: number) => `${BASE_URL}${WP_ROUTES.postEdit(
 export const permalink = (postId: number) => `${BASE_URL}${WP_ROUTES.permalink(postId)}`
 
 /**
- * The public Ceros experience the paste-a-public-URL specs resolve, composed
- * from a base origin and a path. The host carries the account and environment
- * (`<account>.<env>.cerosdev.site`), so the base is the full origin and only
- * the path changes per experience. Defaults to a durable experience on the
- * shared `latest` dev env; override either half for another env or experience.
+ * The Ceros dev environment the suite targets. This is the only piece that
+ * varies by deployment — the experiences, account and API host are fixed test
+ * data derived from it, so pointing the whole suite at a PR env or another dev
+ * env is a one-value change. Defaults to the shared `latest` env.
+ *
+ * Prod is a different TLD and API host, so it is intentionally not expressible
+ * through these templates — this targets dev envs (see the README CI note).
  */
-export const CEROS_EXPERIENCE_BASE_URL = 'https://automation.latest.cerosdev.site'
-export const CEROS_EXPERIENCE_PATH = '/inclusion-and-leadership'
+export const cerosEnv = (): string => process.env.E2E_CEROS_ENV?.trim() || 'latest'
 
-export const cerosExperienceBaseUrl = (): string =>
-  (process.env.E2E_CEROS_BASE_URL?.trim() || CEROS_EXPERIENCE_BASE_URL).replace(/\/+$/, '')
+/**
+ * The two experiences the paste-a-public-URL specs resolve — a legacy Studio one
+ * and a Flex one — both on the fixed `automation` account. Studio serves from
+ * `<env>.view.cerosdev.com/<account>/<slug>` and Flex from the vanity
+ * `<account>.<env>.cerosdev.site/<slug>`, so each has its own template with the
+ * environment injected. The experiences themselves are fixed test data.
+ */
+export const cerosLegacyExperienceUrl = (): string =>
+  `https://${cerosEnv()}.view.cerosdev.com/automation/analytics-test-experience`
 
-export const cerosExperiencePath = (): string => {
-  const path = process.env.E2E_CEROS_EXPERIENCE_PATH?.trim() || CEROS_EXPERIENCE_PATH
-  return path.startsWith('/') ? path : `/${path}`
-}
+export const cerosFlexExperienceUrl = (): string =>
+  `https://automation.${cerosEnv()}.cerosdev.site/sparkboard`
 
-/** The full public experience URL an author pastes into the block. */
-export const cerosExperienceUrl = (): string =>
-  `${cerosExperienceBaseUrl()}${cerosExperiencePath()}`
+/**
+ * The browse-picker spec navigates to a published experience by name: a folder,
+ * then the one legacy Studio experience inside it (an iframe embed, so it avoids
+ * the Flex inline manifest). Fixed test data, not configuration.
+ */
+export const CEROS_PICKER_FOLDER = 'Analytics Experiences'
+export const CEROS_PICKER_EXPERIENCE = 'Analytics Test Experience'

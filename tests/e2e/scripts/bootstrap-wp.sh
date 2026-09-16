@@ -80,17 +80,29 @@ fi
 env_write E2E_WP_APP_PASSWORD "$APP_PASSWORD"
 echo "wrote E2E_WP_APP_PASSWORD to .env (label: $APP_PASSWORD_LABEL)"
 
-# The browse-picker specs need a Ceros API key. It is a wp-config constant, not a test
-# variable, so report it rather than setting it: the key must never pass through
-# this script or reach a tracked file.
-# The marker is split in the PHP so the joined form exists only in the output;
-# wp-env echoes the source back, and a literal would match there too.
-KEY_STATE="$(npx wp-env run cli wp eval 'echo "KEY" . "=" . ( defined("CEROS_API_KEY") && CEROS_API_KEY ? "yes" : "no" );' 2>&1 | tr -d '\r\n')"
-KEY_SET="$(printf '%s' "$KEY_STATE" | grep -oE 'KEY=(yes|no)' | head -1 | cut -d= -f2)"
+# Point the plugin at a Ceros environment. The browse-picker specs need a real
+# key and the account's API; the paste-URL and not-found specs need neither.
+#
+# The API host is derived from E2E_CEROS_ENV (the same env the experience URLs
+# use), defaulting to `latest`. The key has no default — it is a secret, kept in
+# .env locally and a CI secret in the pipeline; a different env needs its key.
+#
+# Production is hard-wired to rest.ceros.com, so a dev-env host goes through the
+# plugin's "staging" mode. The key is a wp-config constant.
+CEROS_ENV="${E2E_CEROS_ENV:-$(env_read E2E_CEROS_ENV)}"
+CEROS_ENV="${CEROS_ENV:-latest}"
+CEROS_API_BASE_URL="https://api-${CEROS_ENV}.dev.flex.cerosdev.com"
+CEROS_KEY="${E2E_CEROS_API_KEY:-$(env_read E2E_CEROS_API_KEY)}"
 
-if [ "$KEY_SET" = yes ]; then
-	echo "CEROS_API_KEY is configured; the browse-picker specs can run."
+if [ -n "$CEROS_KEY" ]; then
+	npx wp-env run cli wp option update ceros_api_environment staging >/dev/null 2>&1
+	npx wp-env run cli wp option update ceros_staging_api_url "$CEROS_API_BASE_URL" >/dev/null 2>&1
+	# Redirected so the key never reaches the log: wp-env echoes the command back.
+	npx wp-env run cli wp config set CEROS_API_KEY "$CEROS_KEY" --type=constant >/dev/null 2>&1
+	echo "configured the plugin for $CEROS_API_BASE_URL (key set; all specs can run)"
 else
-	echo "CEROS_API_KEY is not configured. The not-found and paste-URL specs still run."
-	echo "The browse-picker specs need it: add it to .wp-env.override.json (gitignored) and restart wp-env."
+	# No key: clear any stale one so the block shows the paste panel rather than an
+	# API-key error. The paste-URL and not-found specs still run; browse-picker does not.
+	npx wp-env run cli wp config delete CEROS_API_KEY >/dev/null 2>&1 || true
+	echo "no E2E_CEROS_API_KEY set; cleared the key. paste-URL and not-found specs run; browse-picker needs a key."
 fi
