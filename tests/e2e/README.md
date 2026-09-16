@@ -23,15 +23,20 @@ tests/       specs
 ```bash
 npm ci && npm run build        # repository root; the plugin fatals without build/
 npm run env:start              # repository root
-npm install                    # here
-bash scripts/bootstrap-wp.sh   # here; creates .env and mints the app password
+npm install                    # here (tests/e2e)
+npx playwright install chrome  # here; the suite runs on installed Google Chrome
+bash scripts/bootstrap-wp.sh   # here; creates .env, mints the app password, configures the plugin
 ```
 
 The specs call the real Ceros API. `bootstrap-wp.sh` points the plugin at the Ceros
 environment named by `E2E_CEROS_ENV` (default `latest`) — both the experience URLs and the
 API host derive from it — and, when `E2E_CEROS_API_KEY` is set, configures that key. The
-paste-URL and not-found specs run without a key; the browse-picker specs need one. Whatever
-runs the suite must be able to reach that environment's hosts.
+paste-URL and not-found specs run without a key, so the steps above are enough for them.
+Whatever runs the suite must be able to reach that environment's hosts.
+
+The **browse-picker** specs need a real API key. Add your environment's key to `.env`
+(`E2E_CEROS_API_KEY=…`) and re-run `bootstrap-wp.sh` — it sets the key on the plugin. The
+key is a secret, so `.env` is gitignored and it has no default.
 
 The suite provisions nothing — it reads a URL and credentials from the environment, so
 the same specs run against local `wp-env`, another WordPress, or one built by CI.
@@ -41,9 +46,9 @@ fill in `.env` yourself and skip it.
 ## Running
 
 ```bash
-npm test                                   # everything
-npx playwright test --project=wordpress    # the only project
-npx playwright test --grep @rendered
+npm test                                   # everything (browse-picker needs the API key; see Prerequisites)
+npx playwright test --project=wordpress    # the test project; the auth setup runs first as its dependency
+npx playwright test --grep @rendered       # filter by tag
 npm run type-check
 npm run lint
 ```
@@ -93,7 +98,8 @@ not extend a shared base class, because at this size it would hold nothing.
 The suite is not wired into CI in this PR. A separate `.github/workflows/e2e-tests.yml`
 (its own pull request) runs it on pull requests that touch the plugin or this suite, and on
 pushes to the default branch. Because the specs call the real Ceros API, that workflow needs
-a real `CEROS_API_KEY` (a repository secret) and network access to Ceros — not a placeholder.
+the target environment and a real key as CI config — `E2E_CEROS_ENV` and a secret
+`E2E_CEROS_API_KEY` — plus network access to that environment, not a placeholder.
 
 The workflow pins the WordPress version, because `.wp-env.json` leaves it unset and that has
 resolved to a version with no tag in the mirror. It is deliberately **not** a required check
