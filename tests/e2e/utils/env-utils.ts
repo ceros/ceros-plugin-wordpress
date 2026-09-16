@@ -40,8 +40,6 @@ export const wpAppPassword = (): string => {
   return value
 }
 
-export const restUrl = (path = '') => `${BASE_URL}${WP_ROUTES.restPosts}${path}`
-export const postEditUrl = (postId: number) => `${BASE_URL}${WP_ROUTES.postEdit(postId)}`
 export const permalink = (postId: number) => `${BASE_URL}${WP_ROUTES.permalink(postId)}`
 
 /**
@@ -67,11 +65,3 @@ export const cerosLegacyExperienceUrl = (): string =>
 
 export const cerosFlexExperienceUrl = (): string =>
   `https://automation.${cerosEnv()}.cerosdev.site/sparkboard`
-
-/**
- * The browse-picker spec navigates to a published experience by name: a folder,
- * then the one legacy Studio experience inside it (an iframe embed, so it avoids
- * the Flex inline manifest). Fixed test data, not configuration.
- */
-export const CEROS_PICKER_FOLDER = 'Analytics Experiences'
-export const CEROS_PICKER_EXPERIENCE = 'Analytics Test Experience'

@@ -9,11 +9,18 @@ import type { Locator } from '@playwright/test'
  *
  * Readiness gates only; assertions belong to specs.
  */
-export class CerosPicker {
+export class CerosExperiencePicker {
   readonly modal: Locator
   readonly body: Locator
   readonly loading: Locator
   readonly addButton: Locator
+
+  /**
+   * A tree row (folder or experience) by its display name. A folder's row holds
+   * only its own name — its children render in a sibling node — so filtering the
+   * row by name never matches a nested experience.
+   */
+  readonly row: (name: string) => Locator
 
   constructor(readonly root: CerosBlockRoot) {
     this.modal = root.locator('.ceros-block__modal').describe('experience picker modal')
@@ -22,18 +29,11 @@ export class CerosPicker {
     this.addButton = root
       .getByRole('button', { name: 'Add Experience' })
       .describe('add experience button')
-  }
-
-  /**
-   * A tree row (folder or experience) by its display name. A folder's row holds
-   * only its own name — its children render in a sibling node — so filtering the
-   * row by name never matches a nested experience.
-   */
-  row(name: string): Locator {
-    return this.modal
-      .locator('.ceros-block__item')
-      .filter({ hasText: name })
-      .describe(`picker row: ${name}`)
+    this.row = (name) =>
+      this.modal
+        .locator('.ceros-block__item')
+        .filter({ hasText: name })
+        .describe(`picker row: ${name}`)
   }
 
   async waitForOpen(): Promise<void> {

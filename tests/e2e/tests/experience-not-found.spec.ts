@@ -6,8 +6,9 @@ import { uniqueSuffix } from '@utils/wp-rest-client'
 import { TAGS } from '@utils/test-tags'
 
 /**
- * No driver, no Ceros API, no model key. The most deterministic oracle here,
- * and it covers a state the block has regressed into before.
+ * No driver, no Ceros API, no model key — the most deterministic oracle here.
+ * Asserts the render cascade falls through to the not-found block rather than
+ * silently rendering nothing.
  */
 test.describe('Published post rendering', { tag: [TAGS.cerosBlock, TAGS.rendered] }, () => {
   // A real reader is anonymous. The wordpress project reuses a saved admin

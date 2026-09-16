@@ -24,14 +24,11 @@ test.describe('Paste a public URL', { tag: [TAGS.cerosBlock] }, () => {
     await expect(block.preview).toBeVisible()
   })
 
-  // eslint-disable-next-line playwright/no-skipped-test -- see the comment below.
   test.fixme('resolves a Flex experience and previews the embed', async ({ editor }) => {
-    // BLOCKED, not flaky: every Flex experience on latest (and prod) advertises
-    // an `x-flex-manifest` header pointing at `<experience>/manifest.v1.json`,
-    // which 404s, so the resolver hard-fails with `ceros_manifest_unavailable`
-    // and never previews. Un-fixme once a Flex experience serves a live inline
-    // manifest, or the plugin falls back to an iframe when a header-advertised
-    // manifest fails. Tracked by the manifest-404 investigation.
+    // Blocked, not flaky: the Flex inline-manifest path the plugin needs is not
+    // available in the target environment, so a Flex experience cannot resolve to
+    // a preview yet. Un-fixme when that path resolves, or when the plugin degrades
+    // to an iframe embed. Details in the tracking ticket.
     const block = editor.cerosBlock
     await block.waitForEmptyState()
 

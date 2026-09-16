@@ -3,9 +3,9 @@ import { TIMEOUTS } from '@constants/timeouts'
 import type { BlockEditorPage } from '@pages/block-editor.page'
 
 /** Multi-step workflows over the Browse Experiences modal. */
-export class CerosPickerActions {
-  static for(editor: BlockEditorPage): CerosPickerActions {
-    return new CerosPickerActions(editor)
+export class CerosExperiencePickerActions {
+  static for(editor: BlockEditorPage): CerosExperiencePickerActions {
+    return new CerosExperiencePickerActions(editor)
   }
 
   constructor(readonly editor: BlockEditorPage) {}
@@ -15,7 +15,7 @@ export class CerosPickerActions {
    * it. Leaves the block showing its preview.
    */
   async browseAndAdd(folderName: string, experienceName: string): Promise<void> {
-    const { page, cerosBlock: block, picker } = this.editor
+    const { page, cerosBlock: block, experiencePicker: picker } = this.editor
 
     await base.step('Open the experience picker', async () => {
       await block.browseExperiencesButton.click()

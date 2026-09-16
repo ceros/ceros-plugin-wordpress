@@ -2,7 +2,7 @@ import type { Locator, Page } from '@playwright/test'
 import { TIMEOUTS } from '@constants/timeouts'
 import { WP_ROUTES } from '@constants/wordpress-constants'
 import { CerosBlock } from '@pages/modules/ceros-block'
-import { CerosPicker } from '@pages/modules/ceros-picker'
+import { CerosExperiencePicker } from '@pages/modules/ceros-experience-picker'
 import { EditorCanvas } from '@pages/modules/editor-canvas'
 import { WelcomeGuideModal } from '@pages/modals/welcome-guide.modal'
 
@@ -21,7 +21,7 @@ export class BlockEditorPage {
   readonly canvas: EditorCanvas
   readonly welcomeGuide: WelcomeGuideModal
   readonly cerosBlock: CerosBlock
-  readonly picker: CerosPicker
+  readonly experiencePicker: CerosExperiencePicker
   readonly blockToolbar: Locator
   readonly toolbarButton: (name: string) => Locator
 
@@ -31,7 +31,7 @@ export class BlockEditorPage {
     this.cerosBlock = new CerosBlock(this.canvas.frame)
     // The picker modal is portalled to the top document, not the canvas iframe
     // the block itself renders in.
-    this.picker = new CerosPicker(page)
+    this.experiencePicker = new CerosExperiencePicker(page)
     this.blockToolbar = page
       .getByRole('toolbar', { name: /block tools/i })
       .describe('block toolbar')

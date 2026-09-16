@@ -6,5 +6,3 @@ export const TAGS = {
   cerosBlock: '@cerosBlock',
   rendered: '@rendered',
 } as const
-
-export type TestTag = (typeof TAGS)[keyof typeof TAGS]

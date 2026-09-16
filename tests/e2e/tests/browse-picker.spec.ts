@@ -1,7 +1,7 @@
 import { expect, test } from '@fixtures/fixtures'
-import { CerosPickerActions } from '@actions/ceros-picker-actions'
+import { CerosExperiencePickerActions } from '@actions/ceros-experience-picker-actions'
+import { CEROS_PICKER_EXPERIENCE, CEROS_PICKER_FOLDER } from '@constants/ceros-block-constants'
 import { emptyCerosBlock } from '@utils/block-serializer'
-import { CEROS_PICKER_EXPERIENCE, CEROS_PICKER_FOLDER } from '@utils/env-utils'
 import { TAGS } from '@utils/test-tags'
 
 /**
@@ -19,7 +19,10 @@ test.describe('Browse experiences', { tag: [TAGS.cerosBlock] }, () => {
   }) => {
     await editor.cerosBlock.waitForEmptyState()
 
-    await CerosPickerActions.for(editor).browseAndAdd(CEROS_PICKER_FOLDER, CEROS_PICKER_EXPERIENCE)
+    await CerosExperiencePickerActions.for(editor).browseAndAdd(
+      CEROS_PICKER_FOLDER,
+      CEROS_PICKER_EXPERIENCE,
+    )
 
     await expect(editor.cerosBlock.preview).toBeVisible()
   })

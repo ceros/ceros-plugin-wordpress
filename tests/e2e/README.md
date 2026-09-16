@@ -4,8 +4,7 @@ Playwright tests for the Ceros block in the WordPress editor and on the publishe
 run against a local `wp-env` instance.
 
 **Not wired into CI or the pre-push hook, and not a required check.** These need WordPress,
-Docker and network access, which the pre-push hook explicitly rules out. Adding a workflow is
-the only remaining step if that changes — see [CI](#ci) below.
+Docker and network access, which the pre-push hook explicitly rules out. See [CI](#ci) below.
 
 ## Layout
 
@@ -95,12 +94,8 @@ not extend a shared base class, because at this size it would hold nothing.
 
 ## CI
 
-The suite is not wired into CI in this PR. A separate `.github/workflows/e2e-tests.yml`
-(its own pull request) runs it on pull requests that touch the plugin or this suite, and on
-pushes to the default branch. Because the specs call the real Ceros API, that workflow needs
-the target environment and a real key as CI config — `E2E_CEROS_ENV` and a secret
-`E2E_CEROS_API_KEY` — plus network access to that environment, not a placeholder.
-
-The workflow pins the WordPress version, because `.wp-env.json` leaves it unset and that has
-resolved to a version with no tag in the mirror. It is deliberately **not** a required check
-while ownership of a test that spans two products is unresolved.
+The suite is not wired into CI and is not a required check — it spans two products (the
+plugin and Ceros), and that ownership is unresolved. Running it anywhere, CI or another
+machine, needs the same inputs as a local run: `E2E_CEROS_ENV`, the secret `E2E_CEROS_API_KEY`,
+network access to that environment, and a pinned WordPress version (`.wp-env.json` leaves core
+unset, which has resolved to a version with no tag in the mirror).
