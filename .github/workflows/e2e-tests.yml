@@ -1,0 +1,77 @@
+name: E2E (manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      ceros_env:
+        description: Ceros dev environment to target (experience URLs + API host derive from it)
+        type: string
+        default: latest
+
+permissions:
+  contents: read
+
+concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  e2e:
+    name: Playwright e2e (wp-env + real Ceros env)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      # wp-env's committed dev port; the suite's 8894 default is a local override.
+      BASE_URL: http://localhost:8888
+      E2E_CEROS_ENV: ${{ inputs.ceros_env }}
+      E2E_CEROS_API_KEY: ${{ secrets.E2E_CEROS_API_KEY }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            tests/e2e/package-lock.json
+
+      - name: Install and build the plugin
+        run: |
+          npm ci
+          npm run build
+
+      # Pin WordPress to the test-utils line (wp-6.9 -> 1.33.2); .wp-env.json leaves core unset.
+      - name: Pin WordPress core for wp-env
+        run: echo '{ "core": "WordPress/WordPress#6.9.6" }' > .wp-env.override.json
+
+      - name: Start wp-env
+        run: npm run env:start
+
+      - name: Install e2e dependencies
+        working-directory: tests/e2e
+        run: npm ci
+
+      - name: Install Chrome for Playwright
+        working-directory: tests/e2e
+        run: npx playwright install --with-deps chrome
+
+      - name: Configure the plugin for the Ceros env
+        working-directory: tests/e2e
+        run: bash scripts/bootstrap-wp.sh
+
+      - name: Run the suite
+        working-directory: tests/e2e
+        run: npx playwright test --project=wordpress --reporter=list,html
+
+      - name: Upload Playwright report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            tests/e2e/playwright-report
+            tests/e2e/test-results
+          retention-days: 7
+          if-no-files-found: ignore
