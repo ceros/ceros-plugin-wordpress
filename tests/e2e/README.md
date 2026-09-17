@@ -24,7 +24,7 @@ npm ci && npm run build        # repository root; the plugin fatals without buil
 npm run env:start              # repository root
 npm install                    # here (tests/e2e)
 npx playwright install chrome  # here; the suite runs on installed Google Chrome
-bash scripts/bootstrap-wp.sh   # here; creates .env, mints the app password, configures the plugin
+bash scripts/bootstrap-wp.sh   # here; creates .env and configures the plugin
 ```
 
 The specs call the real Ceros API. `bootstrap-wp.sh` points the plugin at the Ceros
@@ -46,7 +46,7 @@ fill in `.env` yourself and skip it.
 
 ```bash
 npm test                                   # everything (browse-picker needs the API key; see Prerequisites)
-npx playwright test --project=wordpress    # the test project; the auth setup runs first as its dependency
+npx playwright test --project=wordpress    # the test project; global setup logs in first
 npx playwright test --grep @rendered       # filter by tag
 npm run type-check
 npm run lint
@@ -58,18 +58,14 @@ npm run lint
 local `wp-env`. Real environment variables take precedence over the file, so CI sets its
 own values without `.env` interfering.
 
-**There are two WordPress credentials and they are not interchangeable.**
-`E2E_WP_PASSWORD` is the account password, used for browser login.
-`E2E_WP_APP_PASSWORD` is a WordPress application password, used for REST Basic auth —
-`wp_authenticate_application_password()` compares against hashed application passwords
-only, so the account password returns 401. It is generated per install, which is why it
-has no default and `bootstrap-wp.sh` mints it.
+Login is once-per-run: global setup signs in with `E2E_WP_USER` / `E2E_WP_PASSWORD` and
+persists the session (cookies + REST nonce), which authenticates both the browser and the
+REST calls, so no separate REST credential has to be minted or stored.
 
 | Variable                          | Default                     | Purpose                                                                               |
 | --------------------------------- | --------------------------- | ------------------------------------------------------------------------------------- |
 | `BASE_URL`                        | `http://localhost:8894`     | The WordPress instance. `http`, not `https` — wp-env serves plain HTTP.               |
-| `E2E_WP_USER` / `E2E_WP_PASSWORD` | `admin` / `password`        | Browser login. wp-env's documented defaults.                                          |
-| `E2E_WP_APP_PASSWORD`             | —                           | Application password for REST calls. Required; `bootstrap-wp.sh` writes it.           |
+| `E2E_WP_USER` / `E2E_WP_PASSWORD` | `admin` / `password`        | Admin login (browser + REST session). wp-env's documented defaults.                                          |
 | `E2E_CEROS_ENV`                   | `latest`                    | The Ceros dev environment; the experience URLs and API host derive from it.           |
 | `E2E_CEROS_API_KEY`               | —                           | Bearer key for that env (a secret). Required for the browse-picker specs; no default. |
 | `E2E_TIMEOUT_*`                   | see `constants/timeouts.ts` | Override any timeout tier, in milliseconds.                                           |

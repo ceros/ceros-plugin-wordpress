@@ -1,16 +1,25 @@
-import { BASE_URL } from '@utils/env-utils'
+import { RequestUtils } from '@wordpress/e2e-test-utils-playwright'
+import { AUTH_STORAGE_STATE } from '@constants/paths'
+import { BASE_URL, wpPassword, wpUser } from '@utils/env-utils'
 
 /**
- * Fail with one actionable message when WordPress is not reachable, rather than
- * letting every spec time out on its first navigation.
- *
- * This is the only global setup. The suite provisions nothing: WordPress and its
- * credentials come from the environment, so the same specs run against local
- * wp-env, another install, or one built by CI.
+ * Fail fast if WordPress is unreachable, then log in once over REST and persist the
+ * session (cookies + nonce) to AUTH_STORAGE_STATE. Browser contexts reuse it via
+ * `storageState`; the requestUtils fixture loads it for REST.
  */
 export default async function globalSetup(): Promise<void> {
-  let detail: string
+  await assertWordPressReachable()
 
+  const requestUtils = await RequestUtils.setup({
+    baseURL: BASE_URL,
+    user: { username: wpUser(), password: wpPassword() },
+    storageStatePath: AUTH_STORAGE_STATE,
+  })
+  await requestUtils.setupRest()
+}
+
+async function assertWordPressReachable(): Promise<void> {
+  let detail: string
   try {
     const response = await fetch(`${BASE_URL}/wp-login.php`, {
       signal: AbortSignal.timeout(5000),

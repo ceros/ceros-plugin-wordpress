@@ -2,9 +2,16 @@ import { defineConfig, devices } from '@playwright/test'
 import { config } from 'dotenv'
 import { AUTH_STORAGE_STATE } from '@constants/paths'
 import { CONFIG_TIMEOUTS, TIMEOUTS } from '@constants/timeouts'
-import { BASE_URL } from '@utils/env-utils'
+import { BASE_URL, wpPassword, wpUser } from '@utils/env-utils'
 
 config()
+
+// The library reads WP_BASE_URL / WP_USERNAME / WP_PASSWORD at load, and its REST-root
+// discovery hits WP_BASE_URL directly (not the context baseURL). Seed them before it loads.
+process.env.WP_BASE_URL ||= BASE_URL
+process.env.WP_USERNAME ||= wpUser()
+process.env.WP_PASSWORD ||= wpPassword()
+process.env.STORAGE_STATE_PATH ||= AUTH_STORAGE_STATE
 
 export { BASE_URL, TIMEOUTS }
 
@@ -17,12 +24,8 @@ const CHROME = {
 
 export default defineConfig({
   testDir: './tests',
+  // Global setup logs in once and writes the session; every context reuses it via storageState.
   globalSetup: require.resolve('./global-setup'),
-  // Login is no longer per test: the `auth` setup project logs in once and every
-  // context reuses the saved session, so parallel workers would no longer time
-  // each other out on wp-login. The suite is now parallel-ready, but the actual
-  // workers>1 rollout (and the mode-phasing it needs) lands separately — kept
-  // serial here so this change is only the login refactor.
   fullyParallel: false,
   workers: 1,
   forbidOnly: !!process.env.CI,
@@ -32,6 +35,7 @@ export default defineConfig({
   globalTimeout: CONFIG_TIMEOUTS.GLOBAL,
   use: {
     baseURL: BASE_URL,
+    storageState: AUTH_STORAGE_STATE,
     deviceScaleFactor: 1,
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
@@ -39,13 +43,5 @@ export default defineConfig({
     navigationTimeout: CONFIG_TIMEOUTS.NAVIGATION,
   },
   expect: { timeout: TIMEOUTS.SHORT_MEDIUM },
-  projects: [
-    // Logs in once and writes AUTH_STORAGE_STATE. Everything else depends on it.
-    { name: 'auth', testDir: './setup', testMatch: /auth\.setup\.ts/, use: CHROME },
-    {
-      name: 'wordpress',
-      use: { ...CHROME, storageState: AUTH_STORAGE_STATE },
-      dependencies: ['auth'],
-    },
-  ],
+  projects: [{ name: 'wordpress', use: CHROME }],
 })

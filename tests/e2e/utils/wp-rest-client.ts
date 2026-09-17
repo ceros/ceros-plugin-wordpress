@@ -1,11 +1,5 @@
-import type { APIRequestContext } from '@playwright/test'
+import type { RequestUtils } from '@wordpress/e2e-test-utils-playwright'
 import { parseBlockAttributes } from '@utils/block-serializer'
-
-/**
- * Pretty permalinks are off on wp-env, so /wp-json/ 404s. The query form of the
- * REST route works regardless of permalink structure.
- */
-const route = (path: string) => `/?rest_route=${path}`
 
 export type CreatedPost = {
   id: number
@@ -24,33 +18,34 @@ export type CreatePostInput = {
 export const uniqueSuffix = (): string =>
   `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`
 
+/** Create a post, then read back what WordPress stored so the caller can check the block attributes survived. */
 export async function createPost(
-  request: APIRequestContext,
+  requestUtils: RequestUtils,
   input: CreatePostInput,
 ): Promise<CreatedPost> {
-  const response = await request.post(route('/wp/v2/posts'), { data: input })
-  if (!response.ok()) {
-    throw new Error(`create post failed: ${response.status()} ${await response.text()}`)
-  }
-  const body = (await response.json()) as { id: number; title: { raw?: string } }
-  const stored = await readRawContent(request, body.id)
+  const created = await requestUtils.rest<{ id: number }>({
+    method: 'POST',
+    path: '/wp/v2/posts',
+    data: { title: input.title, content: input.content, status: input.status },
+  })
+  const stored = await readRawContent(requestUtils, created.id)
   return {
-    id: body.id,
+    id: created.id,
     title: input.title,
-    permalink: `/?p=${body.id}`,
+    permalink: `/?p=${created.id}`,
     attributes: parseBlockAttributes(stored),
   }
 }
 
-export async function readRawContent(request: APIRequestContext, id: number): Promise<string> {
-  const response = await request.get(route(`/wp/v2/posts/${id}&context=edit`))
-  if (!response.ok()) {
-    throw new Error(`read post ${id} failed: ${response.status()}`)
-  }
-  const body = (await response.json()) as { content: { raw: string } }
+/** Unrendered block markup (context=edit), for the attribute guard. */
+async function readRawContent(requestUtils: RequestUtils, id: number): Promise<string> {
+  const body = await requestUtils.rest<{ content: { raw: string } }>({
+    path: `/wp/v2/posts/${id}`,
+    params: { context: 'edit' },
+  })
   return body.content.raw
 }
 
-export async function deletePost(request: APIRequestContext, id: number): Promise<void> {
-  await request.delete(route(`/wp/v2/posts/${id}&force=true`))
+export async function deletePost(requestUtils: RequestUtils, id: number): Promise<void> {
+  await requestUtils.rest({ method: 'DELETE', path: `/wp/v2/posts/${id}`, params: { force: true } })
 }
