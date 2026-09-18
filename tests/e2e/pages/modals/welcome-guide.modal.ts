@@ -23,7 +23,7 @@ export class WelcomeGuideModal {
 
   async dismissIfPresent(): Promise<void> {
     try {
-      await this.dialog.waitFor({ state: 'visible', timeout: TIMEOUTS.MICRO * 10 })
+      await this.dialog.waitFor({ state: 'visible', timeout: TIMEOUTS.BRIEF })
     } catch {
       return
     }

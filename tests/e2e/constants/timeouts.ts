@@ -9,6 +9,7 @@ const fromEnv = (envVar: string, defaultMs: number): number => {
 
 export const TIMEOUTS = {
   MICRO: fromEnv('E2E_TIMEOUT_MICRO', seconds(0.4)),
+  BRIEF: fromEnv('E2E_TIMEOUT_BRIEF', seconds(4)),
   SHORT: fromEnv('E2E_TIMEOUT_SHORT', seconds(8)),
   SHORT_MEDIUM: fromEnv('E2E_TIMEOUT_SHORT_MEDIUM', seconds(16)),
   MEDIUM: fromEnv('E2E_TIMEOUT_MEDIUM', seconds(28)),

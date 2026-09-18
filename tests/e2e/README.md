@@ -65,7 +65,7 @@ REST calls, so no separate REST credential has to be minted or stored.
 | Variable                          | Default                     | Purpose                                                                               |
 | --------------------------------- | --------------------------- | ------------------------------------------------------------------------------------- |
 | `BASE_URL`                        | `http://localhost:8894`     | The WordPress instance. `http`, not `https` — wp-env serves plain HTTP.               |
-| `E2E_WP_USER` / `E2E_WP_PASSWORD` | `admin` / `password`        | Admin login (browser + REST session). wp-env's documented defaults.                                          |
+| `E2E_WP_USER` / `E2E_WP_PASSWORD` | `admin` / `password`        | Admin login (browser + REST session). wp-env's documented defaults.                   |
 | `E2E_CEROS_ENV`                   | `latest`                    | The Ceros dev environment; the experience URLs and API host derive from it.           |
 | `E2E_CEROS_API_KEY`               | —                           | Bearer key for that env (a secret). Required for the browse-picker specs; no default. |
 | `E2E_TIMEOUT_*`                   | see `constants/timeouts.ts` | Override any timeout tier, in milliseconds.                                           |

@@ -19,12 +19,11 @@ jobs:
   e2e:
     name: Playwright e2e (wp-env + real Ceros env)
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 35
     env:
-      # wp-env's committed dev port; the suite's 8894 default is a local override.
+      # wp-env's dev port (also the suite default).
       BASE_URL: http://localhost:8888
       E2E_CEROS_ENV: ${{ inputs.ceros_env }}
-      E2E_CEROS_API_KEY: ${{ secrets.E2E_CEROS_API_KEY }}
     steps:
       - uses: actions/checkout@v5
 
@@ -44,7 +43,8 @@ jobs:
 
       # Pin WordPress to the test-utils line (wp-6.9 -> 1.33.2); .wp-env.json leaves core unset.
       - name: Pin WordPress core for wp-env
-        run: echo '{ "core": "WordPress/WordPress#6.9.6" }' > .wp-env.override.json
+        run: |
+          echo '{ "core": "WordPress/WordPress#6.9.6" }' > .wp-env.override.json
 
       - name: Start wp-env
         run: npm run env:start
@@ -59,6 +59,8 @@ jobs:
 
       - name: Configure the plugin for the Ceros env
         working-directory: tests/e2e
+        env:
+          E2E_CEROS_API_KEY: ${{ secrets.E2E_CEROS_API_KEY }}
         run: bash scripts/bootstrap-wp.sh
 
       - name: Run the suite

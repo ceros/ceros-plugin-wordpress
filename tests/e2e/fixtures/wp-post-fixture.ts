@@ -1,5 +1,5 @@
-import { BLOCK_NAME } from '@constants/wordpress-constants'
 import { wpRequestUtilsFixture } from '@fixtures/wp-request-utils-fixture'
+import { parseBlockAttributes } from '@utils/block-serializer'
 import { createPost, deletePost, uniqueSuffix, type CreatedPost } from '@utils/wp-rest-client'
 
 export type PostOptions = {
@@ -25,12 +25,21 @@ export const wpPostFixture = wpRequestUtilsFixture.extend<WpPostFixture>({
       status: postOptions.status ?? 'draft',
     })
 
-    // WordPress re-encodes quotes on insert; if a requested block's attributes
-    // did not survive, the render falls through to the not-found branch.
-    if (postOptions.blocks?.some((block) => block.includes(BLOCK_NAME)) && !created.attributes) {
-      throw new Error(
-        `[${testInfo.title}] block attributes did not survive the insert for post ${created.id}`,
-      )
+    // WordPress re-encodes quotes on insert; if a block was requested with
+    // attributes but they did not survive, the render silently falls through to
+    // not-found. parseBlockAttributes returns {} for an attribute-less block, so
+    // assert the requested keys are actually present rather than merely non-null.
+    const requested = (postOptions.blocks ?? [])
+      .map(parseBlockAttributes)
+      .find((attrs) => attrs && Object.keys(attrs).length > 0)
+    if (requested) {
+      const stored = created.attributes ?? {}
+      const missing = Object.keys(requested).filter((key) => !(key in stored))
+      if (missing.length) {
+        throw new Error(
+          `[${testInfo.title}] block attributes did not survive the insert for post ${created.id} (missing: ${missing.join(', ')})`,
+        )
+      }
     }
 
     try {

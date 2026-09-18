@@ -1,7 +1,7 @@
 import { WP_DEFAULT_PASSWORD, WP_DEFAULT_USER } from '@constants/wordpress-constants'
 
 /** wp-env's development port. Everything else derives from BASE_URL. */
-export const DEFAULT_BASE_URL = 'http://localhost:8894'
+export const DEFAULT_BASE_URL = 'http://localhost:8888'
 
 /**
  * Normalise BASE_URL: trim, drop trailing slashes, add a scheme if missing.

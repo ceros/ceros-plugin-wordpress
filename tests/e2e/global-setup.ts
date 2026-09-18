@@ -1,5 +1,6 @@
 import { RequestUtils } from '@wordpress/e2e-test-utils-playwright'
 import { AUTH_STORAGE_STATE } from '@constants/paths'
+import { TIMEOUTS } from '@constants/timeouts'
 import { BASE_URL, wpPassword, wpUser } from '@utils/env-utils'
 
 /**
@@ -22,7 +23,7 @@ async function assertWordPressReachable(): Promise<void> {
   let detail: string
   try {
     const response = await fetch(`${BASE_URL}/wp-login.php`, {
-      signal: AbortSignal.timeout(5000),
+      signal: AbortSignal.timeout(TIMEOUTS.BRIEF),
     })
     if (response.ok) return
     detail = `responded ${response.status}`

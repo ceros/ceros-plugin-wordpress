@@ -26,14 +26,18 @@ export class CerosExperiencePicker {
     this.modal = root.locator('.ceros-block__modal').describe('experience picker modal')
     this.body = this.modal.locator('.ceros-block__modal-body').describe('picker body')
     this.loading = this.modal.locator('.ceros-block__loading').describe('picker loading state')
-    this.addButton = root
+    this.addButton = this.modal
       .getByRole('button', { name: 'Add Experience' })
       .describe('add experience button')
-    this.row = (name) =>
-      this.modal
+    this.row = (name) => {
+      // Anchored exact-match: a substring `hasText` would let a sibling like
+      // "<name> v2" match two rows and turn a click into a strict-mode violation.
+      const exact = new RegExp(`^${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`)
+      return this.modal
         .locator('.ceros-block__item')
-        .filter({ hasText: name })
+        .filter({ hasText: exact })
         .describe(`picker row: ${name}`)
+    }
   }
 
   async waitForOpen(): Promise<void> {

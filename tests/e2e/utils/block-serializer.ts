@@ -20,13 +20,11 @@ export const cerosBlock = (attributes: Partial<CerosBlockAttributes> = {}): stri
 /** A placed but unconfigured block — the editor renders its empty state. */
 export const emptyCerosBlock = (): string => cerosBlock()
 
-/** An id that cannot resolve, which drives the render cascade to the not-found branch. */
+/** An id with no embed data, so the render cascade reaches not-found with no network. */
 export const unresolvableCerosBlock = (suffix: string): string =>
   cerosBlock({
     experienceResourceId: `does-not-exist-${suffix}`,
     experienceName: 'Deleted Experience',
-    deliveryMode: 'inline',
-    manifestUrl: 'https://view.ceros.com/does-not-exist/manifest.v1.json',
   })
 
 /**

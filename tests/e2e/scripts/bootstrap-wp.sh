@@ -22,7 +22,7 @@ env_ensure
 # A real environment variable wins over .env, matching how the suite itself
 # resolves these, so CI can point this at its own instance without a file.
 BASE_URL="${BASE_URL:-$(env_read BASE_URL)}"
-BASE_URL="${BASE_URL:-http://localhost:8894}"
+BASE_URL="${BASE_URL:-http://localhost:8888}"
 WP_USER="${E2E_WP_USER:-$(env_read E2E_WP_USER)}"
 WP_USER="${WP_USER:-admin}"
 
@@ -51,14 +51,17 @@ CEROS_API_BASE_URL="https://api-${CEROS_ENV}.dev.flex.cerosdev.com"
 CEROS_KEY="${E2E_CEROS_API_KEY:-$(env_read E2E_CEROS_API_KEY)}"
 
 if [ -n "$CEROS_KEY" ]; then
-	npx wp-env run cli wp option update ceros_api_environment staging >/dev/null 2>&1
-	npx wp-env run cli wp option update ceros_staging_api_url "$CEROS_API_BASE_URL" >/dev/null 2>&1
+	npx wp-env run cli wp option update ceros_api_environment staging >/dev/null
+	npx wp-env run cli wp option update ceros_staging_api_url "$CEROS_API_BASE_URL" >/dev/null
 	# Redirected so the key never reaches the log: wp-env echoes the command back.
 	npx wp-env run cli wp config set CEROS_API_KEY "$CEROS_KEY" --type=constant >/dev/null 2>&1
 	echo "configured the plugin for $CEROS_API_BASE_URL (key set; all specs can run)"
 else
-	# No key: clear any stale one so the block shows the paste panel rather than an
-	# API-key error. The paste-URL and not-found specs still run; browse-picker does not.
+	# No key: reset the plugin to its defaults so a prior keyed run does not leave it
+	# pointed at a dev host with no credential. paste-URL and not-found still run;
+	# browse-picker does not.
+	npx wp-env run cli wp option delete ceros_api_environment >/dev/null 2>&1 || true
+	npx wp-env run cli wp option delete ceros_staging_api_url >/dev/null 2>&1 || true
 	npx wp-env run cli wp config delete CEROS_API_KEY >/dev/null 2>&1 || true
-	echo "no E2E_CEROS_API_KEY set; cleared the key. paste-URL and not-found specs run; browse-picker needs a key."
+	echo "no E2E_CEROS_API_KEY set; reset the plugin to defaults. paste-URL and not-found specs run; browse-picker needs a key."
 fi

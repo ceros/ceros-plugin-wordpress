@@ -1,10 +1,9 @@
+// First, so .env populates process.env before env-utils below reads BASE_URL from it.
+import 'dotenv/config'
 import { defineConfig, devices } from '@playwright/test'
-import { config } from 'dotenv'
 import { AUTH_STORAGE_STATE } from '@constants/paths'
 import { CONFIG_TIMEOUTS, TIMEOUTS } from '@constants/timeouts'
 import { BASE_URL, wpPassword, wpUser } from '@utils/env-utils'
-
-config()
 
 // The library reads WP_BASE_URL / WP_USERNAME / WP_PASSWORD at load, and its REST-root
 // discovery hits WP_BASE_URL directly (not the context baseURL). Seed them before it loads.
@@ -30,7 +29,7 @@ export default defineConfig({
   workers: 1,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  reporter: process.env.CI ? 'blob' : [['html', { open: 'never' }], ['list']],
+  reporter: [['html', { open: 'never' }], ['list']],
   timeout: CONFIG_TIMEOUTS.TEST,
   globalTimeout: CONFIG_TIMEOUTS.GLOBAL,
   use: {
