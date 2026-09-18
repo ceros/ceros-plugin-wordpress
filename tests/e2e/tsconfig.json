@@ -17,7 +17,12 @@
       "@constants/*": ["./constants/*"],
       "@fixtures/*": ["./fixtures/*"],
       "@pages/*": ["./pages/*"],
-      "@utils/*": ["./utils/*"]
+      "@utils/*": ["./utils/*"],
+      // Types ship in build-types but the package's "exports" omits a types
+      // condition, so bundler resolution misses them; point tsc at them.
+      "@wordpress/e2e-test-utils-playwright": [
+        "./node_modules/@wordpress/e2e-test-utils-playwright/build-types/index.d.ts"
+      ]
     },
     "types": ["node"]
   },
