@@ -46,6 +46,19 @@ async function readRawContent(requestUtils: RequestUtils, id: number): Promise<s
   return body.content.raw
 }
 
+/**
+ * The block attributes WordPress currently has stored for a post, read back
+ * after a save so a spec asserts what actually persisted rather than what the
+ * browser held in memory. {} for an attribute-less block, null for a post with
+ * no Ceros block.
+ */
+export async function readStoredBlockAttributes(
+  requestUtils: RequestUtils,
+  id: number,
+): Promise<Record<string, unknown> | null> {
+  return parseBlockAttributes(await readRawContent(requestUtils, id))
+}
+
 export async function deletePost(requestUtils: RequestUtils, id: number): Promise<void> {
   await requestUtils.rest({ method: 'DELETE', path: `/wp/v2/posts/${id}`, params: { force: true } })
 }

@@ -1,7 +1,9 @@
-import { expect, test } from '@fixtures/fixtures'
+import { test } from '@fixtures/fixtures'
+import { BlockEditorActions } from '@actions/block-editor-actions'
 import { CerosExperiencePickerActions } from '@actions/ceros-experience-picker-actions'
 import { CEROS_PICKER_EXPERIENCE, CEROS_PICKER_FOLDER } from '@constants/ceros-block-constants'
 import { emptyCerosBlock } from '@utils/block-serializer'
+import { expectStoredStudioAttributes, expectStudioEmbedRendered } from '@utils/ceros-embed'
 import { TAGS } from '@utils/test-tags'
 
 /**
@@ -14,16 +16,29 @@ import { TAGS } from '@utils/test-tags'
 test.describe('Browse experiences', { tag: [TAGS.cerosBlock] }, () => {
   test.use({ postOptions: { title: 'ceros block', blocks: [emptyCerosBlock()] } })
 
-  test('picks a published experience from the browser and previews the embed', async ({
+  test('picks a published experience and stores the iframe embed', async ({
     editor,
+    post,
+    requestUtils,
   }) => {
-    await editor.cerosBlock.waitForEmptyState()
+    const block = editor.cerosBlock
+    await block.waitForEmptyState()
 
     await CerosExperiencePickerActions.for(editor).browseAndAdd(
       CEROS_PICKER_FOLDER,
       CEROS_PICKER_EXPERIENCE,
     )
 
-    await expect(editor.cerosBlock.preview).toBeVisible()
+    // The preview renders the real Studio iframe, not merely a visible container.
+    await expectStudioEmbedRendered(block.previewEmbedFrame, '')
+
+    await BlockEditorActions.for(editor.page).saveDraft()
+    // The browse flow resolves a resource id (the paste flow does not), so
+    // require it alongside the Studio iframe attributes.
+    await expectStoredStudioAttributes(requestUtils, post.id, {
+      experienceUrlFragment: '',
+      selectedOption: 'full',
+      requireResourceId: true,
+    })
   })
 })

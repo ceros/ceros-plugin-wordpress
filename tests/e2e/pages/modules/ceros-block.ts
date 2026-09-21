@@ -24,6 +24,10 @@ export class CerosBlock {
   readonly preview: Locator
   readonly previewNote: Locator
   readonly ssrPreviewFrame: Locator
+  readonly previewEmbedContainer: Locator
+  readonly previewEmbedFrame: Locator
+  readonly pasteEmbedFullRadio: Locator
+  readonly pasteEmbedScrollRadio: Locator
 
   readonly errorPanel: Locator
   readonly errorHeading: Locator
@@ -52,6 +56,18 @@ export class CerosBlock {
     this.ssrPreviewFrame = root
       .locator('.ceros-block__ssr-preview-frame')
       .describe('server-rendered preview frame')
+    this.previewEmbedContainer = this.preview
+      .locator('div[data-aspectRatio]')
+      .describe('preview embed container')
+    this.previewEmbedFrame = this.preview
+      .locator('iframe.ceros-experience')
+      .describe('preview embed iframe')
+    this.pasteEmbedFullRadio = root
+      .locator('.ceros-block__embed-options input[value="full"]')
+      .describe('paste panel full height radio')
+    this.pasteEmbedScrollRadio = root
+      .locator('.ceros-block__embed-options input[value="scroll"]')
+      .describe('paste panel scrolling radio')
 
     this.errorPanel = root.locator('.ceros-block__error').describe('ceros block error panel')
     this.errorHeading = this.errorPanel

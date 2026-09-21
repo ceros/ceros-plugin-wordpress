@@ -17,4 +17,16 @@ export class BlockEditorActions {
 
     return this.editor
   }
+
+  /**
+   * Save the post and wait for the write to land, so a later REST read sees the
+   * authored attributes. The button settles into "Saved" once the write
+   * completes — a reliable signal regardless of the REST URL shape.
+   */
+  async saveDraft(): Promise<void> {
+    await base.step('Save the post', async () => {
+      await this.editor.saveDraftButton.click()
+      await this.editor.savedButton.waitFor()
+    })
+  }
 }
