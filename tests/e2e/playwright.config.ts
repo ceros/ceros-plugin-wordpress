@@ -23,6 +23,9 @@ const CHROME = {
 
 export default defineConfig({
   testDir: './tests',
+  // Resolve test files and global setup against the runtime paths (no
+  // @wordpress .d.ts shim), so the loader reaches the package's real entry.
+  tsconfig: './tsconfig.runtime.json',
   // Global setup logs in once and writes the session; every context reuses it via storageState.
   globalSetup: require.resolve('./global-setup'),
   fullyParallel: false,
