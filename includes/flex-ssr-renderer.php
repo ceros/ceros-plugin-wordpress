@@ -52,8 +52,7 @@ function ceros_render_flex_ssr( $manifest_url, $include_custom_html = true ) {
  * @param string $served_url          The manifest URL to advertise on the wrapper for
  *                                    the SPA router (deep-link nav). May be ''.
  * @param bool   $include_custom_html Whether to append the experience's authored
- *                                    custom Body HTML (and the import map its
- *                                    module scripts need).
+ *                                    custom Body HTML.
  * @return string Rendered HTML, or '' when there is nothing renderable.
  */
 function ceros_flex_ssr_render_manifest( $manifest, $served_url, $include_custom_html = true ) {
@@ -88,16 +87,11 @@ function ceros_flex_ssr_render_manifest( $manifest, $served_url, $include_custom
 	// emitted verbatim so any <script> in it runs as authored.
 	$custom_body = $include_custom_html ? ceros_flex_ssr_custom_body_html( $manifest ) : '';
 
-	// A page joins the import map WordPress already prints, which under a block
-	// theme is in the head. A classic theme prints it below the content, after
-	// the module scripts, and the block renderer behind the editor preview emits
-	// no page head at all; both take an inline map instead, which has to precede
-	// those scripts.
 	$import_map = '';
-	if ( wp_is_rest_endpoint() || ! wp_is_block_theme() ) {
-		$import_map = ceros_flex_ssr_import_map_tag( $manifest, $custom_body );
+	if ( ceros_flex_ssr_import_map_needs_own_tag() ) {
+		$import_map = ceros_flex_ssr_import_map_tag( $manifest );
 	} else {
-		ceros_flex_ssr_register_import_map( $manifest, $custom_body );
+		ceros_flex_ssr_register_import_map( $manifest );
 	}
 
 	return $import_map . $styles . $head_scripts . $content . $body_scripts . $custom_body;
@@ -222,24 +216,25 @@ function ceros_flex_ssr_custom_body_html( $manifest ) {
 }
 
 /**
- * The experience's import map, or [] when the page needs none.
+ * The experience's import map, or [] when the manifest carries none.
  *
- * Custom body HTML may import a module by bare specifier, which only resolves
- * against an import map. The manifest carries one; SSR deliveries are not
- * served it automatically, so the consumer supplies it.
+ * A module imported by bare specifier only resolves against an import map. The
+ * manifest carries one; SSR deliveries are not served it automatically, so the
+ * consumer supplies it.
  *
- * Returned verbatim, and only when the custom body HTML names one of its
- * specifiers, so a page that needs no map is left alone.
+ * Returned verbatim, `integrity` included, so a caller printing the map whole
+ * gives every module its SRI. Emitted for every experience that declares one,
+ * whether or not the custom body HTML names a specifier: the experience's own
+ * modules resolve through the same map, and some of them load only once the
+ * page is running, so nothing in the markup says they are coming.
  *
- * @param array  $manifest         The manifest.
- * @param string $custom_body_html The custom body HTML about to be emitted.
+ * A map declaring no imports resolves nothing and is left out, so a page that
+ * needs none keeps its single allowed import map free for the host site's own.
+ *
+ * @param array $manifest The manifest.
  * @return array The import map, or [] when none should be emitted.
  */
-function ceros_flex_ssr_import_map( $manifest, $custom_body_html ) {
-	if ( ! is_string( $custom_body_html ) || '' === $custom_body_html ) {
-		return [];
-	}
-
+function ceros_flex_ssr_import_map( $manifest ) {
 	$map     = isset( $manifest['importMap'] ) ? $manifest['importMap'] : [];
 	$imports = isset( $map['imports'] ) ? $map['imports'] : [];
 	if ( ! is_array( $imports ) || empty( $imports ) ) {
@@ -254,14 +249,7 @@ function ceros_flex_ssr_import_map( $manifest, $custom_body_html ) {
 			$clean[ $specifier ] = $url;
 		}
 	}
-	$used = false;
-	foreach ( array_keys( $clean ) as $specifier ) {
-		if ( false !== strpos( $custom_body_html, $specifier ) ) {
-			$used = true;
-			break;
-		}
-	}
-	if ( ! $used ) {
+	if ( empty( $clean ) ) {
 		return [];
 	}
 
@@ -274,6 +262,34 @@ function ceros_flex_ssr_import_map( $manifest, $custom_body_html ) {
 }
 
 /**
+ * Whether this render has to print an import map of its own rather than adding
+ * its specifiers to the one WordPress prints.
+ *
+ * WordPress prints its map in the head under a block theme, which is ahead of
+ * everything this renderer emits, so there the specifiers are added to that one.
+ * Under a classic theme it prints on `wp_footer` instead, and a block render
+ * behind the editor preview emits no page head or footer at all.
+ *
+ * A footer map is too late to join. This renderer emits the experience's own
+ * scripts as `<script type="module">` inline with the body, and a browser
+ * rejects an import map added after a module script has begun loading, so the
+ * map has to precede them or it is discarded and nothing it declares resolves.
+ * Joining WordPress's map on a classic theme therefore reads as tidier and
+ * silently delivers no map at all.
+ *
+ * Printing one is not free. A document resolves a single import map on engines
+ * that predate multiple-map support, so a map printed inside the content takes
+ * the place of the one WordPress prints lower down for its own script modules.
+ * That is a known cost of classic-theme support, not something this decision can
+ * trade away.
+ *
+ * @return bool
+ */
+function ceros_flex_ssr_import_map_needs_own_tag() {
+	return wp_is_rest_endpoint() || ! wp_is_block_theme();
+}
+
+/**
  * Register the experience's import map with WordPress.
  *
  * A document may hold only one import map and WordPress prints its own in the
@@ -281,15 +297,14 @@ function ceros_flex_ssr_import_map( $manifest, $custom_body_html ) {
  * than emitted separately. WordPress maps the dependencies of an enqueued script
  * module, so they travel as the dependencies of one that does nothing else.
  *
- * @param array  $manifest         The manifest.
- * @param string $custom_body_html The custom body HTML about to be emitted.
+ * @param array $manifest The manifest.
  * @return void
  */
-function ceros_flex_ssr_register_import_map( $manifest, $custom_body_html ) {
+function ceros_flex_ssr_register_import_map( $manifest ) {
 	static $carried = [];
 	static $anchors = 0;
 
-	$map = ceros_flex_ssr_import_map( $manifest, $custom_body_html );
+	$map = ceros_flex_ssr_import_map( $manifest );
 	if ( empty( $map ) ) {
 		return;
 	}
@@ -310,10 +325,29 @@ function ceros_flex_ssr_register_import_map( $manifest, $custom_body_html ) {
 	++$anchors;
 	$carried = array_merge( $carried, $fresh );
 
+	// Declared as dynamic imports. WordPress treats a dependency named as a
+	// bare string as statically imported and emits a modulepreload link for it,
+	// which would fetch the video runtime on every page carrying an experience
+	// rather than when a video needs it. Both kinds reach the printed map.
+	//
+	// It costs the preload for a module the author's own HTML imports at the
+	// top level, the SDK being the one that does, which now starts loading when
+	// that script is parsed rather than during the head. Telling the two apart
+	// means reading the authored HTML here, which is the coupling emitting the
+	// whole map exists to remove; a round trip on those pages is the cheaper
+	// side of that trade.
+	$dependencies = [];
+	foreach ( $fresh as $specifier ) {
+		$dependencies[] = [
+			'id'     => $specifier,
+			'import' => 'dynamic',
+		];
+	}
+
 	wp_enqueue_script_module(
 		'ceros-flex-import-map-' . $anchors,
 		plugin_dir_url( CEROS_PLUGIN_FILE ) . 'public/import-map-anchor.js',
-		$fresh,
+		$dependencies,
 		null
 	);
 }
@@ -326,12 +360,11 @@ function ceros_flex_ssr_register_import_map( $manifest, $custom_body_html ) {
  * that read it, so a page carrying several of them resolves all of their
  * specifiers.
  *
- * @param array  $manifest         The manifest.
- * @param string $custom_body_html The custom body HTML about to be emitted.
+ * @param array $manifest The manifest.
  * @return string The <script> tag, or ''.
  */
-function ceros_flex_ssr_import_map_tag( $manifest, $custom_body_html ) {
-	$map = ceros_flex_ssr_import_map( $manifest, $custom_body_html );
+function ceros_flex_ssr_import_map_tag( $manifest ) {
+	$map = ceros_flex_ssr_import_map( $manifest );
 	if ( empty( $map ) ) {
 		return '';
 	}

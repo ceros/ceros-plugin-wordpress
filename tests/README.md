@@ -90,17 +90,29 @@ core — those tests would stay green while the plugin was wrong.
 `BootstrapShimTest` pins the shim's behaviour so a change to it fails loudly,
 but only real WordPress can prove the behaviour matches.
 
-**Render an SSR block whose custom body HTML imports by bare specifier under
-both a block theme and a classic theme, on a page with one block and with two.**
-WordPress prints its own import map in the head under one and below the content
-under the other, and `ceros_flex_ssr_render_manifest()` picks between joining
-that map and emitting its own on that basis. Under a block theme the page must
-carry one map, WordPress's, holding every block's specifiers; under a classic
-theme, one per block, each above that block's `type="module"` scripts. Every
-specifier must resolve in the browser, which is the part no markup assertion
-covers. Run it on the oldest WordPress in `Requires at least` as well as the
-newest: the map is assembled by core, and which mechanisms feed it has changed
-between releases.
+**Render an SSR block under both a block theme and a classic theme, on a page
+with one block and with two, with and without custom body HTML.** Any experience
+whose manifest carries an import map is in scope, not only those whose authored
+HTML names a specifier. `ceros_flex_ssr_import_map_needs_own_tag()` decides
+between joining the map WordPress prints and printing one, and it reads only
+WordPress state, so no unit test reaches it.
+
+Under a block theme the page must carry one map, WordPress's, in the head,
+holding every block's specifiers. Under a classic theme WordPress prints its map
+on `wp_footer`, which is after this renderer's `type="module"` scripts and so
+too late for a browser to accept, and each block prints its own above those
+scripts instead.
+
+Two things that only a browser shows. Every specifier must resolve at the moment
+it is imported, and the video runtime must **not** be fetched on a page whose
+experience has no video: it is mapped for every experience and pulled in only
+when a video plays, so a `modulepreload` for it is a regression. Put a core
+Interactivity-API block on the classic-theme page as well, to see what the
+page's second import map costs on an engine that resolves only one.
+
+Run it on the oldest WordPress in `Requires at least` as well as the newest: the
+map is assembled by core, and which mechanisms feed it has changed between
+releases.
 
 ## Known-untested branches
 
