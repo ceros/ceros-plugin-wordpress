@@ -1,0 +1,8 @@
+node_modules/
+test-results/
+playwright-report/
+blob-report/
+.env
+
+# Conventional home for saved browser credentials.
+playwright/.auth/

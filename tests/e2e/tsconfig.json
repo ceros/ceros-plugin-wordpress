@@ -1,0 +1,31 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "baseUrl": ".",
+    "paths": {
+      "@actions/*": ["./actions/*"],
+      "@constants/*": ["./constants/*"],
+      "@fixtures/*": ["./fixtures/*"],
+      "@pages/*": ["./pages/*"],
+      "@utils/*": ["./utils/*"],
+      // Types ship in build-types but the package's "exports" omits a types
+      // condition, so bundler resolution misses them; point tsc at them.
+      "@wordpress/e2e-test-utils-playwright": [
+        "./node_modules/@wordpress/e2e-test-utils-playwright/build-types/index.d.ts"
+      ]
+    },
+    "types": ["node"]
+  },
+  "include": ["**/*.ts"],
+  "exclude": ["node_modules"]
+}

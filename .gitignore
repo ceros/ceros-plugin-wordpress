@@ -1,5 +1,4 @@
 .DS_Store
-src/.DS_Store
 build/
 
 # Dependencies
@@ -16,3 +15,11 @@ dist/
 # PHPUnit's test-order cache, and a local phpunit.xml override
 .phpunit.result.cache
 phpunit.xml
+
+# Local environment overrides
+.env
+
+# Playwright output. Traces and reports capture live page state, so they
+# must never be committed.
+test-results/
+playwright-report/

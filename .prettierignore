@@ -1,0 +1,6 @@
+build/
+node_modules/
+vendor/
+
+# The e2e suite is a self-contained package with its own prettier config.
+tests/e2e/
