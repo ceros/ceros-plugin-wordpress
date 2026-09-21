@@ -222,14 +222,9 @@ function ceros_flex_ssr_custom_body_html( $manifest ) {
  * manifest carries one; SSR deliveries are not served it automatically, so the
  * consumer supplies it.
  *
- * Returned verbatim, `integrity` included, so a caller printing the map whole
- * gives every module its SRI. Emitted for every experience that declares one,
- * whether or not the custom body HTML names a specifier: the experience's own
- * modules resolve through the same map, and some of them load only once the
- * page is running, so nothing in the markup says they are coming.
- *
- * A map declaring no imports resolves nothing and is left out, so a page that
- * needs none keeps its single allowed import map free for the host site's own.
+ * Returned verbatim so `integrity` rides along. A map declaring no imports
+ * resolves nothing and is left out, keeping the page's single allowed import
+ * map free for the host site's own.
  *
  * @param array $manifest The manifest.
  * @return array The import map, or [] when none should be emitted.
@@ -265,23 +260,11 @@ function ceros_flex_ssr_import_map( $manifest ) {
  * Whether this render has to print an import map of its own rather than adding
  * its specifiers to the one WordPress prints.
  *
- * WordPress prints its map in the head under a block theme, which is ahead of
- * everything this renderer emits, so there the specifiers are added to that one.
- * Under a classic theme it prints on `wp_footer` instead, and a block render
- * behind the editor preview emits no page head or footer at all.
- *
- * A footer map is too late to join. This renderer emits the experience's own
- * scripts as `<script type="module">` inline with the body, and a browser
- * rejects an import map added after a module script has begun loading, so the
- * map has to precede them or it is discarded and nothing it declares resolves.
- * Joining WordPress's map on a classic theme therefore reads as tidier and
- * silently delivers no map at all.
- *
- * Printing one is not free. A document resolves a single import map on engines
- * that predate multiple-map support, so a map printed inside the content takes
- * the place of the one WordPress prints lower down for its own script modules.
- * That is a known cost of classic-theme support, not something this decision can
- * trade away.
+ * WordPress prints its map in the head under a block theme, ahead of everything
+ * this renderer emits, so there the specifiers join that one. Otherwise it
+ * prints on `wp_footer`, which is after the `<script type="module">` tags this
+ * renderer emits inline with the body, and a browser rejects an import map
+ * added once a module script has begun loading.
  *
  * @return bool
  */
@@ -325,17 +308,8 @@ function ceros_flex_ssr_register_import_map( $manifest ) {
 	++$anchors;
 	$carried = array_merge( $carried, $fresh );
 
-	// Declared as dynamic imports. WordPress treats a dependency named as a
-	// bare string as statically imported and emits a modulepreload link for it,
-	// which would fetch the video runtime on every page carrying an experience
-	// rather than when a video needs it. Both kinds reach the printed map.
-	//
-	// It costs the preload for a module the author's own HTML imports at the
-	// top level, the SDK being the one that does, which now starts loading when
-	// that script is parsed rather than during the head. Telling the two apart
-	// means reading the authored HTML here, which is the coupling emitting the
-	// whole map exists to remove; a round trip on those pages is the cheaper
-	// side of that trade.
+	// A dependency named as a bare string counts as statically imported, which
+	// emits a modulepreload for it. Both kinds reach the printed map.
 	$dependencies = [];
 	foreach ( $fresh as $specifier ) {
 		$dependencies[] = [
