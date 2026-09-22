@@ -8,21 +8,21 @@ export type EmbedSize = 'full' | 'scroll'
 /** The class the legacy Studio (scroll-proxy) iframe carries; present in every stored Studio embed code. */
 export const STUDIO_EMBED_MARKER = 'class="ceros-experience"'
 
-/** Escape a literal so it can be embedded in a RegExp. An empty fragment matches any present src. */
-const asSrcPattern = (fragment: string): RegExp =>
-  new RegExp(fragment.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+/** A pattern that requires a non-empty value containing the fragment; an empty fragment just requires non-empty. */
+const containsPattern = (fragment: string): RegExp =>
+  new RegExp(`.+${fragment.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`)
 
 /**
- * Assert a legacy Studio iframe embed is rendered under the given locator and
- * points at the expected experience — the real embed, not just a visible
- * container.
+ * Assert a legacy Studio iframe embed is rendered under the given locator — the
+ * real embed with a source, not just a visible container. A fragment, when
+ * given, must appear in that source.
  */
 export async function expectStudioEmbedRendered(
   embedFrame: Locator,
-  expectedSrcFragment: string,
+  expectedSrcFragment = '',
 ): Promise<void> {
   await expect(embedFrame).toBeVisible()
-  await expect(embedFrame).toHaveAttribute('src', asSrcPattern(expectedSrcFragment))
+  await expect(embedFrame).toHaveAttribute('src', containsPattern(expectedSrcFragment))
 }
 
 /**
@@ -34,7 +34,7 @@ export async function expectStoredStudioAttributes(
   requestUtils: RequestUtils,
   postId: number,
   expected: {
-    experienceUrlFragment: string
+    experienceUrlFragment?: string
     selectedOption: EmbedSize
     requireResourceId?: boolean
   },
@@ -50,7 +50,10 @@ export async function expectStoredStudioAttributes(
   expect(stored.manifestUrl ?? '').toBe('')
 
   expect(stored.selectedOption ?? 'full').toBe(expected.selectedOption)
-  expect(String(stored.experienceUrl ?? '')).toContain(expected.experienceUrlFragment)
+  // A resolved Studio experience always stores a view URL; it must contain the fragment when one is given.
+  expect(String(stored.experienceUrl ?? '')).toMatch(
+    containsPattern(expected.experienceUrlFragment ?? ''),
+  )
 
   const embedCode =
     expected.selectedOption === 'scroll' ? stored.scrollableEmbedCode : stored.fullHeightEmbedCode

@@ -30,13 +30,12 @@ test.describe('Browse experiences', { tag: [TAGS.cerosBlock] }, () => {
     )
 
     // The preview renders the real Studio iframe, not merely a visible container.
-    await expectStudioEmbedRendered(block.previewEmbedFrame, '')
+    await expectStudioEmbedRendered(block.previewEmbedFrame)
 
     await BlockEditorActions.for(editor.page).saveDraft()
     // The browse flow resolves a resource id (the paste flow does not), so
     // require it alongside the Studio iframe attributes.
     await expectStoredStudioAttributes(requestUtils, post.id, {
-      experienceUrlFragment: '',
       selectedOption: 'full',
       requireResourceId: true,
     })

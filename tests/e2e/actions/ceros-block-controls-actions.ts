@@ -16,7 +16,7 @@ export class CerosBlockControlsActions {
   }
 
   /** Wait for the placed block's controls. The block stays selected after Add, so this only gates on the toolbar. */
-  async selectBlock(): Promise<void> {
+  async waitForPlacedControls(): Promise<void> {
     await base.step('Wait for the placed block controls', async () => {
       await this.controls.waitForToolbar()
     })

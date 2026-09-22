@@ -14,7 +14,7 @@ const legacySlug =
  * request time, so a published post carrying only that URL is enough to prove
  * the iframe renders for a real reader.
  */
-test.describe('Published post rendering', { tag: [TAGS.cerosBlock, TAGS.rendered] }, () => {
+test.describe('Legacy Studio published render', { tag: [TAGS.cerosBlock, TAGS.rendered] }, () => {
   // A real reader is anonymous; render the published page logged out.
   test.use({ storageState: { cookies: [], origins: [] } })
 

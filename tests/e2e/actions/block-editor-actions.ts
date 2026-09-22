@@ -1,4 +1,5 @@
 import { test as base, type Page } from '@playwright/test'
+import { TIMEOUTS } from '@constants/timeouts'
 import { BlockEditorPage } from '@pages/block-editor.page'
 
 /** Driver-free workflow over the editor page. */
@@ -26,7 +27,7 @@ export class BlockEditorActions {
   async saveDraft(): Promise<void> {
     await base.step('Save the post', async () => {
       await this.editor.saveDraftButton.click()
-      await this.editor.savedButton.waitFor()
+      await this.editor.savedButton.waitFor({ timeout: TIMEOUTS.MEDIUM })
     })
   }
 }

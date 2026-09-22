@@ -30,7 +30,7 @@ test.describe('Authoring controls — embed size', { tag: [TAGS.cerosBlock] }, (
     await CerosBlockActions.for(block).resolveAndAddPublicUrl(cerosLegacyExperienceUrl())
 
     const controls = CerosBlockControlsActions.for(editor)
-    await controls.selectBlock()
+    await controls.waitForPlacedControls()
     await controls.chooseEmbedSizeFromToolbar('scroll')
 
     await BlockEditorActions.for(editor.page).saveDraft()
@@ -50,7 +50,7 @@ test.describe('Authoring controls — embed size', { tag: [TAGS.cerosBlock] }, (
     await CerosBlockActions.for(block).resolveAndAddPublicUrl(cerosLegacyExperienceUrl())
 
     const controls = CerosBlockControlsActions.for(editor)
-    await controls.selectBlock()
+    await controls.waitForPlacedControls()
     await controls.chooseEmbedSizeFromInspector('scroll')
 
     await BlockEditorActions.for(editor.page).saveDraft()
@@ -77,7 +77,7 @@ test.describe('Authoring controls — reopen the picker', { tag: [TAGS.cerosBloc
     )
 
     const controls = CerosBlockControlsActions.for(editor)
-    await controls.selectBlock()
+    await controls.waitForPlacedControls()
     await controls.reopenPickerFromToolbar()
 
     await editor.experiencePicker.waitForOpen()
@@ -92,7 +92,7 @@ test.describe('Authoring controls — reopen the picker', { tag: [TAGS.cerosBloc
     )
 
     const controls = CerosBlockControlsActions.for(editor)
-    await controls.selectBlock()
+    await controls.waitForPlacedControls()
     await controls.reopenPickerFromInspector()
 
     await editor.experiencePicker.waitForOpen()
