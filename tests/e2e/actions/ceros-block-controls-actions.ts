@@ -41,12 +41,16 @@ export class CerosBlockControlsActions {
     })
   }
 
-  /** Open the settings sidebar if the inspector panel is not already showing. */
+  /** Show the block inspector: open the settings sidebar if it is closed, then wait for the panel. */
   async ensureInspectorOpen(): Promise<void> {
     if (await this.controls.inspectorExperienceName.isVisible()) {
       return
     }
-    await this.controls.settingsSidebarToggle.click()
+    // Toggle only when the sidebar is closed; clicking the toggle on an already-open
+    // sidebar would hide it.
+    if ((await this.controls.settingsSidebarToggle.getAttribute('aria-pressed')) !== 'true') {
+      await this.controls.settingsSidebarToggle.click()
+    }
     await this.controls.inspectorExperienceName.waitFor()
   }
 
