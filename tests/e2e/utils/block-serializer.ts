@@ -28,6 +28,16 @@ export const unresolvableCerosBlock = (suffix: string): string =>
   })
 
 /**
+ * A published legacy Studio block. render.php rebuilds the iframe embed from the
+ * experience URL at request time, so only the URL and size need to be stored to
+ * exercise the front-end render.
+ */
+export const resolvedLegacyStudioBlock = (
+  experienceUrl: string,
+  selectedOption: 'full' | 'scroll' = 'full',
+): string => cerosBlock({ experienceUrl, selectedOption })
+
+/**
  * Read back the attributes WordPress actually stored.
  *
  * It re-encodes quotes as " on the way in, so stored content is never
