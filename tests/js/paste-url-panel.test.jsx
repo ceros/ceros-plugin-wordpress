@@ -146,6 +146,31 @@ describe( 'PasteUrlPanel', () => {
 		);
 	} );
 
+	it( 'without an API key, offers the paste-URL input, disables browsing, and shows the settings hint', () => {
+		renderPanel();
+
+		expect(
+			screen.getByLabelText( /public experience url/i )
+		).toBeInTheDocument();
+		expect(
+			screen.getByRole( 'button', { name: /browse experiences/i } )
+		).toBeDisabled();
+		expect(
+			screen.getByRole( 'link', { name: /add a ceros api key/i } )
+		).toBeInTheDocument();
+	} );
+
+	it( 'with an API key, enables browsing and drops the no-key hint', () => {
+		renderPanel( { apiKeyConfigured: true } );
+
+		expect(
+			screen.getByRole( 'button', { name: /browse experiences/i } )
+		).toBeEnabled();
+		expect(
+			screen.queryByRole( 'link', { name: /add a ceros api key/i } )
+		).not.toBeInTheDocument();
+	} );
+
 	// block.json defaults the attribute to true, and the panel is reached before
 	// any attribute exists, so an untracked value has to commit as on.
 	it( 'commits the setting as on when no value is supplied', async () => {

@@ -21,6 +21,12 @@ export default tseslint.config(
         'error',
         { argsIgnorePattern: '^_', varsIgnorePattern: '^_', caughtErrorsIgnorePattern: '^_' },
       ],
+      // Shared helpers that carry the assertions for a spec, so a test built
+      // only from them still counts as asserting.
+      'playwright/expect-expect': [
+        'warn',
+        { assertFunctionNames: ['expectStudioEmbedRendered', 'expectStoredStudioAttributes'] },
+      ],
     },
   },
 )

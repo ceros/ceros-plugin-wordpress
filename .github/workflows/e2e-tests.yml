@@ -42,9 +42,11 @@ jobs:
           npm run build
 
       # Pin WordPress to the test-utils line (wp-6.9 -> 1.33.2); .wp-env.json leaves core unset.
-      - name: Pin WordPress core for wp-env
+      # Pin PHP to 8.2 here (bookworm base) rather than the committed 7.4 (bullseye),
+      # whose base image's apt packages are archived and 404 during the image build.
+      - name: Pin WordPress core and PHP for wp-env
         run: |
-          echo '{ "core": "WordPress/WordPress#6.9.6" }' > .wp-env.override.json
+          echo '{ "core": "WordPress/WordPress#6.9.6", "phpVersion": "8.2" }' > .wp-env.override.json
 
       - name: Start wp-env
         run: npm run env:start

@@ -1,0 +1,18 @@
+{
+  // Runtime tsconfig for Playwright, pointed at by the `tsconfig` option in
+  // playwright.config.ts. Identical to tsconfig.json but drops the
+  // @wordpress/e2e-test-utils-playwright -> .d.ts entry, which is a tsc-only
+  // type shim: Playwright's loader would otherwise follow it and fail resolving
+  // the package's runtime entry. The runtime resolves the real package here,
+  // while tsc keeps the shim via tsconfig.json.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "paths": {
+      "@actions/*": ["./actions/*"],
+      "@constants/*": ["./constants/*"],
+      "@fixtures/*": ["./fixtures/*"],
+      "@pages/*": ["./pages/*"],
+      "@utils/*": ["./utils/*"]
+    }
+  }
+}
