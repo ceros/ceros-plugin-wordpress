@@ -24,6 +24,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   quality follows the visitor's connection as it does on the experience's own
   page. This affects Chrome and Firefox; Safari played the adaptive stream
   already. The Ceros AEM Connector carries the same change.
+- **Firefox on classic themes.** Firefox reads only a page's first import map and
+  ignores one printed after a script module. Under a classic theme the block's
+  module scripts, and any script that must run after one, now print at the end
+  of the page, after the one import map WordPress prints there, so the
+  experience and WordPress's own interactive blocks both load in Firefox. The
+  block's markup, custom Body HTML included, stays where it was.
+- **Integrity checks on shared import maps.** The experience's module integrity
+  hashes now travel in the import map WordPress prints, under both block and
+  classic themes.
 
 ## [0.32.0] - 2026-08-31
 

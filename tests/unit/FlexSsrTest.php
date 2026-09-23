@@ -1,9 +1,11 @@
 <?php
 /**
- * Tests for ceros_flex_ssr_html_body(), ceros_flex_ssr_custom_body_html() and
- * ceros_flex_ssr_import_map() — the helpers in includes/flex-ssr-renderer.php
- * that reach neither escaping nor the request superglobals. The rest are
- * deferred; see tests/README.md.
+ * Tests for ceros_flex_ssr_html_body(), ceros_flex_ssr_custom_body_html(),
+ * ceros_flex_ssr_import_map(), ceros_flex_ssr_rebuild_script(),
+ * ceros_flex_ssr_import_map_integrity() and ceros_flex_ssr_in_skipped_context() —
+ * the helpers in includes/flex-ssr-renderer.php that reach neither escaping,
+ * the request superglobals nor WordPress core. The rest are deferred; see
+ * tests/README.md.
  *
  * @package ceros
  */
@@ -219,5 +221,75 @@ final class FlexSsrTest extends TestCase {
 		$map = ceros_flex_ssr_import_map( $manifest );
 
 		$this->assertArrayNotHasKey( 'integrity', $map );
+	}
+
+	public function test_a_rebuilt_script_round_trips_its_attribute_values() {
+		$tag = ceros_flex_ssr_rebuild_script(
+			[
+				'type'        => 'module',
+				'src'         => 'data:text/javascript,a&b',
+				'data-config' => 'a&amp;b "q"',
+				'defer'       => true,
+				'hidden'      => false,
+			],
+			''
+		);
+
+		$this->assertSame(
+			// phpcs:ignore WordPress.WP.EnqueuedResources.NonEnqueuedScript -- expected markup, not output.
+			'<script type="module" src="data:text/javascript,a&amp;b" data-config="a&amp;amp;b &quot;q&quot;" defer></script>' . "\n",
+			$tag
+		);
+	}
+
+	public function test_a_rebuilt_inline_script_keeps_its_text() {
+		$this->assertSame(
+			'<script type="module">import("@ceros/x");</script>' . "\n",
+			ceros_flex_ssr_rebuild_script( [ 'type' => 'module' ], 'import("@ceros/x");' )
+		);
+	}
+
+	public function test_carried_integrity_keeps_the_first_hash_for_a_url() {
+		ceros_flex_ssr_import_map_integrity(
+			[
+				'integrity' => [
+					'https://a.test/first.js' => 'sha384-first',
+					''                        => 'sha384-no-url',
+					'https://a.test/empty.js' => '',
+				],
+			]
+		);
+		$integrity = ceros_flex_ssr_import_map_integrity(
+			[
+				'integrity' => [
+					'https://a.test/first.js'  => 'sha384-second',
+					'https://a.test/second.js' => 'sha384-other',
+				],
+			]
+		);
+
+		$this->assertSame( 'sha384-first', $integrity['https://a.test/first.js'] );
+		$this->assertSame( 'sha384-other', $integrity['https://a.test/second.js'] );
+		$this->assertArrayNotHasKey( '', $integrity );
+		$this->assertArrayNotHasKey( 'https://a.test/empty.js', $integrity );
+	}
+
+	public function contexts_for_a_script() {
+		return [
+			'top level'                     => [ [], false ],
+			'inside a template'             => [ [ [ 'TEMPLATE', 'inert' ] ], true ],
+			'inside svg'                    => [ [ [ 'SVG', 'foreign' ] ], true ],
+			'inside svg foreignObject'      => [ [ [ 'SVG', 'foreign' ], [ 'FOREIGNOBJECT', 'html' ] ], false ],
+			'svg inside foreignObject'      => [ [ [ 'SVG', 'foreign' ], [ 'FOREIGNOBJECT', 'html' ], [ 'SVG', 'foreign' ] ], true ],
+			'foreignObject inside template' => [ [ [ 'TEMPLATE', 'inert' ], [ 'SVG', 'foreign' ], [ 'FOREIGNOBJECT', 'html' ] ], true ],
+			'declarative shadow root'       => [ [ [ 'TEMPLATE', 'html' ] ], false ],
+		];
+	}
+
+	/**
+	 * @dataProvider contexts_for_a_script
+	 */
+	public function test_a_script_is_skipped_only_in_inert_or_foreign_content( $open, $skipped ) {
+		$this->assertSame( $skipped, ceros_flex_ssr_in_skipped_context( $open ) );
 	}
 }

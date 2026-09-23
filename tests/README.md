@@ -102,18 +102,21 @@ HTML names a specifier. `ceros_flex_ssr_import_map_needs_own_tag()` decides
 between joining the map WordPress prints and printing one, and it reads only
 WordPress state, so no unit test reaches it.
 
-Under a block theme the page must carry one map, WordPress's, in the head,
-holding every block's specifiers. Under a classic theme WordPress prints its map
-on `wp_footer`, which is after this renderer's `type="module"` scripts and so
-too late for a browser to accept, and each block prints its own above those
-scripts instead.
+Either way the page must carry one map, WordPress's, holding every block's
+specifiers and their `integrity` hashes: in the head under a block theme, on
+`wp_footer` under a classic one. Under a classic theme a block's module scripts
+and inline scripts calling `import()` print on `wp_footer` after the map, with
+any later script that would otherwise overtake them, and nothing above the map
+may load a module. The block's markup, custom body HTML included, and its other
+scripts stay in place.
 
 Two things that only a browser shows. Every specifier must resolve at the moment
 it is imported, and the video runtime must **not** be fetched on a page whose
 experience has no video: it is mapped for every experience and pulled in only
-when a video plays, so a `modulepreload` for it is a regression. Put a core
-Interactivity-API block on the classic-theme page as well, to see what the
-page's second import map costs on an engine that resolves only one.
+when a video plays, so a `modulepreload` for it is a regression. Run the
+classic-theme page in Firefox with a core Interactivity-API block on it too:
+Firefox honours only the first import map and refuses one printed after a module
+script, so both the block's specifiers and core's must resolve there.
 
 Run it on the oldest WordPress in `Requires at least` as well as the newest: the
 map is assembled by core, and which mechanisms feed it has changed between
@@ -131,9 +134,12 @@ Deliberate, so they are not silently missing:
   absent. Constants cannot be undefined once set, so this needs a subprocess or
   the integration suite. It guards a deliberate fail-closed decision, so it is
   worth covering there.
-- The import-map branch in `ceros_flex_ssr_render_manifest()`. It turns on
-  `wp_is_block_theme()` and `wp_is_rest_endpoint()`, neither of which the closed
-  shim list above admits, and the branch is only meaningful against a real theme.
+- The import-map branch in `ceros_flex_ssr_render_manifest()`, and the helpers
+  that read the theme type, the request type or the hook registry, or walk markup
+  with core's `WP_HTML_Tag_Processor`. None of those is on the closed shim list
+  above, and the branch is only meaningful against a real theme. The pure
+  helpers it uses (script rebuilding, the carried integrity hashes, the
+  skipped-context check) are unit-tested.
 
 And one branch that is unreachable by mistake rather than by choice.
 `ceros_get_friendly_error_message`'s third pattern is commented "cURL error 28:
