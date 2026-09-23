@@ -105,14 +105,13 @@ function ceros_flex_ssr_render_manifest( $manifest, $served_url, $include_custom
 }
 
 /**
- * Separate the scripts that have to follow WordPress's import map from the rest of
- * the markup, leaving each in place as an inert script.
+ * Split out the scripts that must follow WordPress's `wp_footer` import map,
+ * leaving an inert placeholder for each.
  *
- * Firefox refuses an import map once any module has started loading, so module
- * scripts, and inline scripts that call `import()`, follow the map WordPress
- * prints on `wp_footer`. So that nothing overtakes them, a deferred script after a
- * module moves too, and so does every parse-time script after an `import()` call
- * in the same block. The rest stay where they are.
+ * Firefox refuses an import map once a module has started loading. Moved: module
+ * scripts, inline scripts that load a module, and, to keep their order, deferred
+ * scripts after a module and parse-time scripts after an inline loader in the
+ * same block.
  *
  * @param string[] $pieces The block's markup, in order.
  * @return array { @type string $html, @type string[] $scripts }
@@ -153,9 +152,9 @@ function ceros_flex_ssr_split_deferred_scripts( $pieces ) {
 				continue;
 			}
 
-			// The placeholder keeps the attributes, so a lookup by id still reads
-			// them, under a type that is inert and that consent managers do not
-			// re-enable as they do text/plain; the moved copy leaves the id to it.
+			// The placeholder keeps the attributes for lookups by id, under an inert
+			// type that consent managers do not re-enable as they do text/plain.
+			// Only the placeholder keeps the id.
 			$attributes = [];
 			foreach ( (array) $processor->get_attribute_names_with_prefix( '' ) as $name ) {
 				if ( 'id' !== $name ) {
@@ -179,9 +178,9 @@ function ceros_flex_ssr_split_deferred_scripts( $pieces ) {
 }
 
 /**
- * Track the open elements that decide whether a script runs as an HTML script:
- * inert ones (a template, unless it is a declarative shadow root, and noscript),
- * SVG and MathML, and the HTML islands inside them.
+ * Track the open elements that decide whether a script runs as HTML: inert ones
+ * (template, unless a declarative shadow root; noscript), SVG and MathML, and
+ * their HTML integration points.
  *
  * @param array                 $open      [ tag, kind ] pairs, outermost first.
  * @param WP_HTML_Tag_Processor $processor A processor on a tag other than SCRIPT.
@@ -191,10 +190,10 @@ function ceros_flex_ssr_track_context( $open, $processor ) {
 	static $breakout = null;
 	static $html_end = null;
 	if ( null === $breakout ) {
-		// HTML start tags that end the SVG or MathML content they appear in.
+		// HTML start tags that end SVG or MathML content.
 		$breakout = array_flip( [ 'B', 'BIG', 'BLOCKQUOTE', 'BODY', 'BR', 'CENTER', 'CODE', 'DD', 'DIV', 'DL', 'DT', 'EM', 'EMBED', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'HEAD', 'HR', 'I', 'IMG', 'LI', 'LISTING', 'MENU', 'META', 'NOBR', 'OL', 'P', 'PRE', 'RUBY', 'S', 'SMALL', 'SPAN', 'STRONG', 'STRIKE', 'SUB', 'SUP', 'TABLE', 'TT', 'U', 'UL', 'VAR' ] );
-		// End tags of HTML elements with no SVG or MathML namesake, which close
-		// the SVG or MathML content open inside them.
+		// End tags of HTML-only elements, which end SVG or MathML content opened
+		// inside them.
 		$html_end = $breakout + array_flip( [ 'ARTICLE', 'ASIDE', 'BUTTON', 'DETAILS', 'FIGCAPTION', 'FIGURE', 'FOOTER', 'FORM', 'HEADER', 'LABEL', 'MAIN', 'NAV', 'SECTION', 'SUMMARY', 'TBODY', 'TD', 'TFOOT', 'TH', 'THEAD', 'TR' ] );
 	}
 
@@ -214,7 +213,7 @@ function ceros_flex_ssr_track_context( $open, $processor ) {
 	}
 
 	if ( $closer ) {
-		// Close back to the matching opener, as a browser does.
+		// Pop to the matching opener, as a browser does.
 		$matches = array_keys( array_column( $open, 0 ), $tag, true );
 		return empty( $matches ) ? $open : array_slice( $open, 0, end( $matches ) );
 	}
@@ -260,18 +259,18 @@ function ceros_flex_ssr_in_skipped_context( $open ) {
 }
 
 /**
- * Rebuild a script tag from its decoded attributes and text, through the same
- * attribute filters WordPress applies to the script tags it prints.
+ * Rebuild a script tag from decoded attributes and text, applying WordPress's
+ * script-attribute filters.
  *
- * Not `wp_get_script_tag()`: on newer WordPress it sanitizes `src` as a URL,
- * which drops a `data:` source.
+ * Not `wp_get_script_tag()`: newer WordPress sanitizes `src` there, dropping
+ * `data:` URLs.
  *
  * @param array  $attributes Attribute name => decoded value, or true for a bare one.
  * @param string $text       The script's text.
  * @return string The <script> tag.
  */
 function ceros_flex_ssr_rebuild_script( $attributes, $text ) {
-	// phpcs:disable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- core's own script-attribute filters, so nonce plugins reach these tags too.
+	// phpcs:disable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- core's filters, so nonce plugins see these tags.
 	$attributes = isset( $attributes['src'] )
 		? apply_filters( 'wp_script_attributes', $attributes )
 		: apply_filters( 'wp_inline_script_attributes', $attributes, $text );
@@ -290,8 +289,8 @@ function ceros_flex_ssr_rebuild_script( $attributes, $text ) {
 }
 
 /**
- * When the script the processor is on runs: 'module', 'defer' (a classic script
- * loaded with `defer`), 'async', or 'parse' (as soon as the parser reaches it).
+ * When the script runs: 'module', 'defer' (classic with `defer`), 'async', or
+ * 'parse' (when the parser reaches it).
  *
  * @param WP_HTML_Tag_Processor $processor A processor on a SCRIPT tag.
  * @return string
@@ -311,8 +310,8 @@ function ceros_flex_ssr_script_timing( $processor ) {
 }
 
 /**
- * Whether the inline script the processor is on loads a module: it calls
- * `import()` or sets a script element's type to `module`.
+ * Whether the inline script loads a module: it calls `import()` or sets a
+ * script's type to `module`.
  *
  * @param WP_HTML_Tag_Processor $processor A processor on a SCRIPT tag.
  * @return bool
@@ -323,8 +322,8 @@ function ceros_flex_ssr_calls_import( $processor ) {
 }
 
 /**
- * Whether the script the processor is on is one a browser runs: a module or a
- * classic script of a JavaScript MIME type.
+ * Whether a browser runs the script: a module, or a classic script of a
+ * JavaScript MIME type.
  *
  * @param WP_HTML_Tag_Processor $processor A processor on a SCRIPT tag.
  * @return bool
@@ -338,7 +337,7 @@ function ceros_flex_ssr_is_javascript( $processor ) {
 }
 
 /**
- * The script's `type`, lowercased, trimmed and without parameters.
+ * The script's `type`, lowercased, without parameters.
  *
  * @param WP_HTML_Tag_Processor $processor A processor on a SCRIPT tag.
  * @return string
@@ -372,7 +371,7 @@ function ceros_flex_ssr_print_after_import_map( $scripts ) {
 	add_action(
 		'wp_footer',
 		static function () use ( &$queued ) {
-			// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- script tags moved out of the block's markup, attributes re-encoded.
+			// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- moved script tags, attributes re-encoded.
 			echo $queued;
 			$queued = '';
 		},
@@ -381,8 +380,8 @@ function ceros_flex_ssr_print_after_import_map( $scripts ) {
 }
 
 /**
- * Carry an experience's SRI hashes into the import map WordPress prints, which
- * holds only `imports`.
+ * Carry an experience's SRI hashes into WordPress's import map, which holds
+ * only `imports`.
  *
  * @param array $map The experience's import map.
  * @return void
@@ -403,8 +402,7 @@ function ceros_flex_ssr_carry_import_map_integrity( $map ) {
 }
 
 /**
- * The URL => hash `integrity` entries carried so far; the first hash for a URL
- * wins.
+ * The URL => hash entries carried so far; the first hash for a URL wins.
  *
  * @param array|null $map An import map to add, or null to only read.
  * @return array
@@ -424,7 +422,7 @@ function ceros_flex_ssr_import_map_integrity( $map = null ) {
 }
 
 /**
- * Start buffering the output WordPress prints its import map in.
+ * Buffer the output around WordPress's import map.
  *
  * @return void
  */
@@ -434,8 +432,8 @@ function ceros_flex_ssr_buffer_import_map() {
 }
 
 /**
- * The output-buffer level of the buffer opened around WordPress's import map, or
- * 0 when none is open.
+ * Level of the output buffer around WordPress's import map, or 0 when none is
+ * open.
  *
  * @param int|null $set The new level, or null to only read.
  * @return int
@@ -450,8 +448,8 @@ function ceros_flex_ssr_import_map_buffer_level( $set = null ) {
 }
 
 /**
- * Print the buffered output with the carried `integrity` entries merged into
- * WordPress's import map.
+ * Print the buffered output with the carried hashes merged into WordPress's
+ * import map.
  *
  * @return void
  */
@@ -459,8 +457,7 @@ function ceros_flex_ssr_print_buffered_import_map() {
 	$level = ceros_flex_ssr_import_map_buffer_level();
 	ceros_flex_ssr_import_map_buffer_level( 0 );
 
-	// Another buffer opened since is not this plugin's to close; this one then
-	// flushes unchanged with the page.
+	// A newer buffer on top is not ours to close; ours then flushes unchanged.
 	if ( 0 === $level || ob_get_level() !== $level ) {
 		return;
 	}
@@ -472,7 +469,7 @@ function ceros_flex_ssr_print_buffered_import_map() {
 		if ( 'wp-importmap' !== $processor->get_attribute( 'id' ) ) {
 			continue;
 		}
-		// Decoded as objects, so an empty object in the map encodes back as one.
+		// As objects, so an empty `{}` re-encodes as `{}`, not `[]`.
 		$map = json_decode( $processor->get_modifiable_text() );
 		if ( $map instanceof stdClass ) {
 			$existing       = isset( $map->integrity ) && $map->integrity instanceof stdClass ? (array) $map->integrity : [];
@@ -609,7 +606,7 @@ function ceros_flex_ssr_custom_body_html( $manifest ) {
  * The experience's import map, or [] when the manifest carries none.
  *
  * SSR deliveries are not served the manifest's import map, so the page prints it.
- * An empty map is left out, since Firefox honours only a page's first map.
+ * An empty map is dropped, since Firefox honours only a page's first map.
  *
  * @param array $manifest The manifest.
  * @return array The import map, or [] when none should be emitted.
@@ -652,8 +649,8 @@ function ceros_flex_ssr_import_map_needs_own_tag() {
 		return true;
 	}
 
-	// Under a classic theme the page body renders between `wp_head` and
-	// `wp_footer`; a render outside it may never reach a footer.
+	// Classic themes render the body between `wp_head` and `wp_footer`; a render
+	// outside that may never reach a footer.
 	return 'wp_footer' === ceros_flex_ssr_import_map_hook() && ( ! did_action( 'wp_head' ) || doing_action( 'wp_head' ) );
 }
 
@@ -701,9 +698,9 @@ function ceros_flex_ssr_import_map_printed( $mark = false ) {
 add_action( 'after_setup_theme', 'ceros_flex_ssr_watch_import_map', 11 );
 
 /**
- * Record when WordPress prints its import map, straight after it does. WordPress
- * hooks its printing on `after_setup_theme` at the default priority, so this runs
- * after it at the same priority.
+ * Mark WordPress's import map as printed, right after it prints. Registered
+ * after core's own `after_setup_theme` hook, so it runs after core's callback at
+ * the same priority.
  *
  * @return void
  */
@@ -715,7 +712,7 @@ function ceros_flex_ssr_watch_import_map() {
 }
 
 /**
- * Hook callback for ceros_flex_ssr_watch_import_map().
+ * Mark WordPress's import map as printed.
  *
  * @return void
  */
@@ -726,9 +723,9 @@ function ceros_flex_ssr_mark_import_map_printed() {
 /**
  * Register the experience's import map with WordPress.
  *
- * Firefox honours only a page's first import map, so the specifiers join the one
- * WordPress prints. WordPress maps the dependencies of an enqueued script module,
- * so they travel as the dependencies of one that does nothing else.
+ * Firefox honours only a page's first import map, so the specifiers join
+ * WordPress's. WordPress maps an enqueued module's dependencies, so they ride on
+ * an empty anchor module.
  *
  * @param array $manifest The manifest.
  * @return void
