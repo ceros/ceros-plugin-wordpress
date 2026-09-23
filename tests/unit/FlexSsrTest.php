@@ -1,9 +1,11 @@
 <?php
 /**
- * Tests for ceros_flex_ssr_html_body(), ceros_flex_ssr_custom_body_html() and
- * ceros_flex_ssr_import_map() — the helpers in includes/flex-ssr-renderer.php
- * that reach neither escaping nor the request superglobals. The rest are
- * deferred; see tests/README.md.
+ * Tests for ceros_flex_ssr_html_body(), ceros_flex_ssr_custom_body_html(),
+ * ceros_flex_ssr_import_map(), ceros_flex_ssr_rebuild_script(),
+ * ceros_flex_ssr_import_map_integrity() and ceros_flex_ssr_in_skipped_context() —
+ * the helpers in includes/flex-ssr-renderer.php that reach neither escaping,
+ * the request superglobals nor WordPress core. The rest are deferred; see
+ * tests/README.md.
  *
  * @package ceros
  */
@@ -130,7 +132,7 @@ final class FlexSsrTest extends TestCase {
 	}
 
 	/**
-	 * A manifest whose import map names the SDK the custom body HTML imports.
+	 * A manifest carrying an import map, with SRI for one of its two modules.
 	 *
 	 * @return array
 	 */
@@ -147,34 +149,13 @@ final class FlexSsrTest extends TestCase {
 	}
 
 	public function test_import_map_is_returned_verbatim_including_integrity() {
-		$html = '<script type="module">import { connect } from \'@ceros/flex-experience-sdk\'</script>';
+		// The manifest alone decides the map: this fixture has no custom body
+		// HTML, which is the case the video runtime needs, since nothing
+		// authored ever names `@ceros/flex-runtime/hls`. The SRI section rides
+		// along, so a caller printing the map whole keeps each module pinned.
+		$map = ceros_flex_ssr_import_map( $this->sdk_manifest() );
 
-		$map = ceros_flex_ssr_import_map( $this->sdk_manifest(), $html );
-
-		// Verbatim: the SRI section rides along, so the module keeps its
-		// integrity guarantee rather than being rebuilt without one, and every
-		// entry is carried rather than only the one that matched.
 		$this->assertSame( $this->sdk_manifest()['importMap'], $map );
-	}
-
-	public function test_import_map_is_returned_for_a_non_sdk_specifier_too() {
-		$html = '<script type="module">import \'@ceros/flex-runtime/hls\'</script>';
-
-		$this->assertNotEmpty( ceros_flex_ssr_import_map( $this->sdk_manifest(), $html ) );
-	}
-
-	public function test_no_import_map_when_the_custom_html_imports_nothing_from_it() {
-		// A document may hold a single import map, so one is emitted solely when
-		// the injected HTML actually names a specifier it declares.
-		$this->assertSame(
-			[],
-			ceros_flex_ssr_import_map( $this->sdk_manifest(), '<script>track()</script>' )
-		);
-	}
-
-	public function test_no_import_map_when_the_custom_html_is_suppressed() {
-		// The toggle is off, so nothing is injected and nothing needs resolving.
-		$this->assertSame( [], ceros_flex_ssr_import_map( $this->sdk_manifest(), '' ) );
 	}
 
 	public function manifests_without_a_usable_import_map() {
@@ -184,6 +165,14 @@ final class FlexSsrTest extends TestCase {
 			'no imports key'      => [ [ 'importMap' => [ 'integrity' => [] ] ] ],
 			'imports not array'   => [ [ 'importMap' => [ 'imports' => 'nope' ] ] ],
 			'imports empty'       => [ [ 'importMap' => [ 'imports' => [] ] ] ],
+			'integrity only'      => [
+				[
+					'importMap' => [
+						'imports'   => [],
+						'integrity' => [ 'https://assets.ceros.site/js/sdk.js' => 'sha384-abc' ],
+					],
+				],
+			],
 		];
 	}
 
@@ -192,13 +181,7 @@ final class FlexSsrTest extends TestCase {
 	 */
 	public function test_no_import_map_when_the_manifest_has_none( $manifest ) {
 		// Experiences published before Ceros added the field.
-		$html = '<script type="module">import \'@ceros/flex-experience-sdk\'</script>';
-
-		$this->assertSame( [], ceros_flex_ssr_import_map( $manifest, $html ) );
-	}
-
-	public function test_no_import_map_when_the_custom_body_html_is_not_a_string() {
-		$this->assertSame( [], ceros_flex_ssr_import_map( $this->sdk_manifest(), [ 'not', 'a', 'string' ] ) );
+		$this->assertSame( [], ceros_flex_ssr_import_map( $manifest ) );
 	}
 
 	public function test_import_entries_that_are_not_string_pairs_are_dropped() {
@@ -213,7 +196,7 @@ final class FlexSsrTest extends TestCase {
 			],
 		];
 
-		$map = ceros_flex_ssr_import_map( $manifest, "import '@ceros/flex-experience-sdk'" );
+		$map = ceros_flex_ssr_import_map( $manifest );
 
 		$this->assertSame(
 			[ '@ceros/flex-experience-sdk' => 'https://assets.ceros.site/js/sdk.js' ],
@@ -224,7 +207,7 @@ final class FlexSsrTest extends TestCase {
 	public function test_no_import_map_when_every_entry_is_malformed() {
 		$manifest = [ 'importMap' => [ 'imports' => [ '@ceros/broken' => [ 'nested' ] ] ] ];
 
-		$this->assertSame( [], ceros_flex_ssr_import_map( $manifest, "import '@ceros/broken'" ) );
+		$this->assertSame( [], ceros_flex_ssr_import_map( $manifest ) );
 	}
 
 	public function test_a_non_array_integrity_section_is_dropped() {
@@ -235,8 +218,78 @@ final class FlexSsrTest extends TestCase {
 			],
 		];
 
-		$map = ceros_flex_ssr_import_map( $manifest, "import '@ceros/flex-experience-sdk'" );
+		$map = ceros_flex_ssr_import_map( $manifest );
 
 		$this->assertArrayNotHasKey( 'integrity', $map );
+	}
+
+	public function test_a_rebuilt_script_round_trips_its_attribute_values() {
+		$tag = ceros_flex_ssr_rebuild_script(
+			[
+				'type'        => 'module',
+				'src'         => 'data:text/javascript,a&b',
+				'data-config' => 'a&amp;b "q"',
+				'defer'       => true,
+				'hidden'      => false,
+			],
+			''
+		);
+
+		$this->assertSame(
+			// phpcs:ignore WordPress.WP.EnqueuedResources.NonEnqueuedScript -- expected markup, not output.
+			'<script type="module" src="data:text/javascript,a&amp;b" data-config="a&amp;amp;b &quot;q&quot;" defer></script>' . "\n",
+			$tag
+		);
+	}
+
+	public function test_a_rebuilt_inline_script_keeps_its_text() {
+		$this->assertSame(
+			'<script type="module">import("@ceros/x");</script>' . "\n",
+			ceros_flex_ssr_rebuild_script( [ 'type' => 'module' ], 'import("@ceros/x");' )
+		);
+	}
+
+	public function test_carried_integrity_keeps_the_first_hash_for_a_url() {
+		ceros_flex_ssr_import_map_integrity(
+			[
+				'integrity' => [
+					'https://a.test/first.js' => 'sha384-first',
+					''                        => 'sha384-no-url',
+					'https://a.test/empty.js' => '',
+				],
+			]
+		);
+		$integrity = ceros_flex_ssr_import_map_integrity(
+			[
+				'integrity' => [
+					'https://a.test/first.js'  => 'sha384-second',
+					'https://a.test/second.js' => 'sha384-other',
+				],
+			]
+		);
+
+		$this->assertSame( 'sha384-first', $integrity['https://a.test/first.js'] );
+		$this->assertSame( 'sha384-other', $integrity['https://a.test/second.js'] );
+		$this->assertArrayNotHasKey( '', $integrity );
+		$this->assertArrayNotHasKey( 'https://a.test/empty.js', $integrity );
+	}
+
+	public function contexts_for_a_script() {
+		return [
+			'top level'                     => [ [], false ],
+			'inside a template'             => [ [ [ 'TEMPLATE', 'inert' ] ], true ],
+			'inside svg'                    => [ [ [ 'SVG', 'foreign' ] ], true ],
+			'inside svg foreignObject'      => [ [ [ 'SVG', 'foreign' ], [ 'FOREIGNOBJECT', 'html' ] ], false ],
+			'svg inside foreignObject'      => [ [ [ 'SVG', 'foreign' ], [ 'FOREIGNOBJECT', 'html' ], [ 'SVG', 'foreign' ] ], true ],
+			'foreignObject inside template' => [ [ [ 'TEMPLATE', 'inert' ], [ 'SVG', 'foreign' ], [ 'FOREIGNOBJECT', 'html' ] ], true ],
+			'declarative shadow root'       => [ [ [ 'TEMPLATE', 'html' ] ], false ],
+		];
+	}
+
+	/**
+	 * @dataProvider contexts_for_a_script
+	 */
+	public function test_a_script_is_skipped_only_in_inert_or_foreign_content( $open, $skipped ) {
+		$this->assertSame( $skipped, ceros_flex_ssr_in_skipped_context( $open ) );
 	}
 }
