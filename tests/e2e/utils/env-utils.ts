@@ -42,3 +42,12 @@ export const cerosLegacyExperienceUrl = (): string =>
 
 export const cerosFlexExperienceUrl = (): string =>
   `https://automation.${cerosEnv()}.cerosdev.site/sparkboard`
+
+/**
+ * A Ceros Studio *editor* URL (not a published experience). The resolver rejects
+ * it as a non-publish URL on host/path shape, so it drives the paste-error path
+ * without an outbound request. Built on the same `<env>.admin.cerosdev.com` host
+ * the suite already targets so it resolves from the wp-env container.
+ */
+export const cerosStudioEditorUrl = (): string =>
+  `https://${cerosEnv()}.admin.cerosdev.com/account/1/studio/experience/1`

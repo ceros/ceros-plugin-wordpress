@@ -19,6 +19,14 @@ export class CerosBlockActions {
     })
   }
 
+  /** Fill the paste input and submit, without waiting for a result — for inputs the resolver rejects. */
+  async submitPublicUrl(url: string): Promise<void> {
+    await base.step(`Submit a public Ceros URL expecting rejection -> ${url}`, async () => {
+      await this.block.pasteUrlInput.fill(url)
+      await this.block.pasteLoadButton.click()
+    })
+  }
+
   /** Pick an embed size in the resolved-result panel before adding. */
   async choosePasteEmbedSize(size: EmbedSize): Promise<void> {
     await base.step(`Choose embed size in the paste panel -> ${size}`, async () => {

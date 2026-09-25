@@ -171,6 +171,34 @@ describe( 'PasteUrlPanel', () => {
 		).not.toBeInTheDocument();
 	} );
 
+	it.each( [
+		[ 'an empty', '' ],
+		[ 'a whitespace-only', '   ' ],
+	] )( 'rejects %s URL without a request', async ( _label, input ) => {
+		const request = vi.fn();
+		apiFetch.setFetchHandler( request );
+		const user = userEvent.setup();
+		renderPanel();
+
+		if ( input ) {
+			await user.type(
+				screen.getByLabelText( /public experience url/i ),
+				input
+			);
+		}
+		await user.click(
+			screen.getByRole( 'button', { name: /load experience/i } )
+		);
+
+		expect(
+			screen.getByText( 'Please enter a Ceros experience URL.' )
+		).toBeInTheDocument();
+		expect( request ).not.toHaveBeenCalled();
+		expect(
+			screen.queryByRole( 'button', { name: /add experience/i } )
+		).not.toBeInTheDocument();
+	} );
+
 	// block.json defaults the attribute to true, and the panel is reached before
 	// any attribute exists, so an untracked value has to commit as on.
 	it( 'commits the setting as on when no value is supplied', async () => {

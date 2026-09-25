@@ -3,6 +3,10 @@
 export const BLOCK_TEXT = {
   notFoundHeading: 'Experience not found',
   notFoundBody: "possibly indicating that it's been deleted in Ceros admin",
+  pasteNonHttps: 'The experience URL must start with https://.',
+  pasteBadHost: 'The experience URL host is invalid or not publicly reachable.',
+  pasteEditorUrl:
+    'That looks like a Ceros Studio editor URL. Publish the experience, then paste its published URL here.',
 } as const
 
 /**
