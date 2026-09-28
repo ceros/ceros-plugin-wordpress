@@ -31,9 +31,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   own interactive blocks and module scripts from other blocks, themes and plugins
   all load in Firefox. The block's scripts stay in the block, so they run only
   where the block appears on the page: a block that a membership plugin hides
-  runs no scripts, a block that a table-of-contents shortcode renders a second
-  time runs its scripts once, and a block served from a block cache keeps its
-  scripts.
+  runs no scripts, and a block that a table-of-contents shortcode renders a
+  second time runs its scripts once.
 - **Integrity checks on shared import maps.** The experience's module integrity
   hashes now travel in the import map WordPress prints, under both block and
   classic themes.
