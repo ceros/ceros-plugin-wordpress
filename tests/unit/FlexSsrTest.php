@@ -2,7 +2,9 @@
 /**
  * Tests for ceros_flex_ssr_html_body(), ceros_flex_ssr_custom_body_html(),
  * ceros_flex_ssr_import_map(), ceros_flex_ssr_rebuild_script(),
- * ceros_flex_ssr_import_map_integrity() and ceros_flex_ssr_in_skipped_context() —
+ * ceros_flex_ssr_script_markup(), ceros_flex_ssr_import_map_integrity(),
+ * ceros_flex_ssr_in_skipped_context() and the phases of
+ * ceros_flex_ssr_hoist_import_map() —
  * the helpers in includes/flex-ssr-renderer.php that reach neither escaping,
  * the request superglobals nor WordPress core. The rest are deferred; see
  * tests/README.md.
@@ -272,6 +274,50 @@ final class FlexSsrTest extends TestCase {
 		$this->assertSame( 'sha384-other', $integrity['https://a.test/second.js'] );
 		$this->assertArrayNotHasKey( '', $integrity );
 		$this->assertArrayNotHasKey( 'https://a.test/empty.js', $integrity );
+	}
+
+	public function test_the_import_map_buffer_holds_flushed_chunks_until_the_final_phase() {
+		ceros_flex_ssr_import_map_hoist( 'ready' );
+
+		$this->assertSame( '', ceros_flex_ssr_hoist_import_map( '<head>', PHP_OUTPUT_HANDLER_START | PHP_OUTPUT_HANDLER_FLUSH ) );
+		$this->assertSame( '', ceros_flex_ssr_hoist_import_map( '<body>', PHP_OUTPUT_HANDLER_FLUSH ) );
+		$this->assertSame( '<head><body></body>', ceros_flex_ssr_hoist_import_map( '</body>', PHP_OUTPUT_HANDLER_FINAL ) );
+
+		ceros_flex_ssr_import_map_hoist( '' );
+	}
+
+	public function test_the_import_map_buffer_drops_a_cleaned_chunk_but_keeps_earlier_flushes() {
+		ceros_flex_ssr_import_map_hoist( 'ready' );
+
+		$this->assertSame( '', ceros_flex_ssr_hoist_import_map( '<head>', PHP_OUTPUT_HANDLER_START | PHP_OUTPUT_HANDLER_FLUSH ) );
+		$this->assertSame( '', ceros_flex_ssr_hoist_import_map( 'discarded', PHP_OUTPUT_HANDLER_CLEAN ) );
+		$this->assertSame( '<head></html>', ceros_flex_ssr_hoist_import_map( '</html>', PHP_OUTPUT_HANDLER_FINAL ) );
+
+		ceros_flex_ssr_import_map_hoist( '' );
+	}
+
+	public function test_the_import_map_buffer_leaves_the_page_alone_unless_a_block_needed_the_move() {
+		ceros_flex_ssr_import_map_hoist( 'ready' );
+		// phpcs:ignore WordPress.WP.EnqueuedResources.NonEnqueuedScript -- expected markup, not output.
+		$page = '<html><head><script src="/a.js"></script></head><body><script type="importmap" id="wp-importmap">{"imports":{"a":"/a.js"}}</script></body></html>';
+
+		$this->assertSame( $page, ceros_flex_ssr_hoist_import_map( $page, PHP_OUTPUT_HANDLER_START | PHP_OUTPUT_HANDLER_FINAL ) );
+
+		ceros_flex_ssr_import_map_hoist( '' );
+	}
+
+	public function test_script_markup_keeps_every_attribute_as_given() {
+		$this->assertSame(
+			'<script type="importmap" id="wp-importmap" nonce="n&amp;1">{"imports":{}}</script>' . "\n",
+			ceros_flex_ssr_script_markup(
+				[
+					'type'  => 'importmap',
+					'id'    => 'wp-importmap',
+					'nonce' => 'n&1',
+				],
+				'{"imports":{}}'
+			)
+		);
 	}
 
 	public function contexts_for_a_script() {

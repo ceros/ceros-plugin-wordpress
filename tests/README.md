@@ -104,11 +104,18 @@ WordPress state, so no unit test reaches it.
 
 Either way the page must carry one map, WordPress's, holding every block's
 specifiers and their `integrity` hashes: in the head under a block theme, on
-`wp_footer` under a classic one. Under a classic theme a block's module scripts
-and inline scripts calling `import()` print on `wp_footer` after the map, with
-any later script that would otherwise overtake them, and nothing above the map
-may load a module. The block's markup, custom body HTML included, and its other
-scripts stay in place.
+`wp_footer` under a classic one. Under a classic theme WordPress's map then
+moves above the page's first script or module preload, with its attributes
+(a CSP `nonce` included), and the block's markup and scripts stay in place.
+With the page's output buffer unavailable, a block's module scripts and inline
+scripts calling `import()` print on `wp_footer` after the map instead, with any
+later script that would otherwise overtake them.
+
+Under a classic theme, also cover the cases where the block's HTML is not what
+reaches the page: a module script in a Custom HTML block below the block
+(Firefox), content hidden by a membership plugin, and a shortcode that renders
+the content a second time (Easy Table of Contents' `[ez-toc]`). Scripts run once
+for each block on the page and never for a block that is not on it.
 
 Two things that only a browser shows. Every specifier must resolve at the moment
 it is imported, and the video runtime must **not** be fetched on a page whose
@@ -139,7 +146,9 @@ Deliberate, so they are not silently missing:
   with core's `WP_HTML_Tag_Processor`. None of those is on the closed shim list
   above, and the branch is only meaningful against a real theme. The pure
   helpers it uses (script rebuilding, the carried integrity hashes, the
-  skipped-context check) are unit-tested.
+  skipped-context check, the output-buffer phases) are unit-tested. Moving the
+  import map itself (`ceros_flex_ssr_move_import_map`) walks markup with the tag
+  processor, so it belongs to the integration suite.
 
 And one branch that is unreachable by mistake rather than by choice.
 `ceros_get_friendly_error_message`'s third pattern is commented "cURL error 28:

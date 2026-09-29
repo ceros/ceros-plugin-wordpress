@@ -98,10 +98,145 @@ function ceros_flex_ssr_render_manifest( $manifest, $served_url, $include_custom
 		return $styles . $head_scripts . $content . $body_scripts . $custom_body;
 	}
 
+	if ( ceros_flex_ssr_import_map_hoist() ) {
+		ceros_flex_ssr_import_map_hoist( 'needed' );
+		return $styles . $head_scripts . $content . $body_scripts . $custom_body;
+	}
+
 	$split = ceros_flex_ssr_split_deferred_scripts( [ $styles, $head_scripts, $content, $body_scripts, $custom_body ] );
 	ceros_flex_ssr_print_after_import_map( $split['scripts'] );
 
 	return $split['html'];
+}
+
+add_action( 'template_redirect', 'ceros_flex_ssr_start_import_map_hoist', PHP_INT_MAX );
+
+/**
+ * Buffer the page so WordPress's `wp_footer` import map can be moved above the
+ * first script, letting blocks keep their scripts in place.
+ *
+ * @return void
+ */
+function ceros_flex_ssr_start_import_map_hoist() {
+	if ( 'wp_footer' !== ceros_flex_ssr_import_map_hook() ) {
+		return;
+	}
+
+	ob_start( 'ceros_flex_ssr_hoist_import_map' );
+	ceros_flex_ssr_import_map_hoist( 'ready' );
+}
+
+/**
+ * The import map hoist state: '' when the page is not buffered, 'ready' when it
+ * is, 'needed' once a block has relied on it.
+ *
+ * @param string|null $state The new state, or null to only read.
+ * @return string
+ */
+function ceros_flex_ssr_import_map_hoist( $state = null ) {
+	static $current = '';
+
+	if ( null !== $state ) {
+		$current = $state;
+	}
+	return $current;
+}
+
+/**
+ * Output buffer callback: move WordPress's import map above the page's first
+ * script or module preload.
+ *
+ * Flushed chunks are held back, since the map is printed only in the last one.
+ *
+ * @param string $html  The buffered output.
+ * @param int    $phase The PHP_OUTPUT_HANDLER_* flags.
+ * @return string
+ */
+function ceros_flex_ssr_hoist_import_map( $html, $phase ) {
+	static $held = '';
+
+	if ( ! ( $phase & PHP_OUTPUT_HANDLER_FINAL ) ) {
+		if ( ! ( $phase & PHP_OUTPUT_HANDLER_CLEAN ) ) {
+			$held .= $html;
+		}
+		return '';
+	}
+
+	$html = $held . $html;
+	$held = '';
+
+	if ( 'needed' !== ceros_flex_ssr_import_map_hoist() ) {
+		return $html;
+	}
+
+	return ceros_flex_ssr_move_import_map( $html );
+}
+
+/**
+ * Move the `wp-importmap` script above the first script or module preload,
+ * leaving an inert placeholder where it was.
+ *
+ * @param string $html A full page.
+ * @return string The page, unchanged when there is no map or it already leads.
+ */
+function ceros_flex_ssr_move_import_map( $html ) {
+	$marker    = 'data-ceros-import-map-before';
+	$marked    = false;
+	$map_tag   = '';
+	$skips     = [];
+	$processor = new WP_HTML_Tag_Processor( $html );
+
+	while ( $processor->next_tag( [ 'tag_closers' => 'visit' ] ) ) {
+		$tag        = $processor->get_tag();
+		$is_script  = 'SCRIPT' === $tag;
+		$is_preload = 'LINK' === $tag && 'modulepreload' === strtolower( trim( (string) $processor->get_attribute( 'rel' ) ) );
+
+		if ( ! $is_script ) {
+			$skips = ceros_flex_ssr_track_context( $skips, $processor );
+		}
+		if ( $processor->is_tag_closer() || ! ( $is_script || $is_preload ) || ceros_flex_ssr_in_skipped_context( $skips ) ) {
+			continue;
+		}
+
+		$is_map = $is_script && 'wp-importmap' === $processor->get_attribute( 'id' );
+		if ( ! $marked ) {
+			if ( $is_map ) {
+				return $html;
+			}
+			$processor->set_attribute( $marker, true );
+			$marked = true;
+			continue;
+		}
+		if ( ! $is_map ) {
+			continue;
+		}
+
+		$attributes = [];
+		foreach ( (array) $processor->get_attribute_names_with_prefix( '' ) as $name ) {
+			$attributes[ $name ] = $processor->get_attribute( $name );
+		}
+		$map_tag = ceros_flex_ssr_script_markup( $attributes, $processor->get_modifiable_text() );
+
+		$processor->remove_attribute( 'id' );
+		$processor->set_attribute( 'type', 'application/x-ceros-moved' );
+		$processor->set_modifiable_text( '' );
+		break;
+	}
+
+	if ( '' === $map_tag ) {
+		return $html;
+	}
+
+	// The processor adds the marker straight after the tag name.
+	$html = $processor->get_updated_html();
+	$at   = strpos( $html, ' ' . $marker );
+	$open = false === $at ? false : strrpos( substr( $html, 0, $at ), '<' );
+	if ( false === $open ) {
+		return $html;
+	}
+
+	$html = substr_replace( $html, '', $at, strlen( ' ' . $marker ) );
+	return substr_replace( $html, $map_tag, $open, 0 );
 }
 
 /**
@@ -276,6 +411,17 @@ function ceros_flex_ssr_rebuild_script( $attributes, $text ) {
 		: apply_filters( 'wp_inline_script_attributes', $attributes, $text );
 	// phpcs:enable
 
+	return ceros_flex_ssr_script_markup( $attributes, $text );
+}
+
+/**
+ * Build a script tag from decoded attributes and text as given.
+ *
+ * @param array  $attributes Attribute name => decoded value, or true for a bare one.
+ * @param string $text       The script's text.
+ * @return string The <script> tag.
+ */
+function ceros_flex_ssr_script_markup( $attributes, $text ) {
 	$tag = '<script';
 	foreach ( $attributes as $name => $value ) {
 		if ( true === $value ) {
