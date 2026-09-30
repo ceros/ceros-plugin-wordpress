@@ -15,6 +15,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   you to update the plugin. The settings page shows the message on load, and
   it also appears when you save the settings, when you load experiences, and
   when you test the connection.
+- **Adaptive video in server-rendered embeds.** A Flex experience loads part of
+  its runtime on demand, and the video player is one of those parts. Before, a
+  server-rendered block passed those module addresses to the page only when the
+  experience's custom Body HTML named one of them, so an experience with no
+  custom HTML played the largest version of every video for its whole duration.
+  Now the addresses travel with every experience that has them, and video
+  quality follows the visitor's connection as it does on the experience's own
+  page. This affects Chrome and Firefox; Safari played the adaptive stream
+  already. The Ceros AEM Connector carries the same change.
+- **Firefox on classic themes.** Firefox reads only a page's first import map and
+  ignores one printed after a script module. Under a classic theme, on a page
+  with a server-rendered block, the one import map WordPress prints at the end of
+  the page now moves above the page's first script. The experience, WordPress's
+  own interactive blocks and module scripts from other blocks, themes and plugins
+  all load in Firefox. The block's scripts stay in the block, so they run only
+  where the block appears on the page: a block that a membership plugin hides
+  runs no scripts, and a block that a table-of-contents shortcode renders a
+  second time runs its scripts once.
+- **Integrity checks on shared import maps.** The experience's module integrity
+  hashes now travel in the import map WordPress prints, under both block and
+  classic themes.
 
 ## [0.32.0] - 2026-08-31
 
