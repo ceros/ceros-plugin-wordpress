@@ -37,10 +37,37 @@ The **browse-picker** specs need a real API key. Add your environment's key to `
 (`E2E_CEROS_API_KEY=…`) and re-run `bootstrap-wp.sh` — it sets the key on the plugin. The
 key is a secret, so `.env` is gitignored and it has no default.
 
-The suite provisions nothing — it reads a URL and credentials from the environment, so
-the same specs run against local `wp-env`, another WordPress, or one built by CI.
-`bootstrap-wp.sh` is the only piece that knows `wp-env` exists; against anything else,
-fill in `.env` yourself and skip it.
+The suite provisions nothing else: it reads a URL and credentials from the environment,
+so the block specs run against local `wp-env`, another WordPress, or one built by CI.
+`bootstrap-wp.sh` and the settings fixture are the only pieces that know `wp-env` exists;
+against anything else, fill in `.env` yourself and skip bootstrap.
+
+### Settings specs: a disposable instance only
+
+`settings.spec` saves, rejects, and removes API keys and switches the API environment.
+Those settings are site-wide, so the specs must run against a WordPress set up for the
+run (local `wp-env`, or the one CI builds), never a shared or live site:
+
+- **They change the site for everyone on it.** Anyone using that site while the specs run
+  loses a working key or finds the plugin pointed at another environment.
+- **They set up and restore state through `wp-env`.** The `plugin-settings` fixture reads
+  the plugin's settings before each test, applies the key state the test needs, and puts
+  everything back afterwards, even when the test fails. It does this with WP-CLI in the
+  local `wp-env` instance (`utils/wp-cli.ts`). Pointed at a remote site while a local
+  `wp-env` is running, the fixture would reset the local instance while the test changes
+  the remote one.
+- **One worker per instance.** Two workers on one instance would change settings under
+  each other's tests. Scale out with shards that each run their own `wp-env`.
+- **They need the bootstrapped key.** The fixture takes the key from the `CEROS_API_KEY`
+  constant `bootstrap-wp.sh` sets, so run bootstrap with `E2E_CEROS_API_KEY` first.
+
+Running against a remote site already takes a deliberate `BASE_URL` plus that site's
+credentials. Exclude these specs there with `--grep-invert @settings`.
+
+Tracing and video are off for `settings.spec`, because the real key is entered on the page.
+
+The Editor-role test changes no settings: it creates its own Editor user over REST, checks
+the settings surfaces refuse it, and deletes the user afterwards.
 
 ## Running
 
@@ -62,13 +89,13 @@ Login is once-per-run: global setup signs in with `E2E_WP_USER` / `E2E_WP_PASSWO
 persists the session (cookies + REST nonce), which authenticates both the browser and the
 REST calls, so no separate REST credential has to be minted or stored.
 
-| Variable                          | Default                     | Purpose                                                                               |
-| --------------------------------- | --------------------------- | ------------------------------------------------------------------------------------- |
-| `BASE_URL`                        | `http://localhost:8894`     | The WordPress instance. `http`, not `https` — wp-env serves plain HTTP.               |
-| `E2E_WP_USER` / `E2E_WP_PASSWORD` | `admin` / `password`        | Admin login (browser + REST session). wp-env's documented defaults.                   |
-| `E2E_CEROS_ENV`                   | `latest`                    | The Ceros dev environment; the experience URLs and API host derive from it.           |
-| `E2E_CEROS_API_KEY`               | —                           | Bearer key for that env (a secret). Required for the browse-picker specs; no default. |
-| `E2E_TIMEOUT_*`                   | see `constants/timeouts.ts` | Override any timeout tier, in milliseconds.                                           |
+| Variable                          | Default                     | Purpose                                                                                |
+| --------------------------------- | --------------------------- | -------------------------------------------------------------------------------------- |
+| `BASE_URL`                        | `http://localhost:8894`     | The WordPress instance. `http`, not `https` — wp-env serves plain HTTP.                |
+| `E2E_WP_USER` / `E2E_WP_PASSWORD` | `admin` / `password`        | Admin login (browser + REST session). wp-env's documented defaults.                    |
+| `E2E_CEROS_ENV`                   | `latest`                    | The Ceros dev environment; the experience URLs and API host derive from it.            |
+| `E2E_CEROS_API_KEY`               | —                           | Bearer key for that env (a secret). Required for the browse-picker and settings specs. |
+| `E2E_TIMEOUT_*`                   | see `constants/timeouts.ts` | Override any timeout tier, in milliseconds.                                            |
 
 ## Conventions
 
