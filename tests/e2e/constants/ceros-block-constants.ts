@@ -7,6 +7,8 @@ export const BLOCK_TEXT = {
   pasteBadHost: 'The experience URL host is invalid or not publicly reachable.',
   pasteEditorUrl:
     'That looks like a Ceros Studio editor URL. Publish the experience, then paste its published URL here.',
+  /** How the block reports a key the Ceros API rejects (the staging-mode technical message). */
+  apiKeyRejected: 'Ceros API error (401)',
 } as const
 
 /**
