@@ -16,3 +16,8 @@ export const BLOCK_TEXT = {
  */
 export const CEROS_PICKER_FOLDER = 'Analytics Experiences'
 export const CEROS_PICKER_EXPERIENCE = 'Analytics Test Experience'
+
+/** The block's REST routes, which any user who can edit posts may call. */
+export const BLOCK_ENDPOINTS = {
+  resolvePublicUrl: '/ceros/v1/resolve-public-url',
+} as const

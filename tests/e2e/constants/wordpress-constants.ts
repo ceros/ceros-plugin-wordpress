@@ -13,4 +13,5 @@ export const WP_DEFAULT_PASSWORD = 'password'
 export const WP_ROUTES = {
   postEdit: (postId: number) => `/wp-admin/post.php?post=${postId}&action=edit`,
   permalink: (postId: number) => `/?p=${postId}`,
+  cerosSettings: '/wp-admin/options-general.php?page=ceros_settings',
 } as const
