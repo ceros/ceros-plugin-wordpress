@@ -27,10 +27,13 @@ if ( ! defined( 'ABSPATH' ) ) {
  * @param bool   $include_custom_html Whether to append the experience's authored
  *                                    custom Body HTML. Defaults true, matching the
  *                                    block attribute default.
+ * @param bool   $tracking            Whether the embed reports to Ceros analytics.
+ *                                    Defaults true, matching the block attribute
+ *                                    default.
  * @return string Rendered HTML, or '' when the manifest could not be fetched
  *                (the caller should fall back to another delivery mode).
  */
-function ceros_render_flex_ssr( $manifest_url, $include_custom_html = true ) {
+function ceros_render_flex_ssr( $manifest_url, $include_custom_html = true, $tracking = true ) {
 	$manifest = ceros_fetch_flex_manifest( $manifest_url );
 	if ( is_wp_error( $manifest ) || ! is_array( $manifest ) ) {
 		return '';
@@ -39,7 +42,7 @@ function ceros_render_flex_ssr( $manifest_url, $include_custom_html = true ) {
 	// Follow a deep link (?cer_<slug>=<page>) to the requested page when present.
 	$resolved = ceros_flex_ssr_resolve_page( $manifest, $manifest_url );
 
-	return ceros_flex_ssr_render_manifest( $resolved['manifest'], $resolved['url'], $include_custom_html );
+	return ceros_flex_ssr_render_manifest( $resolved['manifest'], $resolved['url'], $include_custom_html, $tracking );
 }
 
 /**
@@ -53,9 +56,10 @@ function ceros_render_flex_ssr( $manifest_url, $include_custom_html = true ) {
  *                                    the SPA router (deep-link nav). May be ''.
  * @param bool   $include_custom_html Whether to append the experience's authored
  *                                    custom Body HTML.
+ * @param bool   $tracking            Whether the embed reports to Ceros analytics.
  * @return string Rendered HTML, or '' when there is nothing renderable.
  */
-function ceros_flex_ssr_render_manifest( $manifest, $served_url, $include_custom_html = true ) {
+function ceros_flex_ssr_render_manifest( $manifest, $served_url, $include_custom_html = true, $tracking = true ) {
 	if ( ! is_array( $manifest ) ) {
 		return '';
 	}
@@ -78,6 +82,9 @@ function ceros_flex_ssr_render_manifest( $manifest, $served_url, $include_custom
 	if ( '' !== (string) $served_url ) {
 		$wrapper_attrs = ' data-flex-manifest-url="' . esc_url( $served_url ) . '"';
 	}
+	// flex-ssr.js reads the opt-in off the viewer's immediate parent, which is
+	// this wrapper.
+	$wrapper_attrs .= ceros_flex_analytics_attribute( (bool) $tracking );
 
 	$content = '<div class="ceros-block__flex-ssr"' . $wrapper_attrs . '>'
 		. $html_body

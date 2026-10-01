@@ -408,17 +408,20 @@ function ceros_load_flex_manifest( $manifest_url ) {
 /**
  * Build the Flex iframe snippet (matches buildFlexIframeSnippet in ceros-spark).
  *
- * @param string $experience_url   The experience URL.
- * @param string $embed_script_url The embed.v1.js URL.
- * @param string $height           'auto' (full height) or e.g. '800px' (scrollable).
+ * @param string    $experience_url   The experience URL.
+ * @param string    $embed_script_url The embed.v1.js URL.
+ * @param string    $height           'auto' (full height) or e.g. '800px' (scrollable).
+ * @param bool|null $tracking         Writes `data-ceros-analytics`; null omits it,
+ *                                    which the iframe embed reads as on.
  * @return string The iframe embed snippet.
  */
-function ceros_build_flex_iframe_snippet( $experience_url, $embed_script_url, $height ) {
+function ceros_build_flex_iframe_snippet( $experience_url, $embed_script_url, $height, $tracking = null ) {
 	return sprintf(
 		// phpcs:ignore WordPress.WP.EnqueuedResources.NonEnqueuedScript -- an embed snippet returned to the editor and stored on the block, not a site asset to enqueue.
-		'<div data-embed-width="100%%" data-embed-height="%s" data-ceros-experience="%s"></div>' . "\n" . '<script src="%s"></script>',
+		'<div data-embed-width="100%%" data-embed-height="%s" data-ceros-experience="%s"%s></div>' . "\n" . '<script src="%s"></script>',
 		esc_attr( $height ),
 		esc_url( $experience_url ),
+		null === $tracking ? '' : ceros_flex_analytics_attribute( $tracking ),
 		esc_url( $embed_script_url )
 	);
 }
@@ -426,15 +429,18 @@ function ceros_build_flex_iframe_snippet( $experience_url, $embed_script_url, $h
 /**
  * Build the Flex Inline (iframeless) snippet (matches buildFlexInlineSnippet in ceros-spark).
  *
- * @param string $manifest_url The manifest URL.
- * @param string $script_url   The flex-client.js URL.
+ * @param string    $manifest_url The manifest URL.
+ * @param string    $script_url   The flex-client.js URL.
+ * @param bool|null $tracking     Writes `data-ceros-analytics`; null omits it,
+ *                                which Inline reads as off.
  * @return string The inline embed snippet.
  */
-function ceros_build_flex_inline_snippet( $manifest_url, $script_url ) {
+function ceros_build_flex_inline_snippet( $manifest_url, $script_url, $tracking = null ) {
 	return sprintf(
 		// phpcs:ignore WordPress.WP.EnqueuedResources.NonEnqueuedScript -- an embed snippet returned to the editor and stored on the block, not a site asset to enqueue.
-		'<div data-flex-inline data-flex-manifest-url="%s"></div>' . "\n" . '<script src="%s"></script>',
+		'<div data-flex-inline data-flex-manifest-url="%s"%s></div>' . "\n" . '<script src="%s"></script>',
 		esc_url( $manifest_url ),
+		null === $tracking ? '' : ceros_flex_analytics_attribute( $tracking ),
 		esc_url( $script_url )
 	);
 }
@@ -454,16 +460,17 @@ function ceros_build_flex_inline_snippet( $manifest_url, $script_url ) {
  * to the production Flex assets CDN.
  *
  * @param string $manifest_url The manifest URL persisted on the block.
+ * @param bool   $tracking     Whether the embed reports to Ceros analytics.
  * @return string The inline embed snippet, or '' on any failure.
  */
-function ceros_render_flex_inline( $manifest_url ) {
+function ceros_render_flex_inline( $manifest_url, $tracking = true ) {
 	$manifest = ceros_load_flex_manifest( $manifest_url );
 	if ( null === $manifest ) {
 		return '';
 	}
 
 	$flex_client = ceros_flex_delivery_script_url( $manifest, 'inline', 'flex-client.js' );
-	return ceros_build_flex_inline_snippet( trim( (string) $manifest_url ), $flex_client );
+	return ceros_build_flex_inline_snippet( trim( (string) $manifest_url ), $flex_client, (bool) $tracking );
 }
 
 /**
@@ -479,9 +486,10 @@ function ceros_render_flex_inline( $manifest_url ) {
  *
  * @param string $manifest_url The manifest URL persisted on the block.
  * @param string $height       'auto' (full height) or e.g. '800px' (scrollable).
+ * @param bool   $tracking     Whether the embed reports to Ceros analytics.
  * @return string The iframe embed snippet, or '' on any failure.
  */
-function ceros_render_flex_iframe( $manifest_url, $height ) {
+function ceros_render_flex_iframe( $manifest_url, $height, $tracking = true ) {
 	$manifest = ceros_load_flex_manifest( $manifest_url );
 	if ( null === $manifest ) {
 		return '';
@@ -493,7 +501,7 @@ function ceros_render_flex_iframe( $manifest_url, $height ) {
 	}
 
 	$embed_script = ceros_flex_delivery_script_url( $manifest, 'iframe', 'embed.v1.js' );
-	return ceros_build_flex_iframe_snippet( $experience_url, $embed_script, $height );
+	return ceros_build_flex_iframe_snippet( $experience_url, $embed_script, $height, (bool) $tracking );
 }
 
 /**

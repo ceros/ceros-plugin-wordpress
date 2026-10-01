@@ -27,7 +27,7 @@ import { StoreControls } from './store-controls';
  *
  * @param {Object}   props
  * @param {string}   props.selectedExperienceName - Name of the selected experience
- * @param {Object}   props.attributes             - Block attributes (reads `includeCustomHtml`)
+ * @param {Object}   props.attributes             - Block attributes (reads `includeCustomHtml`, `cerosAnalytics`)
  * @param {string}   props.selectedEmbedOption    - Currently selected embed option ('full' or 'scroll')
  * @param {boolean}  props.hasFullHeight          - Whether full height embed code is available
  * @param {boolean}  props.hasScrolling           - Whether scrolling embed code is available
@@ -54,6 +54,9 @@ export function SidebarControls( {
 	const handleEdit =
 		onEdit || ( () => dispatch( { type: ACTION_TYPES.OPEN_MODAL } ) );
 	const isIframeDelivery = deliveryMode === DELIVERY_MODES.IFRAME;
+	// Flex experiences, in any delivery mode. Legacy Studio embeds have no
+	// manifest and no way to switch Ceros analytics off.
+	const isFlex = hasInline || Boolean( attributes?.manifestUrl );
 	return (
 		<InspectorControls>
 			<PanelBody
@@ -275,6 +278,25 @@ export function SidebarControls( {
 							} );
 							setAttributes( { includeCustomHtml: value } );
 						} }
+					/>
+				</PanelBody>
+			) }
+			{ isFlex && (
+				<PanelBody
+					title={ __( 'Analytics', 'ceros' ) }
+					initialOpen={ true }
+				>
+					<ToggleControl
+						__nextHasNoMarginBottom
+						label={ __( 'Ceros analytics tracking', 'ceros' ) }
+						help={ __(
+							'Reports views and interactions to Ceros Analytics, as the published experience does. Turn it off to report nothing to Ceros; your own analytics still receives the experience’s events. Previews are never tracked.',
+							'ceros'
+						) }
+						checked={ attributes?.cerosAnalytics !== false }
+						onChange={ ( value ) =>
+							setAttributes( { cerosAnalytics: value } )
+						}
 					/>
 				</PanelBody>
 			) }

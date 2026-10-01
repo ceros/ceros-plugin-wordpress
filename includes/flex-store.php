@@ -582,9 +582,10 @@ function ceros_store_rrmdir( $dir, $depth = 0 ) {
  * @param string $index_rel_path      Path to index.json, relative to the uploads basedir.
  * @param bool   $include_custom_html Whether to append the experience's authored
  *                                    custom Body HTML.
+ * @param bool   $tracking            Whether the embed reports to Ceros analytics.
  * @return string Rendered HTML, or '' when the bundle is missing/unreadable.
  */
-function ceros_render_flex_ssr_stored( $index_rel_path, $include_custom_html = true ) {
+function ceros_render_flex_ssr_stored( $index_rel_path, $include_custom_html = true, $tracking = true ) {
 	$index_rel_path = ltrim( (string) $index_rel_path, '/' );
 	// Confine to our storage root.
 	if ( false !== strpos( $index_rel_path, '..' ) || 0 !== strpos( $index_rel_path, 'ceros-flex/' ) ) {
@@ -619,7 +620,7 @@ function ceros_render_flex_ssr_stored( $index_rel_path, $include_custom_html = t
 		return '';
 	}
 
-	return ceros_flex_ssr_render_manifest( $served_manifest, $url_dir . '/' . $served_rel, $include_custom_html );
+	return ceros_flex_ssr_render_manifest( $served_manifest, $url_dir . '/' . $served_rel, $include_custom_html, $tracking );
 }
 
 /**
