@@ -62,3 +62,11 @@ export async function readStoredBlockAttributes(
 export async function deletePost(requestUtils: RequestUtils, id: number): Promise<void> {
   await requestUtils.rest({ method: 'DELETE', path: `/wp/v2/posts/${id}`, params: { force: true } })
 }
+
+export async function deleteUser(requestUtils: RequestUtils, id: number): Promise<void> {
+  await requestUtils.rest({
+    method: 'DELETE',
+    path: `/wp/v2/users/${id}`,
+    params: { force: true, reassign: 1 },
+  })
+}

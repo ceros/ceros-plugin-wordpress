@@ -1,7 +1,11 @@
+/**
+ * A logged-in Editor-role user for permission checks: created over REST before the
+ * test and deleted after it. Changes no plugin settings.
+ */
 import { RequestUtils } from '@wordpress/e2e-test-utils-playwright'
 import { wpRequestUtilsFixture } from '@fixtures/wp-request-utils-fixture'
 import { BASE_URL } from '@utils/env-utils'
-import { uniqueSuffix } from '@utils/wp-rest-client'
+import { deleteUser, uniqueSuffix } from '@utils/wp-rest-client'
 
 export interface WpEditorRoleFixture {
   /** REST helper logged in as a new user with the Editor role, deleted after the test. */
@@ -27,11 +31,7 @@ export const wpEditorRoleFixture = wpRequestUtilsFixture.extend<WpEditorRoleFixt
       await use(editorRoleUser)
     } finally {
       await editorRoleUser.request.dispose()
-      await requestUtils.rest({
-        method: 'DELETE',
-        path: `/wp/v2/users/${id}`,
-        params: { force: true, reassign: 1 },
-      })
+      await deleteUser(requestUtils, id)
     }
   },
 })
