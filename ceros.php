@@ -78,6 +78,10 @@ require_once plugin_dir_path( __FILE__ ) . 'includes/functions.php';
 // Flex manifest fetching (shared by the public-URL resolver and SSR renderer).
 require_once plugin_dir_path( __FILE__ ) . 'includes/flex-manifest.php';
 
+// Ceros analytics tracking for Flex embeds — the `data-ceros-analytics`
+// attribute and the preview check that turns it off.
+require_once plugin_dir_path( __FILE__ ) . 'includes/flex-analytics.php';
+
 // Public (API-key-less) experience URL resolver — detects Flex vs legacy and
 // builds embed codes from a pasted public experience URL. Relies on
 // ceros_is_public_host() (settings.php) at request time.
