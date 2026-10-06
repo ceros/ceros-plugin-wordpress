@@ -3,6 +3,7 @@
 import {
   API_KEY_CONSTANT,
   API_KEY_OPTIONS,
+  INVALID_API_KEY,
   PLUGIN_SETTINGS_OPTIONS,
 } from '@constants/ceros-settings-constants'
 import { phpString, wpCli, wpEval, wpEvalJson } from '@utils/wp-cli'
@@ -15,6 +16,8 @@ export type PluginApiKeyState =
   | 'none'
   /** The provisioned key in the plugin's encrypted storage, as a save from the page leaves it. */
   | 'saved'
+  /** A key the Ceros API rejects, in the plugin's encrypted storage. */
+  | 'invalid'
 
 export type PluginSettingsSnapshot = {
   apiKey: string | null
@@ -48,7 +51,8 @@ export async function applyApiKeyState(
     return
   }
 
-  const key = state === 'saved' ? requireProvisionedKey(snapshot) : ''
+  const key =
+    state === 'saved' ? requireProvisionedKey(snapshot) : state === 'invalid' ? INVALID_API_KEY : ''
   if (snapshot.apiKey !== null) await wpCli(['config', 'delete', API_KEY_CONSTANT])
   await wpEval(
     `foreach ([${API_KEY_OPTIONS.map(phpString).join(', ')}] as $name) { delete_option($name); }` +

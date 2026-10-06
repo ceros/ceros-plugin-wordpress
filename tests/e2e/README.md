@@ -44,7 +44,9 @@ against anything else, fill in `.env` yourself and skip bootstrap.
 
 ### Settings specs: a disposable instance only
 
-`settings.spec` saves, rejects, and removes API keys and switches the API environment.
+The `@settings` specs change the plugin's API key: `settings.spec` saves, rejects, and
+removes keys and switches the API environment, and `invalid-key.spec` saves a key the API
+rejects.
 Those settings are site-wide, so the specs must run against a WordPress set up for the
 run (local `wp-env`, or the one CI builds), never a shared or live site:
 
