@@ -39,8 +39,8 @@ key is a secret, so `.env` is gitignored and it has no default.
 
 The suite provisions nothing else: it reads a URL and credentials from the environment,
 so the block specs run against local `wp-env`, another WordPress, or one built by CI.
-`bootstrap-wp.sh` and the settings fixture are the only pieces that know `wp-env` exists;
-against anything else, fill in `.env` yourself and skip bootstrap.
+`bootstrap-wp.sh`, the settings fixture, and the HTTP-stub fixture are the only pieces that
+know `wp-env` exists; against anything else, fill in `.env` yourself and skip bootstrap.
 
 ### Settings specs: a disposable instance only
 
@@ -64,12 +64,23 @@ run (local `wp-env`, or the one CI builds), never a shared or live site:
   constant `bootstrap-wp.sh` sets, so run bootstrap with `E2E_CEROS_API_KEY` first.
 
 Running against a remote site already takes a deliberate `BASE_URL` plus that site's
-credentials. Exclude these specs there with `--grep-invert @settings`.
+credentials. Exclude these specs there, with the `@stubbedHttp` ones below:
+`--grep-invert "@settings|@stubbedHttp"`.
 
 Tracing and video are off for `settings.spec`, because the real key is entered on the page.
 
 The Editor-role test changes no settings: it creates its own Editor user over REST, checks
 the settings surfaces refuse it, and deletes the user afterwards.
+
+### Stubbed responses: local `wp-env` only
+
+The `@stubbedHttp` specs fix what WordPress's outbound requests get back, to reach errors
+a real Ceros URL never produces. `.wp-env.json` loads a test-only plugin
+(`plugins/ceros-e2e-http-stub`) that answers requests to exact URLs listed in the
+`ceros_e2e_http_stubs` option and does nothing while the option is absent. The
+`http-stub` fixture sets the option with WP-CLI and deletes it after each test, even when
+the test fails. The plugin ships with neither the distributable nor any other site, so
+these specs need local `wp-env`.
 
 ## Running
 

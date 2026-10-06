@@ -6,4 +6,5 @@ export const TAGS = {
   cerosBlock: '@cerosBlock',
   rendered: '@rendered',
   settings: '@settings',
+  stubbedHttp: '@stubbedHttp',
 } as const
