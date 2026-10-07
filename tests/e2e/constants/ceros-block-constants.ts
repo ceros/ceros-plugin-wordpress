@@ -7,6 +7,14 @@ export const BLOCK_TEXT = {
   pasteBadHost: 'The experience URL host is invalid or not publicly reachable.',
   pasteEditorUrl:
     'That looks like a Ceros Studio editor URL. Publish the experience, then paste its published URL here.',
+  /** Followed by the transport error. */
+  pasteUnreachable: 'Could not reach the experience to verify it:',
+  pasteNotCeros:
+    'This URL isn’t on a recognized Ceros domain and didn’t identify itself as a Ceros experience. To embed it, add a Ceros API key and use Browse.',
+  pasteManifestUntrusted:
+    'This experience reported a manifest hosted outside Ceros, so it can’t be trusted.',
+  pasteManifestUnavailable:
+    'This is a Ceros Flex experience, but its manifest couldn’t be loaded. Please try again in a moment.',
   /** How the block reports a key the Ceros API rejects (the staging-mode technical message). */
   apiKeyRejected: 'Ceros API error (401)',
 } as const
