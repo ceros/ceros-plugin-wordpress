@@ -41,7 +41,10 @@ export const cerosLegacyExperienceUrl = (): string =>
   `https://${cerosEnv()}.view.cerosdev.com/automation/analytics-test-experience`
 
 export const cerosFlexExperienceUrl = (): string =>
-  `https://automation.${cerosEnv()}.cerosdev.site/sparkboard`
+  `https://automation.${cerosEnv()}.cerosdev.site/wp-paste-url`
+
+/** Where the Flex experience serves its manifest, as its `x-flex-manifest` header reports. */
+export const cerosFlexManifestUrl = (): string => `${cerosFlexExperienceUrl()}/manifest.v1.json`
 
 /**
  * A Ceros Studio *editor* URL (not a published experience). The resolver rejects

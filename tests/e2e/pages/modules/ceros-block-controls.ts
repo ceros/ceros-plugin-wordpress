@@ -1,5 +1,6 @@
 import type { Locator, Page } from '@playwright/test'
 import { TIMEOUTS } from '@constants/timeouts'
+import type { DeliveryMode } from '@utils/ceros-embed'
 
 /**
  * The Ceros block's toolbar and inspector controls for a placed experience.
@@ -21,6 +22,7 @@ export class CerosBlockControls {
   readonly inspectorEditButton: Locator
   readonly inspectorFullHeightRadio: Locator
   readonly inspectorScrollingRadio: Locator
+  readonly inspectorDeliveryRadio: (mode: DeliveryMode) => Locator
 
   constructor(readonly page: Page) {
     this.embedTypeDropdown = page
@@ -55,6 +57,10 @@ export class CerosBlockControls {
     this.inspectorScrollingRadio = page
       .locator('.ceros-sidebar__radio-input[value="scroll"]')
       .describe('inspector scrolling radio')
+    this.inspectorDeliveryRadio = (mode: DeliveryMode) =>
+      page
+        .locator(`.ceros-sidebar__radio-input[value="${mode}"]`)
+        .describe(`inspector ${mode} delivery radio`)
   }
 
   async waitForToolbar(): Promise<void> {

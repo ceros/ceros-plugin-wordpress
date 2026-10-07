@@ -5,8 +5,14 @@ import { readStoredBlockAttributes } from '@utils/wp-rest-client'
 /** The two iframe embed sizes the block stores as `selectedOption`. */
 export type EmbedSize = 'full' | 'scroll'
 
+/** How a Flex experience is delivered, stored as `deliveryMode`. */
+export type DeliveryMode = 'iframe' | 'inline' | 'ssr'
+
 /** The class the legacy Studio (scroll-proxy) iframe carries; present in every stored Studio embed code. */
 export const STUDIO_EMBED_MARKER = 'class="ceros-experience"'
+
+/** The attribute every Flex inline snippet carries. */
+export const FLEX_INLINE_MARKER = 'data-flex-inline'
 
 /** A pattern that requires a non-empty value containing the fragment; an empty fragment just requires non-empty. */
 const containsPattern = (fragment: string): RegExp =>
@@ -62,4 +68,25 @@ export async function expectStoredStudioAttributes(
   if (expected.requireResourceId) {
     expect(String(stored.experienceResourceId ?? '')).not.toBe('')
   }
+}
+
+/**
+ * Assert the block attributes WordPress stored describe a Flex experience in the
+ * given delivery mode. render.php rebuilds every Flex embed from the manifest URL.
+ */
+export async function expectStoredFlexAttributes(
+  requestUtils: RequestUtils,
+  postId: number,
+  expected: { deliveryMode: DeliveryMode; manifestUrl: string; experienceUrlFragment: string },
+): Promise<void> {
+  const attrs = await readStoredBlockAttributes(requestUtils, postId)
+  expect(attrs, 'the post should carry a configured Ceros block').toBeTruthy()
+  const stored = attrs ?? {}
+
+  expect(stored.deliveryMode ?? 'iframe').toBe(expected.deliveryMode)
+  expect(stored.manifestUrl).toBe(expected.manifestUrl)
+  expect(String(stored.experienceUrl ?? '')).toMatch(
+    containsPattern(expected.experienceUrlFragment),
+  )
+  expect(String(stored.inlineEmbedCode ?? '')).toContain(FLEX_INLINE_MARKER)
 }

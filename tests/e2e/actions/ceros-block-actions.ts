@@ -1,6 +1,6 @@
 import { test as base, type Locator } from '@playwright/test'
 import type { CerosBlock } from '@pages/modules/ceros-block'
-import type { EmbedSize } from '@utils/ceros-embed'
+import type { DeliveryMode, EmbedSize } from '@utils/ceros-embed'
 
 /** Multi-step workflows over the Ceros block's authoring panels. */
 export class CerosBlockActions {
@@ -35,6 +35,13 @@ export class CerosBlockActions {
         scroll: this.block.pasteEmbedScrollRadio,
       }
       await radios[size].check()
+    })
+  }
+
+  /** Pick a delivery mode in the resolved-result panel before adding. Offered for Flex experiences only. */
+  async choosePasteDeliveryMode(mode: DeliveryMode): Promise<void> {
+    await base.step(`Choose delivery mode in the paste panel -> ${mode}`, async () => {
+      await this.block.pasteDeliveryRadio(mode).check()
     })
   }
 
