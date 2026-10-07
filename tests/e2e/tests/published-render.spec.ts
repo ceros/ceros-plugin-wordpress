@@ -36,6 +36,6 @@ test.describe('Legacy Studio published render', { tag: [TAGS.cerosBlock, TAGS.re
 
     // The Studio branch rendered, not the not-found or Flex-inline branches.
     await expect(publishedPost.missingExperience).toHaveCount(0)
-    await expect(publishedPost.inlineEmbed).toHaveCount(0)
+    await expect(publishedPost.flex.inlineEmbed).toHaveCount(0)
   })
 })

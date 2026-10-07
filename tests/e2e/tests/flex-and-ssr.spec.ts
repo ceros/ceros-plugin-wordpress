@@ -3,7 +3,6 @@ import { BlockEditorActions } from '@actions/block-editor-actions'
 import { CerosBlockActions } from '@actions/ceros-block-actions'
 import { CerosBlockControlsActions } from '@actions/ceros-block-controls-actions'
 import { BLOCK_TEXT } from '@constants/ceros-block-constants'
-import { FlexRender } from '@pages/modules/flex-render'
 import { PublishedPostPage } from '@pages/published-post.page'
 import { emptyCerosBlock, resolvedFlexBlock } from '@utils/block-serializer'
 import { expectStoredFlexAttributes, type DeliveryMode } from '@utils/ceros-embed'
@@ -14,9 +13,12 @@ const flexUrl = cerosFlexExperienceUrl()
 const flexSlug = new URL(flexUrl).pathname.split('/').filter(Boolean).pop() ?? ''
 const manifestUrl = cerosFlexManifestUrl()
 
-/** The marker render.php emits for each delivery mode. */
-const embedFor = (render: FlexRender, mode: DeliveryMode) =>
-  ({ iframe: render.iframeEmbed, inline: render.inlineEmbed, ssr: render.ssrEmbed })[mode]
+/** The attribute that ties each mode's marker to the experience it embeds. */
+const SOURCE_ATTRIBUTE: Record<DeliveryMode, [name: string, value: string]> = {
+  iframe: ['data-ceros-experience', flexUrl],
+  inline: ['data-flex-manifest-url', manifestUrl],
+  ssr: ['data-flex-manifest-url', manifestUrl],
+}
 
 const NON_DEFAULT_MODES = ['inline', 'ssr'] as const satisfies readonly DeliveryMode[]
 
@@ -40,10 +42,7 @@ test.describe('Flex delivery modes', { tag: [TAGS.cerosBlock, TAGS.flex] }, () =
       await actions.choosePasteDeliveryMode(mode)
       await actions.addResolvedExperience()
 
-      await expect(embedFor(block.ssrPreview, mode)).toHaveAttribute(
-        'data-flex-manifest-url',
-        manifestUrl,
-      )
+      await expect(block.ssrPreview.embed(mode)).toHaveAttribute(...SOURCE_ATTRIBUTE[mode])
 
       await BlockEditorActions.for(editor.page).saveDraft()
       await expectStoredFlexAttributes(requestUtils, post.id, {
@@ -66,10 +65,7 @@ test.describe('Flex delivery modes', { tag: [TAGS.cerosBlock, TAGS.flex] }, () =
       await controls.waitForPlacedControls()
       await controls.chooseDeliveryModeFromInspector(mode)
 
-      await expect(embedFor(block.ssrPreview, mode)).toHaveAttribute(
-        'data-flex-manifest-url',
-        manifestUrl,
-      )
+      await expect(block.ssrPreview.embed(mode)).toHaveAttribute(...SOURCE_ATTRIBUTE[mode])
 
       await BlockEditorActions.for(editor.page).saveDraft()
       await expectStoredFlexAttributes(requestUtils, post.id, {
@@ -101,11 +97,12 @@ test.describe('Flex published render', { tag: [TAGS.cerosBlock, TAGS.rendered, T
       test(`a Flex experience renders its ${mode} embed`, async ({ page, post }) => {
         const publishedPost = new PublishedPostPage(page)
         await publishedPost.open(post.id)
-        const flex = new FlexRender(page)
+        const { flex } = publishedPost
 
-        await expect(embedFor(flex, mode)).toHaveCount(1)
+        await expect(flex.embed(mode)).toHaveCount(1)
+        await expect(flex.embed(mode)).toHaveAttribute(...SOURCE_ATTRIBUTE[mode])
         for (const other of ALL_MODES.filter((m) => m !== mode)) {
-          await expect(embedFor(flex, other)).toHaveCount(0)
+          await expect(flex.embed(other)).toHaveCount(0)
         }
         await expect(publishedPost.missingExperience).toHaveCount(0)
       })
@@ -113,14 +110,9 @@ test.describe('Flex published render', { tag: [TAGS.cerosBlock, TAGS.rendered, T
   }
 })
 
-/**
- * When the manifest can't be read, the editor warns that the server render isn't
- * the delivery mode in effect. The manifest request is stubbed to fail.
- */
-test.describe(
-  'Flex SSR preview — manifest unavailable',
-  { tag: [TAGS.cerosBlock, TAGS.flex, TAGS.stubbedHttp] },
-  () => {
+/** The SSR preview reads the manifest and warns when it can't, since the page then renders another mode. */
+test.describe('Flex SSR preview — manifest warning', { tag: [TAGS.cerosBlock, TAGS.flex] }, () => {
+  test.describe('manifest loads', () => {
     test.use({
       postOptions: {
         title: 'ceros block',
@@ -128,11 +120,33 @@ test.describe(
       },
     })
 
+    test('the preview shows no warning', async ({ editor }) => {
+      // Reload so the manifest read starts after the listener is in place.
+      const manifestRead = editor.page.waitForResponse((r) => r.url().includes('manifest-meta'))
+      await editor.page.reload()
+      expect((await manifestRead).ok()).toBe(true)
+
+      await expect(editor.cerosBlock.ssrPreview.ssrEmbed).toHaveCount(1)
+      await expect(editor.cerosBlock.previewWarning).toHaveCount(0)
+    })
+  })
+
+  // A manifest URL no other test uses, so a stub left by a killed run can't reach them.
+  const unavailableManifestUrl = `${new URL(flexUrl).origin}/ceros-e2e/manifest.json`
+
+  test.describe('manifest unavailable', { tag: [TAGS.stubbedHttp] }, () => {
+    test.use({
+      postOptions: {
+        title: 'ceros block',
+        blocks: [resolvedFlexBlock(flexSlug, unavailableManifestUrl, 'ssr')],
+      },
+    })
+
     test('the preview warns that server rendering is unavailable', async ({ editor, stubHttp }) => {
-      await stubHttp({ [manifestUrl]: { status: 404 } })
+      await stubHttp({ [unavailableManifestUrl]: { status: 404 } })
       await editor.page.reload()
 
       await expect(editor.cerosBlock.previewWarning).toContainText(BLOCK_TEXT.ssrUnavailable)
     })
-  },
-)
+  })
+})

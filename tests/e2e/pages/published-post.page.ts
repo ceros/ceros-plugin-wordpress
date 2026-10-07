@@ -1,19 +1,16 @@
 import type { Locator, Page } from '@playwright/test'
 import { WP_ROUTES } from '@constants/wordpress-constants'
+import { FlexRender } from '@pages/modules/flex-render'
 
 /** A published post on the front end — where the render cascade shows its work. */
 export class PublishedPostPage {
-  readonly inlineEmbed: Locator
-  readonly inlineManifestUrl: Locator
+  readonly flex: FlexRender
   readonly iframeEmbed: Locator
   readonly missingExperience: Locator
   readonly missingExperienceHeading: Locator
 
   constructor(readonly page: Page) {
-    this.inlineEmbed = page.locator('div[data-flex-inline]').describe('inline embed marker')
-    this.inlineManifestUrl = page
-      .locator('div[data-flex-inline][data-flex-manifest-url]')
-      .describe('inline embed with a manifest url')
+    this.flex = new FlexRender(page)
     this.iframeEmbed = page
       .locator('div[data-ceros-experience], div[data-aspectRatio] iframe.ceros-experience')
       .describe('iframe embed marker')

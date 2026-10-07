@@ -90,25 +90,27 @@ test.describe('Paste a public URL', { tag: [TAGS.cerosBlock] }, () => {
     expect(stored.experienceUrl ?? '').toBe('')
   })
 
-  test('resolves a Flex experience and stores its manifest', async ({
-    editor,
-    post,
-    requestUtils,
-  }) => {
-    const block = editor.cerosBlock
-    await block.waitForEmptyState()
-    await CerosBlockActions.for(block).resolvePublicUrl(flexUrl)
+  test.describe('Flex', { tag: [TAGS.flex] }, () => {
+    test('resolves a Flex experience and stores its manifest', async ({
+      editor,
+      post,
+      requestUtils,
+    }) => {
+      const block = editor.cerosBlock
+      await block.waitForEmptyState()
+      await CerosBlockActions.for(block).resolvePublicUrl(flexUrl)
 
-    // Only a Flex experience offers a delivery mode; iframe is the default.
-    await expect(block.pasteDeliveryRadio('iframe')).toBeChecked()
-    await CerosBlockActions.for(block).addResolvedExperience()
-    await expect(block.ssrPreview.iframeEmbed).toHaveAttribute('data-ceros-experience', flexUrl)
+      // Only a Flex experience offers a delivery mode; iframe is the default.
+      await expect(block.pasteDeliveryRadio('iframe')).toBeChecked()
+      await CerosBlockActions.for(block).addResolvedExperience()
+      await expect(block.ssrPreview.iframeEmbed).toHaveAttribute('data-ceros-experience', flexUrl)
 
-    await BlockEditorActions.for(editor.page).saveDraft()
-    await expectStoredFlexAttributes(requestUtils, post.id, {
-      deliveryMode: 'iframe',
-      manifestUrl: cerosFlexManifestUrl(),
-      experienceUrlFragment: flexSlug,
+      await BlockEditorActions.for(editor.page).saveDraft()
+      await expectStoredFlexAttributes(requestUtils, post.id, {
+        deliveryMode: 'iframe',
+        manifestUrl: cerosFlexManifestUrl(),
+        experienceUrlFragment: flexSlug,
+      })
     })
   })
 })
