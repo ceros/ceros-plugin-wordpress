@@ -32,6 +32,11 @@ function ceros_render_block( $attributes ) {
 	// unchanged and which is truthy — that fails open, the safe direction here.
 	$include_custom_html = false !== ( $attributes['includeCustomHtml'] ?? true );
 
+	// Ceros analytics tracking, on by default and always off in a preview. Read
+	// by every Flex delivery below via `data-ceros-analytics`.
+	$tracking = function_exists( 'ceros_flex_tracking_enabled' )
+		&& ceros_flex_tracking_enabled( $attributes, ceros_is_preview_render() );
+
 	$missing_experience_markup = '<div class="ceros-missing-experience" style="font-family: sans-serif;background-color:#000;color:#fff;min-height:700px;display:flex;align-items:center;justify-content:center;text-align:center;padding:2rem;">
 			<div>
 				<h2 style="font-size:2.5rem;margin:0 0 1rem;font-weight:600;">' . esc_html__( 'Experience not found', 'ceros' ) . '</h2>
@@ -48,7 +53,7 @@ function ceros_render_block( $attributes ) {
 	// fall through to the iframe embed below.
 	if ( 'inline' === $delivery_mode && ! empty( $attributes['manifestUrl'] )
 		&& function_exists( 'ceros_render_flex_inline' ) ) {
-		$inline_html = ceros_render_flex_inline( $attributes['manifestUrl'] );
+		$inline_html = ceros_render_flex_inline( $attributes['manifestUrl'], $tracking );
 		if ( '' !== $inline_html ) {
 			return $inline_html;
 		}
@@ -59,7 +64,7 @@ function ceros_render_block( $attributes ) {
 	if ( 'ssr' === $delivery_mode ) {
 		// Store mode: render fully from the locally-persisted bundle (no CDN).
 		if ( ! empty( $attributes['storedIndexPath'] ) && function_exists( 'ceros_render_flex_ssr_stored' ) ) {
-			$stored_html = ceros_render_flex_ssr_stored( $attributes['storedIndexPath'], $include_custom_html );
+			$stored_html = ceros_render_flex_ssr_stored( $attributes['storedIndexPath'], $include_custom_html, $tracking );
 			if ( '' !== $stored_html ) {
 				return $stored_html;
 			}
@@ -67,7 +72,7 @@ function ceros_render_block( $attributes ) {
 
 		// Live mode: fetch the manifest server-side and render inline.
 		if ( ! empty( $attributes['manifestUrl'] ) && function_exists( 'ceros_render_flex_ssr' ) ) {
-			$ssr_html = ceros_render_flex_ssr( $attributes['manifestUrl'], $include_custom_html );
+			$ssr_html = ceros_render_flex_ssr( $attributes['manifestUrl'], $include_custom_html, $tracking );
 			if ( '' !== $ssr_html ) {
 				return $ssr_html;
 			}
@@ -83,7 +88,7 @@ function ceros_render_block( $attributes ) {
 	if ( ! empty( $attributes['manifestUrl'] ) && function_exists( 'ceros_render_flex_iframe' ) ) {
 		$selected    = $attributes['selectedOption'] ?? 'full';
 		$height      = ( 'scroll' === $selected ) ? '800px' : 'auto';
-		$flex_iframe = ceros_render_flex_iframe( $attributes['manifestUrl'], $height );
+		$flex_iframe = ceros_render_flex_iframe( $attributes['manifestUrl'], $height, $tracking );
 		if ( '' !== $flex_iframe ) {
 			return $flex_iframe;
 		}
@@ -125,9 +130,15 @@ function ceros_render_block( $attributes ) {
 		$embed_code = $attributes['fullHeightEmbedCode'];
 	}
 
-	// Sanitize the embed code before output to prevent XSS.
+	// Sanitize the embed code before output to prevent XSS. A Flex block lands
+	// here only when its manifest couldn't be fetched; its saved embed code
+	// predates the block's tracking choice, so that choice is stamped onto it.
 	if ( ! empty( $embed_code ) ) {
-		return ceros_sanitize_embed_code( $embed_code );
+		$embed_code = ceros_sanitize_embed_code( $embed_code );
+		if ( ! empty( $attributes['manifestUrl'] ) && function_exists( 'ceros_flex_stamp_analytics' ) ) {
+			$embed_code = ceros_flex_stamp_analytics( $embed_code, $tracking );
+		}
+		return $embed_code;
 	}
 
 	// Final fallback - should not normally reach here.

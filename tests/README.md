@@ -69,6 +69,9 @@ Currently deferred to that suite:
 - `Ceros_Encryption::get_api_key()` / `save_api_key()` — the options table. The
   crypto underneath them _is_ covered here.
 - The REST handlers — real `WP_REST_Request` objects.
+- `ceros_flex_stamp_analytics` — `WP_HTML_Tag_Processor`;
+  `ceros_is_preview_render` and `ceros_flex_flag_editor_preview` — `is_preview()`
+  and the REST route of the request.
 
 Covered here on top of the URL, sanitizer, store and crypto cases:
 

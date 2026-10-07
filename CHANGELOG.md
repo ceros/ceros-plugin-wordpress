@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Ceros analytics tracking switch.** A Flex experience's block now has a
+  **Ceros analytics tracking** switch in the sidebar, for the iframe, inline and
+  server-rendered delivery modes. It is on by default, so an inline or
+  server-rendered experience reports to Ceros Analytics the way the published
+  experience and the iframe embed do. Turn it off and the experience reports
+  nothing to Ceros; the experience's analytics events still reach the page, so
+  your own analytics keeps working. The block's editor preview and WordPress's
+  post preview never report, whatever the switch says. Inline and
+  server-rendered reporting needs an experience published after Ceros added it
+  to the manifest, and the account's Ceros Analytics setting on.
+
 ### Fixed
 - **The plugin reports an old plugin, not a bad API key.** The Ceros API rejects
   a request if it does not support the API version. Before, the plugin showed a
