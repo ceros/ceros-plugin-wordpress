@@ -1,4 +1,5 @@
 import { BLOCK_NAME } from '@constants/wordpress-constants'
+import type { DeliveryMode } from '@utils/ceros-embed'
 
 export type CerosBlockAttributes = {
   experienceName: string
@@ -36,6 +37,13 @@ export const resolvedLegacyStudioBlock = (
   experienceUrl: string,
   selectedOption: 'full' | 'scroll' = 'full',
 ): string => cerosBlock({ experienceUrl, selectedOption })
+
+/** A placed Flex block. render.php rebuilds each delivery mode from the manifest URL alone. */
+export const resolvedFlexBlock = (
+  experienceName: string,
+  manifestUrl: string,
+  deliveryMode: DeliveryMode,
+): string => cerosBlock({ experienceName, manifestUrl, deliveryMode })
 
 /**
  * Read back the attributes WordPress actually stored.

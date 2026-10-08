@@ -2,14 +2,25 @@ import { expect, test } from '@fixtures/fixtures'
 import { BlockEditorActions } from '@actions/block-editor-actions'
 import { CerosBlockActions } from '@actions/ceros-block-actions'
 import { emptyCerosBlock } from '@utils/block-serializer'
-import { expectStoredStudioAttributes, expectStudioEmbedRendered } from '@utils/ceros-embed'
+import {
+  expectStoredFlexAttributes,
+  expectStoredStudioAttributes,
+  expectStudioEmbedRendered,
+} from '@utils/ceros-embed'
 import { readStoredBlockAttributes } from '@utils/wp-rest-client'
-import { cerosFlexExperienceUrl, cerosLegacyExperienceUrl } from '@utils/env-utils'
+import {
+  cerosFlexExperienceUrl,
+  cerosFlexManifestUrl,
+  cerosLegacyExperienceUrl,
+} from '@utils/env-utils'
 import { TAGS } from '@utils/test-tags'
 
 /** The last path segment of the legacy experience URL — the slug the embed iframe points at. */
 const legacySlug =
   new URL(cerosLegacyExperienceUrl()).pathname.split('/').filter(Boolean).pop() ?? ''
+
+const flexUrl = cerosFlexExperienceUrl()
+const flexSlug = new URL(flexUrl).pathname.split('/').filter(Boolean).pop() ?? ''
 
 /**
  * The paste-a-public-URL authoring flow. The author pastes a public Ceros
@@ -79,16 +90,27 @@ test.describe('Paste a public URL', { tag: [TAGS.cerosBlock] }, () => {
     expect(stored.experienceUrl ?? '').toBe('')
   })
 
-  test.fixme('resolves a Flex experience and previews the embed', async ({ editor }) => {
-    // Blocked, not flaky: the Flex inline-manifest path the plugin needs is not
-    // available in the target environment, so a Flex experience cannot resolve to
-    // a preview yet. Un-fixme when that path resolves, or when the plugin degrades
-    // to an iframe embed.
-    const block = editor.cerosBlock
-    await block.waitForEmptyState()
+  test.describe('Flex', { tag: [TAGS.flex] }, () => {
+    test('resolves a Flex experience and stores its manifest', async ({
+      editor,
+      post,
+      requestUtils,
+    }) => {
+      const block = editor.cerosBlock
+      await block.waitForEmptyState()
+      await CerosBlockActions.for(block).resolvePublicUrl(flexUrl)
 
-    await CerosBlockActions.for(block).resolveAndAddPublicUrl(cerosFlexExperienceUrl())
+      // Only a Flex experience offers a delivery mode; iframe is the default.
+      await expect(block.pasteDeliveryRadio('iframe')).toBeChecked()
+      await CerosBlockActions.for(block).addResolvedExperience()
+      await expect(block.ssrPreview.iframeEmbed).toHaveAttribute('data-ceros-experience', flexUrl)
 
-    await expect(block.preview).toBeVisible()
+      await BlockEditorActions.for(editor.page).saveDraft()
+      await expectStoredFlexAttributes(requestUtils, post.id, {
+        deliveryMode: 'iframe',
+        manifestUrl: cerosFlexManifestUrl(),
+        experienceUrlFragment: flexSlug,
+      })
+    })
   })
 })

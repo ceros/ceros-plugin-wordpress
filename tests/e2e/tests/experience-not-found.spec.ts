@@ -34,6 +34,6 @@ test.describe('Published post rendering', { tag: [TAGS.cerosBlock, TAGS.rendered
 
     // Prove the cascade fell through to not-found, not merely that nothing errored.
     await expect(publishedPost.iframeEmbed).toHaveCount(0)
-    await expect(publishedPost.inlineEmbed).toHaveCount(0)
+    await expect(publishedPost.flex.inlineEmbed).toHaveCount(0)
   })
 })

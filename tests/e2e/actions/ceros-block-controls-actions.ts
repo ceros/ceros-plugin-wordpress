@@ -1,7 +1,7 @@
 import { test as base, type Locator } from '@playwright/test'
 import { CerosBlockControls } from '@pages/modules/ceros-block-controls'
 import type { BlockEditorPage } from '@pages/block-editor.page'
-import type { EmbedSize } from '@utils/ceros-embed'
+import type { DeliveryMode, EmbedSize } from '@utils/ceros-embed'
 
 /** Multi-step workflows over a placed experience's toolbar and inspector controls. */
 export class CerosBlockControlsActions {
@@ -63,6 +63,14 @@ export class CerosBlockControlsActions {
         scroll: this.controls.inspectorScrollingRadio,
       }
       await radios[size].check()
+    })
+  }
+
+  /** Pick a delivery mode from the inspector. Offered for Flex experiences only. */
+  async chooseDeliveryModeFromInspector(mode: DeliveryMode): Promise<void> {
+    await base.step(`Choose delivery mode from the inspector -> ${mode}`, async () => {
+      await this.ensureInspectorOpen()
+      await this.controls.inspectorDeliveryRadio(mode).check()
     })
   }
 

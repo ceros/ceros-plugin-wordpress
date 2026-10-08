@@ -15,6 +15,7 @@ export const BLOCK_TEXT = {
     'This experience reported a manifest hosted outside Ceros, so it can’t be trusted.',
   pasteManifestUnavailable:
     'This is a Ceros Flex experience, but its manifest couldn’t be loaded. Please try again in a moment.',
+  ssrUnavailable: 'Server rendering is unavailable for this experience',
   /** How the block reports a key the Ceros API rejects (the staging-mode technical message). */
   apiKeyRejected: 'Ceros API error (401)',
 } as const
