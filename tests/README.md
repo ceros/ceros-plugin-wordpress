@@ -57,12 +57,18 @@ Currently deferred to that suite:
 - `ceros_sanitize_staging_api_url` — `sanitize_text_field`, `esc_url_raw` and
   `add_settings_error`.
 - `ceros_resolve_public_experience_url`, `ceros_fetch_flex_manifest`,
-  `ceros_render_flex_*` — outbound HTTP.
-- `ceros_store_is_allowed_asset_url` — reachable, but its Ceros-host cases go
-  through `gethostbyname()`, so it would put DNS in the pre-push path.
+  `ceros_render_flex_*` — outbound HTTP. `ceros_render_flex_ssr_stored` makes
+  none, but reads the uploads directory; its path refusals are unit-tested.
+- `ceros_store_is_allowed_asset_url` — its Ceros-host cases go through
+  `gethostbyname()`, so they would put DNS in the pre-push path. Refusals that
+  return before DNS are unit-tested.
 - `ceros_store_experience_key`, `ceros_store_version`,
   `ceros_store_slug_filename` — `sanitize_key`, `sanitize_file_name`,
   `wp_json_encode`.
+- `ceros_store_flex_manifest` and its fetch, download and purge helpers —
+  outbound HTTP and writes under the uploads directory. Worth covering there:
+  a purge removes only older versions of the same experience in the same post,
+  and never follows a symlink.
 - `ceros_flex_ssr_styles` / `_head_scripts` / `_body_scripts` / `_style_tag` /
   `_script_tag` — escaping; `ceros_flex_ssr_requested_slug` — request
   superglobals.

@@ -8,4 +8,5 @@ export const TAGS = {
   flex: '@flex',
   settings: '@settings',
   stubbedHttp: '@stubbedHttp',
+  storesFiles: '@storesFiles',
 } as const

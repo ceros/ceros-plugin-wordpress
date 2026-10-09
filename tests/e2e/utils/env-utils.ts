@@ -47,6 +47,13 @@ export const cerosFlexExperienceUrl = (): string =>
 export const cerosFlexManifestUrl = (): string => `${cerosFlexExperienceUrl()}/manifest.v1.json`
 
 /**
+ * A manifest URL on the Flex host that serves nothing, for stubbed-response tests. No
+ * real experience points at it, so a stub left by a killed run can't reach other tests.
+ */
+export const cerosStubManifestUrl = (): string =>
+  `${new URL(cerosFlexExperienceUrl()).origin}/ceros-e2e/manifest.json`
+
+/**
  * A Ceros Studio *editor* URL (not a published experience). The resolver rejects
  * it as a non-publish URL on host/path shape, so it drives the paste-error path
  * without an outbound request. Built on the same `<env>.admin.cerosdev.com` host

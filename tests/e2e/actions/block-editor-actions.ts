@@ -30,4 +30,22 @@ export class BlockEditorActions {
       await this.editor.savedButton.waitFor({ timeout: TIMEOUTS.MEDIUM })
     })
   }
+
+  /** Save a published post and wait for its write; it has no "Saved" state to settle into. */
+  async savePublished(postId: number): Promise<void> {
+    // This post's own write, not its autosaves or another post's; the route may sit in a query string.
+    const postWrite = new RegExp(`/wp/v2/posts/${postId}(?![\\d/])`)
+
+    await base.step('Save the published post', async () => {
+      const saved = this.editor.page.waitForResponse(
+        (response) =>
+          response.request().method() === 'POST' &&
+          postWrite.test(decodeURIComponent(response.url())) &&
+          response.ok(),
+        { timeout: TIMEOUTS.MEDIUM },
+      )
+      await this.editor.saveButton.click()
+      await saved
+    })
+  }
 }

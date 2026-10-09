@@ -6,17 +6,6 @@ run against a local `wp-env` instance.
 **Not wired into CI or the pre-push hook, and not a required check.** These need WordPress,
 Docker and network access, which the pre-push hook explicitly rules out. See [CI](#ci) below.
 
-## Layout
-
-```
-constants/   timeout tiers and block vocabulary
-fixtures/    the fixture chain and the barrel every spec imports
-pages/       page objects: locators and readiness waits, no assertions
-actions/     multi-step workflows composed from page objects
-utils/       REST client, block serializer, environment helpers
-tests/       specs
-```
-
 ## Prerequisites
 
 ```bash
@@ -39,10 +28,52 @@ key is a secret, so `.env` is gitignored and it has no default.
 
 The suite provisions nothing else: it reads a URL and credentials from the environment,
 so the block specs run against local `wp-env`, another WordPress, or one built by CI.
-`bootstrap-wp.sh`, the settings fixture, and the HTTP-stub fixture are the only pieces that
-know `wp-env` exists; against anything else, fill in `.env` yourself and skip bootstrap.
+`bootstrap-wp.sh`, the settings fixture, the HTTP-stub fixture and the flex-store fixture are
+the only pieces that know `wp-env` exists; against anything else, fill in `.env` yourself and skip bootstrap.
 
-### Settings specs: a disposable instance only
+## Running
+
+```bash
+npm test                                   # everything (browse-picker needs the API key; see Prerequisites)
+npx playwright test --project=wordpress    # the test project; global setup logs in first
+npx playwright test --grep @rendered       # filter by tag
+npm run type-check
+npm run lint
+```
+
+Against a site other than local `wp-env`, exclude the specs that need one:
+`--grep-invert "@settings|@stubbedHttp|@storesFiles"`. See
+[Where the specs can run](#where-the-specs-can-run).
+
+## Environment variables
+
+`.env.example` is the template. Copy it to `.env` (gitignored) and the defaults target a
+local `wp-env`. Real environment variables take precedence over the file, so CI sets its
+own values without `.env` interfering.
+
+Login is once-per-run: global setup signs in with `E2E_WP_USER` / `E2E_WP_PASSWORD` and
+persists the session (cookies + REST nonce), which authenticates both the browser and the
+REST calls, so no separate REST credential has to be minted or stored.
+
+| Variable                          | Default                     | Purpose                                                                                |
+| --------------------------------- | --------------------------- | -------------------------------------------------------------------------------------- |
+| `BASE_URL`                        | `http://localhost:8894`     | The WordPress instance. `http`, not `https` — wp-env serves plain HTTP.                |
+| `E2E_WP_USER` / `E2E_WP_PASSWORD` | `admin` / `password`        | Admin login (browser + REST session). wp-env's documented defaults.                    |
+| `E2E_CEROS_ENV`                   | `latest`                    | The Ceros dev environment; the experience URLs and API host derive from it.            |
+| `E2E_CEROS_API_KEY`               | —                           | Bearer key for that env (a secret). Required for the browse-picker and settings specs. |
+| `E2E_TIMEOUT_*`                   | see `constants/timeouts.ts` | Override any timeout tier, in milliseconds.                                            |
+
+## Where the specs can run
+
+Most specs run against any WordPress with the plugin. These tags need more:
+
+| Tag            | Needs                       | Why                                                    |
+| -------------- | --------------------------- | ------------------------------------------------------ |
+| `@settings`    | a disposable local `wp-env` | changes the site-wide API key, restored through WP-CLI |
+| `@stubbedHttp` | local `wp-env`              | answers outbound requests through a test-only plugin   |
+| `@storesFiles` | local `wp-env`              | writes to uploads, deleted afterwards through WP-CLI   |
+
+### Settings specs
 
 The `@settings` specs change the plugin's API key: `settings.spec` saves, rejects, and
 removes keys and switches the API environment, and `invalid-key.spec` saves a key the API
@@ -63,16 +94,12 @@ run (local `wp-env`, or the one CI builds), never a shared or live site:
 - **They need the bootstrapped key.** The fixture takes the key from the `CEROS_API_KEY`
   constant `bootstrap-wp.sh` sets, so run bootstrap with `E2E_CEROS_API_KEY` first.
 
-Running against a remote site already takes a deliberate `BASE_URL` plus that site's
-credentials. Exclude these specs there, with the `@stubbedHttp` ones below:
-`--grep-invert "@settings|@stubbedHttp"`.
-
 Tracing and video are off for `settings.spec`, because the real key is entered on the page.
 
 The Editor-role test changes no settings: it creates its own Editor user over REST, checks
 the settings surfaces refuse it, and deletes the user afterwards.
 
-### Stubbed responses: local `wp-env` only
+### Stubbed responses
 
 The `@stubbedHttp` specs fix what WordPress's outbound requests get back, to reach errors
 a real Ceros URL never produces. `.wp-env.json` loads a test-only plugin
@@ -82,33 +109,23 @@ a real Ceros URL never produces. `.wp-env.json` loads a test-only plugin
 the test fails. The plugin ships with neither the distributable nor any other site, so
 these specs need local `wp-env`.
 
-## Running
+### Stored files
 
-```bash
-npm test                                   # everything (browse-picker needs the API key; see Prerequisites)
-npx playwright test --project=wordpress    # the test project; global setup logs in first
-npx playwright test --grep @rendered       # filter by tag
-npm run type-check
-npm run lint
+The `@storesFiles` specs store a Flex experience on the site, which writes it under
+`uploads/ceros-flex/<postId>/`. Deleting the post leaves that folder behind, so the
+`flex-store` fixture lists it and deletes it with WP-CLI after each test, even when the
+test fails.
+
+## Layout
+
 ```
-
-## Environment variables
-
-`.env.example` is the template. Copy it to `.env` (gitignored) and the defaults target a
-local `wp-env`. Real environment variables take precedence over the file, so CI sets its
-own values without `.env` interfering.
-
-Login is once-per-run: global setup signs in with `E2E_WP_USER` / `E2E_WP_PASSWORD` and
-persists the session (cookies + REST nonce), which authenticates both the browser and the
-REST calls, so no separate REST credential has to be minted or stored.
-
-| Variable                          | Default                     | Purpose                                                                                |
-| --------------------------------- | --------------------------- | -------------------------------------------------------------------------------------- |
-| `BASE_URL`                        | `http://localhost:8894`     | The WordPress instance. `http`, not `https` — wp-env serves plain HTTP.                |
-| `E2E_WP_USER` / `E2E_WP_PASSWORD` | `admin` / `password`        | Admin login (browser + REST session). wp-env's documented defaults.                    |
-| `E2E_CEROS_ENV`                   | `latest`                    | The Ceros dev environment; the experience URLs and API host derive from it.            |
-| `E2E_CEROS_API_KEY`               | —                           | Bearer key for that env (a secret). Required for the browse-picker and settings specs. |
-| `E2E_TIMEOUT_*`                   | see `constants/timeouts.ts` | Override any timeout tier, in milliseconds.                                            |
+constants/   timeout tiers and block vocabulary
+fixtures/    the fixture chain and the barrel every spec imports
+pages/       page objects: locators and readiness waits, no assertions
+actions/     multi-step workflows composed from page objects
+utils/       REST client, block serializer, environment helpers
+tests/       specs
+```
 
 ## Conventions
 
@@ -120,6 +137,9 @@ REST calls, so no separate REST credential has to be minted or stored.
   out of band, and no post ID is passed in through the environment.
 - No numeric timeout literals and no `waitForTimeout`. Use `TIMEOUTS` from `@constants/timeouts`.
 - Tag every `test.describe` from `@utils/test-tags`.
+- A test that only reads the published page runs logged out with
+  `test.use({ storageState: { cookies: [], origins: [] } })`. A test that also drives the
+  editor takes the `reader` fixture, a logged-out page beside the logged-in one.
 - Prefer `getByRole` and `getByLabel`; fall back to a class selector only where the markup
   offers nothing better, and say why.
 

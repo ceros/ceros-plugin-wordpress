@@ -6,7 +6,11 @@ import { BLOCK_TEXT } from '@constants/ceros-block-constants'
 import { PublishedPostPage } from '@pages/published-post.page'
 import { emptyCerosBlock, resolvedFlexBlock } from '@utils/block-serializer'
 import { expectStoredFlexAttributes, type DeliveryMode } from '@utils/ceros-embed'
-import { cerosFlexExperienceUrl, cerosFlexManifestUrl } from '@utils/env-utils'
+import {
+  cerosFlexExperienceUrl,
+  cerosFlexManifestUrl,
+  cerosStubManifestUrl,
+} from '@utils/env-utils'
 import { TAGS } from '@utils/test-tags'
 
 const flexUrl = cerosFlexExperienceUrl()
@@ -131,8 +135,7 @@ test.describe('Flex SSR preview — manifest warning', { tag: [TAGS.cerosBlock, 
     })
   })
 
-  // A manifest URL no other test uses, so a stub left by a killed run can't reach them.
-  const unavailableManifestUrl = `${new URL(flexUrl).origin}/ceros-e2e/manifest.json`
+  const unavailableManifestUrl = cerosStubManifestUrl()
 
   test.describe('manifest unavailable', { tag: [TAGS.stubbedHttp] }, () => {
     test.use({

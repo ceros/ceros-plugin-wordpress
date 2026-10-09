@@ -23,6 +23,12 @@ export class CerosBlockControls {
   readonly inspectorFullHeightRadio: Locator
   readonly inspectorScrollingRadio: Locator
   readonly inspectorDeliveryRadio: (mode: DeliveryMode) => Locator
+  readonly storeStatus: Locator
+  readonly storeButton: Locator
+  readonly refreshStoredCopyButton: Locator
+  readonly removeStoredCopyButton: Locator
+  readonly storeError: Locator
+  readonly storeUpdateHint: Locator
 
   constructor(readonly page: Page) {
     this.embedTypeDropdown = page
@@ -61,6 +67,23 @@ export class CerosBlockControls {
       page
         .locator(`.ceros-sidebar__radio-input[value="${mode}"]`)
         .describe(`inspector ${mode} delivery radio`)
+
+    // Store controls show in the inspector for an SSR-delivered Flex experience only.
+    const store = page.locator('.ceros-sidebar__store')
+    this.storeStatus = store.locator('.ceros-sidebar__store-status').describe('store status')
+    this.storeButton = store
+      .getByRole('button', { name: 'Fetch & store locally' })
+      .describe('store locally button')
+    this.refreshStoredCopyButton = store
+      .getByRole('button', { name: 'Refresh stored copy' })
+      .describe('refresh stored copy button')
+    this.removeStoredCopyButton = store
+      .getByRole('button', { name: 'Remove', exact: true })
+      .describe('remove stored copy button')
+    this.storeError = store.locator('.ceros-sidebar__store-error').describe('store error')
+    this.storeUpdateHint = store
+      .locator('.ceros-sidebar__store-update')
+      .describe('stored copy update hint')
   }
 
   async waitForToolbar(): Promise<void> {
