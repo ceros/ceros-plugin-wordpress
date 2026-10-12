@@ -10,6 +10,8 @@ export type CerosBlockAttributes = {
   selectedOption: string
   fullHeightEmbedCode: string
   scrollableEmbedCode: string
+  storedAt: string
+  storedPublishedAt: string
 }
 
 /** `save.js` returns null, so post content is a self-closing comment carrying the attributes. */

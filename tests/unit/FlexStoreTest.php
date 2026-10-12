@@ -9,6 +9,9 @@
  * the downloads live in ceros_store_localize_import_map(), which is deferred
  * because it makes HTTP requests. See tests/README.md.
  *
+ * ceros_render_flex_ssr_stored() and ceros_store_is_allowed_asset_url() are
+ * covered only for refusals that return before the uploads lookup or DNS.
+ *
  * @package ceros
  */
 
@@ -331,5 +334,43 @@ final class FlexStoreTest extends TestCase {
 			'https://site.test/u/v1/import-map/abc12345-shared.js',
 			$out['importMap']['imports']['@ceros/b']
 		);
+	}
+
+	public function index_paths_outside_the_store() {
+		return [
+			'parent traversal'     => [ '../wp-config.php' ],
+			'traversal mid path'   => [ 'ceros-flex/1/../../../wp-config.php' ],
+			'other uploads folder' => [ '2026/10/index.json' ],
+			'look-alike root'      => [ 'ceros-flexx/1/index.json' ],
+			'root without slash'   => [ 'ceros-flex' ],
+			'absolute path'        => [ '/etc/passwd' ],
+			'empty string'         => [ '' ],
+		];
+	}
+
+	/**
+	 * @dataProvider index_paths_outside_the_store
+	 */
+	public function test_stored_render_refuses_paths_outside_the_store( $path ) {
+		$this->assertSame( '', ceros_render_flex_ssr_stored( $path ) );
+	}
+
+	public function asset_urls_refused_without_dns() {
+		return [
+			// Scheme is checked first, so a real Ceros host never reaches DNS.
+			'plain http'          => [ 'http://assets.ceros.site/js/app.js' ],
+			'protocol relative'   => [ '//assets.ceros.site/js/app.js' ],
+			// A public IP passes the host guard, so only the Ceros allowlist refuses it.
+			'public ip off ceros' => [ 'https://8.8.8.8/js/app.js' ],
+			'unparseable url'     => [ 'https:///js/app.js' ],
+			'empty string'        => [ '' ],
+		];
+	}
+
+	/**
+	 * @dataProvider asset_urls_refused_without_dns
+	 */
+	public function test_store_refuses_non_ceros_asset_urls( $url ) {
+		$this->assertFalse( ceros_store_is_allowed_asset_url( $url ) );
 	}
 }

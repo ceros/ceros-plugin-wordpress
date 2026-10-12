@@ -13,6 +13,7 @@ export class BlockEditorPage {
   readonly experiencePicker: CerosExperiencePicker
   readonly saveDraftButton: Locator
   readonly savedButton: Locator
+  readonly saveButton: Locator
 
   constructor(readonly page: Page) {
     this.canvas = new EditorCanvas(page)
@@ -25,6 +26,10 @@ export class BlockEditorPage {
       .getByRole('button', { name: 'Save draft' })
       .describe('save draft button')
     this.savedButton = page.getByRole('button', { name: 'Saved' }).describe('saved indicator')
+    // A published post saves through "Save" rather than "Save draft".
+    this.saveButton = page
+      .getByRole('button', { name: 'Save', exact: true })
+      .describe('save button')
   }
 
   async open(postId: number): Promise<void> {

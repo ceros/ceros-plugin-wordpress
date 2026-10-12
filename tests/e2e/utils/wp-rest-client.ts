@@ -59,6 +59,14 @@ export async function readStoredBlockAttributes(
   return parseBlockAttributes(await readRawContent(requestUtils, id))
 }
 
+export async function publishPost(requestUtils: RequestUtils, id: number): Promise<void> {
+  await requestUtils.rest({
+    method: 'POST',
+    path: `/wp/v2/posts/${id}`,
+    data: { status: 'publish' },
+  })
+}
+
 export async function deletePost(requestUtils: RequestUtils, id: number): Promise<void> {
   await requestUtils.rest({ method: 'DELETE', path: `/wp/v2/posts/${id}`, params: { force: true } })
 }

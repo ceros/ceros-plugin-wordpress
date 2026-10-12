@@ -2,7 +2,7 @@ import { expect, test } from '@fixtures/fixtures'
 import { CerosBlockActions } from '@actions/ceros-block-actions'
 import { BLOCK_TEXT } from '@constants/ceros-block-constants'
 import { emptyCerosBlock } from '@utils/block-serializer'
-import { cerosFlexExperienceUrl, cerosStudioEditorUrl } from '@utils/env-utils'
+import { cerosStubManifestUrl, cerosStudioEditorUrl } from '@utils/env-utils'
 import type { HttpStubs } from '@utils/http-stubs'
 import { TAGS } from '@utils/test-tags'
 
@@ -41,7 +41,7 @@ test.describe('Paste a public URL — validation errors', { tag: [TAGS.cerosBloc
  * them before it requests anything.
  */
 const STUB_URL = 'https://example.com/ceros-e2e/experience'
-const CEROS_MANIFEST_URL = `${new URL(cerosFlexExperienceUrl()).origin}/ceros-e2e/manifest.json`
+const CEROS_MANIFEST_URL = cerosStubManifestUrl()
 const TRANSPORT_ERROR = 'Connection timed out'
 
 const STUBBED_OUTCOMES: readonly { label: string; stubs: HttpStubs; message: string }[] = [

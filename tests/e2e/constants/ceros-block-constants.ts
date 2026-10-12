@@ -18,6 +18,16 @@ export const BLOCK_TEXT = {
   ssrUnavailable: 'Server rendering is unavailable for this experience',
   /** How the block reports a key the Ceros API rejects (the staging-mode technical message). */
   apiKeyRejected: 'Ceros API error (401)',
+  /** The store route's refusal for a post the user cannot edit. */
+  storeNotAllowed: 'You are not allowed to edit this post.',
+  /** Followed by the date and time of the store. */
+  storedLocally: 'Stored locally on',
+  notStored: 'Not stored — rendering live.',
+  storedPreviewNote: 'Preview of the copy stored on your site.',
+  /** How the store reports a manifest it could not fetch: the bare HTTP status. */
+  storeManifestNotFound: 'HTTP 404',
+  storeNewExperienceVersion:
+    'A new version of this experience is available — refresh to update the stored copy.',
 } as const
 
 /**
@@ -31,4 +41,5 @@ export const CEROS_PICKER_EXPERIENCE = 'Analytics Test Experience'
 /** The block's REST routes, which any user who can edit posts may call. */
 export const BLOCK_ENDPOINTS = {
   resolvePublicUrl: '/ceros/v1/resolve-public-url',
+  storeManifest: '/ceros/v1/store-manifest',
 } as const
