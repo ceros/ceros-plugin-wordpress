@@ -37,7 +37,6 @@ export default defineConfig({
   globalTimeout: CONFIG_TIMEOUTS.GLOBAL,
   use: {
     baseURL: BASE_URL,
-    storageState: AUTH_STORAGE_STATE,
     deviceScaleFactor: 1,
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',

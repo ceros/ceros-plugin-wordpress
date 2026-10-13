@@ -1,3 +1,5 @@
+import { mergeTests } from '@playwright/test'
+import { actorFixture } from '@fixtures/actor-fixture'
 import { wpRequestUtilsFixture } from '@fixtures/wp-request-utils-fixture'
 import { parseBlockAttributes } from '@utils/block-serializer'
 import { createPost, deletePost, uniqueSuffix, type CreatedPost } from '@utils/wp-rest-client'
@@ -14,15 +16,20 @@ export interface WpPostFixture {
   post: CreatedPost
 }
 
-export const wpPostFixture = wpRequestUtilsFixture.extend<WpPostFixture>({
+export const wpPostFixture = mergeTests(wpRequestUtilsFixture, actorFixture).extend<WpPostFixture>({
   postOptions: [{}, { option: true }],
 
-  post: async ({ requestUtils, postOptions }, use, testInfo) => {
+  post: async ({ requestUtils, postOptions, actor }, use, testInfo) => {
+    if (actor === 'author' && !process.env.E2E_AUTHOR_ID) {
+      throw new Error('E2E_AUTHOR_ID is not set; global setup did not run')
+    }
     const suffix = uniqueSuffix()
     const created = await createPost(requestUtils, {
       title: `${postOptions.title ?? 'e2e post'} ${suffix}`,
       content: (postOptions.blocks ?? []).join('\n\n'),
       status: postOptions.status ?? 'draft',
+      // An Author can only edit their own posts.
+      author: actor === 'author' ? Number(process.env.E2E_AUTHOR_ID) : undefined,
     })
 
     // WordPress re-encodes quotes on insert; if a block was requested with
