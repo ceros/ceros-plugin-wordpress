@@ -17,7 +17,7 @@ import { TAGS } from '@utils/test-tags'
 // The real key is entered on this page; a trace or video would record it.
 test.use({ trace: 'off', video: 'off' })
 
-test.describe('Plugin settings', { tag: [TAGS.settings] }, () => {
+test.describe('Plugin settings', { tag: [TAGS.settings, TAGS.runsAlone] }, () => {
   test.describe('key in wp-config', () => {
     test.use({ pluginApiKey: 'constant' })
 

@@ -35,14 +35,20 @@ the only pieces that know `wp-env` exists; against anything else, fill in `.env`
 
 ```bash
 npm test                                   # everything (browse-picker needs the API key; see Prerequisites)
-npx playwright test --project=wordpress    # the test project; global setup logs in first
+npx playwright test --project=parallel     # the tests that run in parallel (the serial ones still follow)
+npx playwright test --project=serial       # only the tests that run one at a time
 npx playwright test --grep @rendered       # filter by tag
 npm run type-check
 npm run lint
 ```
 
+Filters such as `--grep`, file names and `--last-failed` only apply to the `parallel`
+project: every serial test still runs after it. Add `--project=parallel --no-deps` to run
+only the matching parallel tests. Never pass `--no-deps` without `--project=parallel`: the
+serial tests would then run at the same time as the parallel ones.
+
 Against a site other than local `wp-env`, exclude the specs that need one:
-`--grep-invert "@settings|@stubbedHttp|@storesFiles"`. See
+`npx playwright test --project=parallel --no-deps --grep-invert "@settings|@stubbedHttp|@storesFiles"`. See
 [Where the specs can run](#where-the-specs-can-run).
 
 ## Environment variables
@@ -89,8 +95,9 @@ run (local `wp-env`, or the one CI builds), never a shared or live site:
   local `wp-env` instance (`utils/wp-cli.ts`). Pointed at a remote site while a local
   `wp-env` is running, the fixture would reset the local instance while the test changes
   the remote one.
-- **One worker per instance.** Two workers on one instance would change settings under
-  each other's tests. Scale out with shards that each run their own `wp-env`.
+- **They run alone.** Two tests changing settings at once would change them under each
+  other. Tag any test that changes site-wide state with `@runsAlone`: the `serial` project
+  runs those one at a time, after the `parallel` project has finished.
 - **They need the bootstrapped key.** The fixture takes the key from the `CEROS_API_KEY`
   constant `bootstrap-wp.sh` sets, so run bootstrap with `E2E_CEROS_API_KEY` first.
 

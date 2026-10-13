@@ -137,7 +137,7 @@ test.describe('Flex SSR preview — manifest warning', { tag: [TAGS.cerosBlock, 
 
   const unavailableManifestUrl = cerosStubManifestUrl()
 
-  test.describe('manifest unavailable', { tag: [TAGS.stubbedHttp] }, () => {
+  test.describe('manifest unavailable', { tag: [TAGS.stubbedHttp, TAGS.runsAlone] }, () => {
     test.use({
       postOptions: {
         title: 'ceros block',

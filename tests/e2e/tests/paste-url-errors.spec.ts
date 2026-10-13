@@ -72,7 +72,7 @@ const STUBBED_OUTCOMES: readonly { label: string; stubs: HttpStubs; message: str
 
 test.describe(
   'Paste a public URL — errors from the response',
-  { tag: [TAGS.cerosBlock, TAGS.stubbedHttp] },
+  { tag: [TAGS.cerosBlock, TAGS.stubbedHttp, TAGS.runsAlone] },
   () => {
     test.use({ postOptions: { title: 'ceros block', blocks: [emptyCerosBlock()] } })
 
