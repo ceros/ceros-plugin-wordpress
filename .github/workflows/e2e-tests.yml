@@ -32,9 +32,8 @@ jobs:
         with:
           node-version: '22'
           cache: npm
-          cache-dependency-path: |
-            package-lock.json
-            tests/e2e/package-lock.json
+          # Same key as ci.yml, which saves it on main, so every branch reuses main's cache.
+          cache-dependency-path: package-lock.json
 
       - name: Install and build the plugin
         run: |
