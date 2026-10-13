@@ -42,14 +42,18 @@ jobs:
           npm run build
 
       # Pin WordPress to the test-utils line (wp-6.9 -> 1.33.2); .wp-env.json leaves core unset.
+      # A release zip downloads faster than a clone of WordPress/WordPress, and does not fail with `early EOF`.
       # Pin PHP to 8.2 here (bookworm base) rather than the committed 7.4 (bullseye),
       # whose base image's apt packages are archived and 404 during the image build.
       - name: Pin WordPress core and PHP for wp-env
         run: |
-          echo '{ "core": "WordPress/WordPress#6.9.6", "phpVersion": "8.2" }' > .wp-env.override.json
+          echo '{ "core": "https://wordpress.org/wordpress-6.9.6.zip", "phpVersion": "8.2" }' > .wp-env.override.json
 
+      # Runs in the background while the e2e dependencies and Chrome install.
       - name: Start wp-env
-        run: npm run env:start
+        run: |
+          ( npm run env:start > "$RUNNER_TEMP/wp-env.log" 2>&1
+            echo $? > "$RUNNER_TEMP/wp-env.exit" ) > /dev/null 2>&1 &
 
       - name: Install e2e dependencies
         working-directory: tests/e2e
@@ -58,6 +62,13 @@ jobs:
       - name: Install Chrome for Playwright
         working-directory: tests/e2e
         run: npx playwright install --with-deps chrome
+
+      - name: Wait for wp-env
+        timeout-minutes: 10
+        run: |
+          until [ -f "$RUNNER_TEMP/wp-env.exit" ]; do sleep 1; done
+          cat "$RUNNER_TEMP/wp-env.log"
+          exit "$(cat "$RUNNER_TEMP/wp-env.exit")"
 
       - name: Configure the plugin for the Ceros env
         working-directory: tests/e2e
