@@ -26,9 +26,8 @@ export interface PluginSettingsFixture {
 }
 
 /**
- * Assumes one worker per WordPress instance (the config's `workers: 1`). Two workers
- * on one instance would change settings under each other's tests; scale out with
- * shards that each run their own wp-env.
+ * Settings are site-wide, so tests using this fixture must be tagged `@runsAlone`
+ * to run one at a time, after the rest of the suite.
  */
 export const pluginSettingsFixture = base.extend<PluginSettingsFixture>({
   pluginApiKey: ['constant', { option: true }],

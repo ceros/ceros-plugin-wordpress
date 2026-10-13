@@ -4,6 +4,7 @@ import { defineConfig, devices } from '@playwright/test'
 import { AUTH_STORAGE_STATE } from '@constants/paths'
 import { CONFIG_TIMEOUTS, TIMEOUTS } from '@constants/timeouts'
 import { BASE_URL, wpPassword, wpUser } from '@utils/env-utils'
+import { TAGS } from '@utils/test-tags'
 
 // The library reads WP_BASE_URL / WP_USERNAME / WP_PASSWORD at load, and its REST-root
 // discovery hits WP_BASE_URL directly (not the context baseURL). Seed them before it loads.
@@ -21,6 +22,8 @@ const CHROME = {
   viewport: { width: 1920, height: 1080 },
 } as const
 
+const RUNS_ALONE = new RegExp(TAGS.runsAlone)
+
 export default defineConfig({
   testDir: './tests',
   // Resolve test files and global setup against the runtime paths (no
@@ -28,8 +31,7 @@ export default defineConfig({
   tsconfig: './tsconfig.runtime.json',
   // Global setup logs in once and writes the session; every context reuses it via storageState.
   globalSetup: require.resolve('./global-setup'),
-  fullyParallel: false,
-  workers: 1,
+  workers: 4,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   reporter: [['html', { open: 'never' }], ['list']],
@@ -44,5 +46,16 @@ export default defineConfig({
     navigationTimeout: CONFIG_TIMEOUTS.NAVIGATION,
   },
   expect: { timeout: TIMEOUTS.SHORT_MEDIUM },
-  projects: [{ name: 'wordpress', use: CHROME }],
+  projects: [
+    // A teardown, not a dependency, so the runs-alone tests still run after the
+    // parallel ones, on their own, even when a parallel test failed.
+    {
+      name: 'parallel',
+      use: CHROME,
+      grepInvert: RUNS_ALONE,
+      fullyParallel: true,
+      teardown: 'serial',
+    },
+    { name: 'serial', use: CHROME, grep: RUNS_ALONE, workers: 1 },
+  ],
 })

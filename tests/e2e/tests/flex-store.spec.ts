@@ -117,7 +117,7 @@ test.describe('Flex store', { tag: [TAGS.cerosBlock, TAGS.flex] }, () => {
     })
   })
 
-  test.describe('failure', { tag: [TAGS.storesFiles, TAGS.stubbedHttp] }, () => {
+  test.describe('failure', { tag: [TAGS.storesFiles, TAGS.stubbedHttp, TAGS.runsAlone] }, () => {
     const unavailableManifestUrl = cerosStubManifestUrl()
     test.use({
       postOptions: {
