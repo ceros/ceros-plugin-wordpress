@@ -12,6 +12,8 @@ export type CreatePostInput = {
   title: string
   content: string
   status: 'draft' | 'publish'
+  /** User id to own the post; the requester's own when omitted. */
+  author?: number
 }
 
 /** Short, collision-resistant suffix so repeated runs never clash. */
@@ -26,7 +28,7 @@ export async function createPost(
   const created = await requestUtils.rest<{ id: number }>({
     method: 'POST',
     path: '/wp/v2/posts',
-    data: { title: input.title, content: input.content, status: input.status },
+    data: input,
   })
   const stored = await readRawContent(requestUtils, created.id)
   return {
@@ -77,4 +79,30 @@ export async function deleteUser(requestUtils: RequestUtils, id: number): Promis
     path: `/wp/v2/users/${id}`,
     params: { force: true, reassign: 1 },
   })
+}
+
+/** Create the user with this role, or reset the password and role of the one that already exists. */
+export async function upsertUser(
+  requestUtils: RequestUtils,
+  user: { username: string; password: string; role: string },
+): Promise<number> {
+  const [existing] = await requestUtils.rest<{ id: number }[]>({
+    path: '/wp/v2/users',
+    params: { slug: user.username, context: 'edit' },
+  })
+  if (!existing) {
+    const created = await requestUtils.createUser({
+      username: user.username,
+      email: `${user.username}@example.com`,
+      password: user.password,
+      roles: [user.role],
+    })
+    return created.id
+  }
+  await requestUtils.rest({
+    method: 'POST',
+    path: `/wp/v2/users/${existing.id}`,
+    data: { password: user.password, roles: [user.role] },
+  })
+  return existing.id
 }
