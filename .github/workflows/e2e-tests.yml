@@ -48,8 +48,19 @@ jobs:
         run: |
           echo '{ "core": "WordPress/WordPress#6.9.6", "phpVersion": "8.2" }' > .wp-env.override.json
 
+      # Measurement only: time-stamped wp-env debug output and what the runner already has.
+      - name: Probe the runner
+        continue-on-error: true
+        run: |
+          which google-chrome && google-chrome --version
+          docker images
+          time curl -sSfo /tmp/wp.zip https://wordpress.org/wordpress-6.9.6.zip && ls -l /tmp/wp.zip
+
       - name: Start wp-env
-        run: npm run env:start
+        shell: bash
+        run: |
+          set -o pipefail
+          npm run env:start -- --debug 2>&1 | while IFS= read -r line; do echo "$(date +%T) $line"; done
 
       - name: Install e2e dependencies
         working-directory: tests/e2e
