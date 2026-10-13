@@ -42,25 +42,19 @@ jobs:
           npm run build
 
       # Pin WordPress to the test-utils line (wp-6.9 -> 1.33.2); .wp-env.json leaves core unset.
+      # A release zip downloads faster than a clone of WordPress/WordPress.
       # Pin PHP to 8.2 here (bookworm base) rather than the committed 7.4 (bullseye),
       # whose base image's apt packages are archived and 404 during the image build.
       - name: Pin WordPress core and PHP for wp-env
         run: |
-          echo '{ "core": "WordPress/WordPress#6.9.6", "phpVersion": "8.2" }' > .wp-env.override.json
+          echo '{ "core": "https://wordpress.org/wordpress-6.9.6.zip", "phpVersion": "8.2" }' > .wp-env.override.json
 
-      # Measurement only: time-stamped wp-env debug output and what the runner already has.
-      - name: Probe the runner
-        continue-on-error: true
-        run: |
-          which google-chrome && google-chrome --version
-          docker images
-          time curl -sSfo /tmp/wp.zip https://wordpress.org/wordpress-6.9.6.zip && ls -l /tmp/wp.zip
-
+      # Runs in the background while the e2e dependencies and Chrome install.
       - name: Start wp-env
         shell: bash
         run: |
-          set -o pipefail
-          npm run env:start -- --debug 2>&1 | while IFS= read -r line; do echo "$(date +%T) $line"; done
+          ( npm run env:start -- --debug 2>&1 | while IFS= read -r line; do echo "$(date +%T) $line"; done > "$RUNNER_TEMP/wp-env.log"
+            echo "${PIPESTATUS[0]}" > "$RUNNER_TEMP/wp-env.exit" ) > /dev/null 2>&1 &
 
       - name: Install e2e dependencies
         working-directory: tests/e2e
@@ -69,6 +63,14 @@ jobs:
       - name: Install Chrome for Playwright
         working-directory: tests/e2e
         run: npx playwright install --with-deps chrome
+
+      - name: Wait for wp-env
+        shell: bash
+        timeout-minutes: 10
+        run: |
+          until [ -f "$RUNNER_TEMP/wp-env.exit" ]; do sleep 1; done
+          cat "$RUNNER_TEMP/wp-env.log"
+          exit "$(cat "$RUNNER_TEMP/wp-env.exit")"
 
       - name: Configure the plugin for the Ceros env
         working-directory: tests/e2e
