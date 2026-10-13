@@ -9,7 +9,7 @@ import { TAGS } from '@utils/test-tags'
  * instead of failing silently or crashing. Changes site-wide settings, which the
  * fixture restores.
  */
-test.describe('Invalid API key', { tag: [TAGS.cerosBlock, TAGS.settings] }, () => {
+test.describe('Invalid API key', { tag: [TAGS.cerosBlock, TAGS.settings, TAGS.runsAlone] }, () => {
   test.use({
     pluginApiKey: 'invalid',
     postOptions: { title: 'ceros block', blocks: [emptyCerosBlock()] },

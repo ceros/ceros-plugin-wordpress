@@ -78,7 +78,7 @@ jobs:
 
       - name: Run the suite
         working-directory: tests/e2e
-        run: npx playwright test --project=wordpress --reporter=list,html
+        run: npm test -- --reporter=list,html
 
       - name: Upload Playwright report
         if: ${{ !cancelled() }}

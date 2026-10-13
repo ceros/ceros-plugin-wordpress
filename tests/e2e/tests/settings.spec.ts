@@ -19,7 +19,7 @@ test.use({ trace: 'off', video: 'off' })
 // Site settings need manage_options.
 test.use({ actor: 'administrator' })
 
-test.describe('Plugin settings', { tag: [TAGS.settings] }, () => {
+test.describe('Plugin settings', { tag: [TAGS.settings, TAGS.runsAlone] }, () => {
   test.describe('key in wp-config', () => {
     test.use({ pluginApiKey: 'constant' })
 

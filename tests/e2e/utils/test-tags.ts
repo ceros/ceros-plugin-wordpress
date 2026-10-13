@@ -9,4 +9,6 @@ export const TAGS = {
   settings: '@settings',
   stubbedHttp: '@stubbedHttp',
   storesFiles: '@storesFiles',
+  /** Changes site-wide state, so it runs one at a time after the rest. */
+  runsAlone: '@runsAlone',
 } as const
