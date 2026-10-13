@@ -58,13 +58,15 @@ local `wp-env`. Real environment variables take precedence over the file, so CI 
 own values without `.env` interfering.
 
 Login is once-per-run: global setup signs in with `E2E_WP_USER` / `E2E_WP_PASSWORD` and
-persists the session (cookies + REST nonce), which authenticates both the browser and the
-REST calls, so no separate REST credential has to be minted or stored.
+persists the session (cookies + REST nonce), which authenticates the REST calls and the
+administrator specs, so no separate REST credential has to be minted or stored. Global setup also
+creates (or resets the password and role of) an `e2e-author` user with the Author role on the
+target site, so run only one suite at a time per WordPress site: the reset ends other runs' sessions.
 
 | Variable                          | Default                     | Purpose                                                                                |
 | --------------------------------- | --------------------------- | -------------------------------------------------------------------------------------- |
 | `BASE_URL`                        | `http://localhost:8894`     | The WordPress instance. `http`, not `https` — wp-env serves plain HTTP.                |
-| `E2E_WP_USER` / `E2E_WP_PASSWORD` | `admin` / `password`        | Admin login (browser + REST session). wp-env's documented defaults.                    |
+| `E2E_WP_USER` / `E2E_WP_PASSWORD` | `admin` / `password`        | Admin login (REST session, administrator specs). wp-env's documented defaults.         |
 | `E2E_CEROS_ENV`                   | `latest`                    | The Ceros dev environment; the experience URLs and API host derive from it.            |
 | `E2E_CEROS_API_KEY`               | —                           | Bearer key for that env (a secret). Required for the browse-picker and settings specs. |
 | `E2E_TIMEOUT_*`                   | see `constants/timeouts.ts` | Override any timeout tier, in milliseconds.                                            |
@@ -122,6 +124,18 @@ The `@storesFiles` specs store a Flex experience on the site, which writes it un
 `uploads/ceros-flex/<postId>/`. Deleting the post leaves that folder behind, so the
 `flex-store` fixture lists it and deletes it with WP-CLI after each test, even when the
 test fails.
+
+## Roles
+
+The browser is logged in as `e2e-author`, an Author, by default: the least privileged role
+that can publish, and one without `unfiltered_html`, so saves go through the same filtering as
+on hosts like WordPress.com. The post fixture hands the test's post to that user, since an
+Author can edit only their own posts. Fixture setup and read-back over REST stay on the admin.
+
+`settings.spec` opts into the admin with `test.use({ actor: 'administrator' })`, since the
+settings page needs `manage_options`.
+
+Read-only specs still run logged out with an empty `storageState` (see [Conventions](#conventions)).
 
 ## Layout
 

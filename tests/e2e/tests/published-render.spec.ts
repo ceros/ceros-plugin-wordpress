@@ -1,12 +1,10 @@
 import { expect, test } from '@fixtures/fixtures'
 import { PublishedPostPage } from '@pages/published-post.page'
 import { resolvedLegacyStudioBlock } from '@utils/block-serializer'
-import { cerosLegacyExperienceUrl } from '@utils/env-utils'
+import { cerosLegacyExperienceUrl, experienceSlug } from '@utils/env-utils'
 import { TAGS } from '@utils/test-tags'
 
-/** The last path segment of the legacy experience URL — the slug the rendered iframe points at. */
-const legacySlug =
-  new URL(cerosLegacyExperienceUrl()).pathname.split('/').filter(Boolean).pop() ?? ''
+const legacySlug = experienceSlug(cerosLegacyExperienceUrl())
 
 /**
  * The published front-end render for a legacy Studio experience. render.php

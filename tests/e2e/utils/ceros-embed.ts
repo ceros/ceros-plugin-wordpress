@@ -8,8 +8,8 @@ export type EmbedSize = 'full' | 'scroll'
 /** How a Flex experience is delivered, stored as `deliveryMode`. */
 export type DeliveryMode = 'iframe' | 'inline' | 'ssr'
 
-/** The class the legacy Studio (scroll-proxy) iframe carries; present in every stored Studio embed code. */
-export const STUDIO_EMBED_MARKER = 'class="ceros-experience"'
+/** The wrapper every stored Studio embed code keeps, even after filtering strips its iframe and script. */
+const STUDIO_EMBED_WRAPPER = /data-aspectratio=/i
 
 /** The attribute every Flex inline snippet carries. */
 export const FLEX_INLINE_MARKER = 'data-flex-inline'
@@ -34,7 +34,8 @@ export async function expectStudioEmbedRendered(
 /**
  * Assert the block attributes WordPress stored describe a legacy Studio iframe
  * embed of the expected experience and size. The paste-URL flow leaves the
- * resource id empty; the browse flow sets it, so callers opt in.
+ * resource id empty; the browse flow sets it, so callers opt in. Stored embed code is
+ * filtered for users without `unfiltered_html`; render.php rebuilds from experienceUrl.
  */
 export async function expectStoredStudioAttributes(
   requestUtils: RequestUtils,
@@ -63,7 +64,7 @@ export async function expectStoredStudioAttributes(
 
   const embedCode =
     expected.selectedOption === 'scroll' ? stored.scrollableEmbedCode : stored.fullHeightEmbedCode
-  expect(String(embedCode ?? '')).toContain(STUDIO_EMBED_MARKER)
+  expect(String(embedCode ?? '')).toMatch(STUDIO_EMBED_WRAPPER)
 
   if (expected.requireResourceId) {
     expect(String(stored.experienceResourceId ?? '')).not.toBe('')

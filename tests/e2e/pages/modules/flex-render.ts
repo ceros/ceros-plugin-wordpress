@@ -8,12 +8,16 @@ import type { DeliveryMode } from '@utils/ceros-embed'
 export class FlexRender {
   readonly iframeEmbed: Locator
   readonly inlineEmbed: Locator
+  readonly inlineRuntime: Locator
   readonly ssrEmbed: Locator
   readonly embed: (mode: DeliveryMode) => Locator
 
   constructor(readonly root: Page | FrameLocator) {
     this.iframeEmbed = root.locator('div[data-ceros-experience]').describe('flex iframe embed')
     this.inlineEmbed = root.locator('div[data-flex-inline]').describe('flex inline embed')
+    this.inlineRuntime = root
+      .locator('div[data-flex-inline] + script[src*="flex-client"]')
+      .describe('flex inline runtime script')
     this.ssrEmbed = root.locator('div.ceros-block__flex-ssr').describe('flex server-rendered embed')
     this.embed = (mode: DeliveryMode) =>
       ({ iframe: this.iframeEmbed, inline: this.inlineEmbed, ssr: this.ssrEmbed })[mode]

@@ -40,6 +40,10 @@ export const cerosEnv = (): string => process.env.E2E_CEROS_ENV?.trim() || 'late
 export const cerosLegacyExperienceUrl = (): string =>
   `https://${cerosEnv()}.view.cerosdev.com/automation/analytics-test-experience`
 
+/** The last path segment of an experience URL, which its embed points at. */
+export const experienceSlug = (url: string): string =>
+  new URL(url).pathname.split('/').filter(Boolean).pop() ?? ''
+
 export const cerosFlexExperienceUrl = (): string =>
   `https://automation.${cerosEnv()}.cerosdev.site/wp-paste-url`
 
