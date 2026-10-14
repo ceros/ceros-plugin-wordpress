@@ -6,7 +6,7 @@ import {
   INVALID_API_KEY,
   PLUGIN_SETTINGS_OPTIONS,
 } from '@constants/ceros-settings-constants'
-import { phpString, wpCli, wpEval, wpEvalJson } from '@utils/wp-cli'
+import { phpString, wpEval, wpEvalJson } from '@utils/wp-cli'
 
 /** Where the settings page finds the API key when it opens. */
 export type PluginApiKeyState =
@@ -42,6 +42,9 @@ export const requireProvisionedKey = (snapshot: PluginSettingsSnapshot): string 
   return snapshot.apiKey
 }
 
+/** Run a WP-CLI command from inside `wp eval`, in the same process, so it adds no container start. */
+const phpWpCli = (command: string): string => `WP_CLI::runcommand(${command}, ['launch' => false]);`
+
 export async function applyApiKeyState(
   state: PluginApiKeyState,
   snapshot: PluginSettingsSnapshot,
@@ -53,9 +56,9 @@ export async function applyApiKeyState(
 
   const key =
     state === 'saved' ? requireProvisionedKey(snapshot) : state === 'invalid' ? INVALID_API_KEY : ''
-  if (snapshot.apiKey !== null) await wpCli(['config', 'delete', API_KEY_CONSTANT])
   await wpEval(
-    `foreach ([${API_KEY_OPTIONS.map(phpString).join(', ')}] as $name) { delete_option($name); }` +
+    (snapshot.apiKey !== null ? phpWpCli(phpString(`config delete ${API_KEY_CONSTANT}`)) : '') +
+      ` foreach ([${API_KEY_OPTIONS.map(phpString).join(', ')}] as $name) { delete_option($name); }` +
       (key ? ` Ceros_Encryption::save_api_key(${phpString(key)});` : ''),
     [key],
   )
@@ -63,15 +66,16 @@ export async function applyApiKeyState(
 
 export async function restorePluginSettings(snapshot: PluginSettingsSnapshot): Promise<void> {
   const options = phpString(JSON.stringify(snapshot.options))
+  const { apiKey } = snapshot
   await wpEval(
     `foreach (json_decode(${options}, true) as $name => $value) {
       null === $value ? delete_option($name) : update_option($name, $value);
-    }`,
+    }` +
+      (apiKey !== null
+        ? phpWpCli(
+            `${phpString(`config set ${API_KEY_CONSTANT} `)} . escapeshellarg(${phpString(apiKey)}) . ' --type=constant'`,
+          )
+        : ''),
+    [apiKey ?? ''],
   )
-  if (snapshot.apiKey !== null) {
-    await wpCli(
-      ['config', 'set', API_KEY_CONSTANT, snapshot.apiKey, '--type=constant'],
-      [snapshot.apiKey],
-    )
-  }
 }
