@@ -55,10 +55,7 @@ export const cerosFlexManifestUrl = (): string => `${cerosFlexExperienceUrl()}/m
  * A path under `/ceros-e2e/` unique to the running test, for stubbed-response tests. No
  * real page or other test requests it, so a stub on it only ever answers this test.
  */
-const stubPath = (file: string): string => {
-  const { testId, repeatEachIndex } = test.info()
-  return `/ceros-e2e/${testId}-${repeatEachIndex}/${file}`
-}
+const stubPath = (file: string): string => `/ceros-e2e/${test.info().testId}/${file}`
 
 /** A manifest URL on the Flex host that serves nothing, unique to the running test. */
 export const cerosStubManifestUrl = (): string =>

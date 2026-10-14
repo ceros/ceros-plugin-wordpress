@@ -43,7 +43,10 @@ export const requireProvisionedKey = (snapshot: PluginSettingsSnapshot): string 
 }
 
 /** Run a WP-CLI command from inside `wp eval`, in the same process, so it adds no container start. */
-const phpWpCli = (command: string): string => `WP_CLI::runcommand(${command}, ['launch' => false]);`
+const phpWpCli = (args: readonly string[], options: Record<string, string> = {}): string =>
+  `WP_CLI::run_command([${args.map(phpString).join(', ')}], [${Object.entries(options)
+    .map(([name, value]) => `${phpString(name)} => ${phpString(value)}`)
+    .join(', ')}]);`
 
 export async function applyApiKeyState(
   state: PluginApiKeyState,
@@ -57,7 +60,7 @@ export async function applyApiKeyState(
   const key =
     state === 'saved' ? requireProvisionedKey(snapshot) : state === 'invalid' ? INVALID_API_KEY : ''
   await wpEval(
-    (snapshot.apiKey !== null ? phpWpCli(phpString(`config delete ${API_KEY_CONSTANT}`)) : '') +
+    (snapshot.apiKey !== null ? phpWpCli(['config', 'delete', API_KEY_CONSTANT]) : '') +
       ` foreach ([${API_KEY_OPTIONS.map(phpString).join(', ')}] as $name) { delete_option($name); }` +
       (key ? ` Ceros_Encryption::save_api_key(${phpString(key)});` : ''),
     [key],
@@ -72,9 +75,7 @@ export async function restorePluginSettings(snapshot: PluginSettingsSnapshot): P
       null === $value ? delete_option($name) : update_option($name, $value);
     }` +
       (apiKey !== null
-        ? phpWpCli(
-            `${phpString(`config set ${API_KEY_CONSTANT} `)} . escapeshellarg(${phpString(apiKey)}) . ' --type=constant'`,
-          )
+        ? phpWpCli(['config', 'set', API_KEY_CONSTANT, apiKey], { type: 'constant' })
         : ''),
     [apiKey ?? ''],
   )
