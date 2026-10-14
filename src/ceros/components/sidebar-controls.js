@@ -54,8 +54,9 @@ export function SidebarControls( {
 	const handleEdit =
 		onEdit || ( () => dispatch( { type: ACTION_TYPES.OPEN_MODAL } ) );
 	const isIframeDelivery = deliveryMode === DELIVERY_MODES.IFRAME;
-	// Flex experiences, in any delivery mode. Legacy Studio embeds have no
-	// manifest and no way to switch Ceros analytics off.
+	// Flex experiences, in any delivery mode. Mirrors ceros_is_flex_block() in
+	// includes/flex-analytics.php, which applies the choice at render. Legacy
+	// Studio embeds have no manifest and no way to switch Ceros analytics off.
 	const isFlex = hasInline || Boolean( attributes?.manifestUrl );
 	return (
 		<InspectorControls>

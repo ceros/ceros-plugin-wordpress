@@ -9,6 +9,8 @@ export type CerosBlockAttributes = {
   selectedOption: string
   fullHeightEmbedCode: string
   scrollableEmbedCode: string
+  inlineEmbedCode: string
+  cerosAnalytics: boolean
 }
 
 /** `save.js` returns null, so post content is a self-closing comment carrying the attributes. */
@@ -36,6 +38,26 @@ export const resolvedLegacyStudioBlock = (
   experienceUrl: string,
   selectedOption: 'full' | 'scroll' = 'full',
 ): string => cerosBlock({ experienceUrl, selectedOption })
+
+/**
+ * A Flex block whose manifest can't be fetched, so render.php falls back to its
+ * stored iframe embed code and stamps the block's tracking choice onto it. The
+ * manifest URL is http, which the fetch rejects before making a request, so the
+ * render needs no network. `withManifestUrl: false` models a block saved before
+ * the manifest URL was stored, which carries only the Inline snippet.
+ */
+export const unfetchableFlexBlock = (
+  experienceUrl: string,
+  options: { cerosAnalytics?: boolean; withManifestUrl?: boolean } = {},
+): string => {
+  const manifestUrl = `${experienceUrl.replace(/^https:/, 'http:')}/manifest.v1.json`
+  return cerosBlock({
+    ...(options.withManifestUrl === false ? {} : { manifestUrl }),
+    inlineEmbedCode: `<div data-flex-inline data-flex-manifest-url="${manifestUrl}"></div>`,
+    fullHeightEmbedCode: `<div data-embed-width="100%" data-embed-height="auto" data-ceros-experience="${experienceUrl}"></div>`,
+    ...(options.cerosAnalytics === undefined ? {} : { cerosAnalytics: options.cerosAnalytics }),
+  })
+}
 
 /**
  * Read back the attributes WordPress actually stored.

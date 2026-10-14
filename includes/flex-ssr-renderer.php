@@ -28,12 +28,13 @@ if ( ! defined( 'ABSPATH' ) ) {
  *                                    custom Body HTML. Defaults true, matching the
  *                                    block attribute default.
  * @param bool   $tracking            Whether the embed reports to Ceros analytics.
- *                                    Defaults true, matching the block attribute
- *                                    default.
+ *                                    Defaults false, unlike the block attribute:
+ *                                    a caller that omits it has not run the
+ *                                    preview check, so it must not report.
  * @return string Rendered HTML, or '' when the manifest could not be fetched
  *                (the caller should fall back to another delivery mode).
  */
-function ceros_render_flex_ssr( $manifest_url, $include_custom_html = true, $tracking = true ) {
+function ceros_render_flex_ssr( $manifest_url, $include_custom_html = true, $tracking = false ) {
 	$manifest = ceros_fetch_flex_manifest( $manifest_url );
 	if ( is_wp_error( $manifest ) || ! is_array( $manifest ) ) {
 		return '';
@@ -59,7 +60,7 @@ function ceros_render_flex_ssr( $manifest_url, $include_custom_html = true, $tra
  * @param bool   $tracking            Whether the embed reports to Ceros analytics.
  * @return string Rendered HTML, or '' when there is nothing renderable.
  */
-function ceros_flex_ssr_render_manifest( $manifest, $served_url, $include_custom_html = true, $tracking = true ) {
+function ceros_flex_ssr_render_manifest( $manifest, $served_url, $include_custom_html = true, $tracking = false ) {
 	if ( ! is_array( $manifest ) ) {
 		return '';
 	}
@@ -84,7 +85,7 @@ function ceros_flex_ssr_render_manifest( $manifest, $served_url, $include_custom
 	}
 	// flex-ssr.js reads the opt-in off the viewer's immediate parent, which is
 	// this wrapper.
-	$wrapper_attrs .= ceros_flex_analytics_attribute( (bool) $tracking );
+	$wrapper_attrs .= ceros_flex_analytics_attribute( $tracking );
 
 	$content = '<div class="ceros-block__flex-ssr"' . $wrapper_attrs . '>'
 		. $html_body

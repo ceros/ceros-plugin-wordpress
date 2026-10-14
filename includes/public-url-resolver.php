@@ -463,14 +463,14 @@ function ceros_build_flex_inline_snippet( $manifest_url, $script_url, $tracking 
  * @param bool   $tracking     Whether the embed reports to Ceros analytics.
  * @return string The inline embed snippet, or '' on any failure.
  */
-function ceros_render_flex_inline( $manifest_url, $tracking = true ) {
+function ceros_render_flex_inline( $manifest_url, $tracking = false ) {
 	$manifest = ceros_load_flex_manifest( $manifest_url );
 	if ( null === $manifest ) {
 		return '';
 	}
 
 	$flex_client = ceros_flex_delivery_script_url( $manifest, 'inline', 'flex-client.js' );
-	return ceros_build_flex_inline_snippet( trim( (string) $manifest_url ), $flex_client, (bool) $tracking );
+	return ceros_build_flex_inline_snippet( trim( (string) $manifest_url ), $flex_client, $tracking );
 }
 
 /**
@@ -489,7 +489,7 @@ function ceros_render_flex_inline( $manifest_url, $tracking = true ) {
  * @param bool   $tracking     Whether the embed reports to Ceros analytics.
  * @return string The iframe embed snippet, or '' on any failure.
  */
-function ceros_render_flex_iframe( $manifest_url, $height, $tracking = true ) {
+function ceros_render_flex_iframe( $manifest_url, $height, $tracking = false ) {
 	$manifest = ceros_load_flex_manifest( $manifest_url );
 	if ( null === $manifest ) {
 		return '';
@@ -501,7 +501,7 @@ function ceros_render_flex_iframe( $manifest_url, $height, $tracking = true ) {
 	}
 
 	$embed_script = ceros_flex_delivery_script_url( $manifest, 'iframe', 'embed.v1.js' );
-	return ceros_build_flex_iframe_snippet( $experience_url, $embed_script, $height, (bool) $tracking );
+	return ceros_build_flex_iframe_snippet( $experience_url, $embed_script, $height, $tracking );
 }
 
 /**

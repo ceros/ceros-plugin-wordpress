@@ -14,8 +14,8 @@
  * whose Ceros analytics toggle is on; nothing here can make an embed report
  * more than its manifest allows.
  *
- * Editor and post previews never track: an author checking their own page is
- * not an audience.
+ * Previews never track: the editor's, WordPress's post preview and the
+ * Customizer's. An author checking their own page is not an audience.
  *
  * @package ceros
  */
@@ -41,6 +41,18 @@ function ceros_flex_tracking_enabled( $attributes, $is_preview ) {
 	// a block saved before the toggle existed arrives as true. Compared against
 	// false for the same reason as includeCustomHtml in render.php.
 	return false !== ( $attributes['cerosAnalytics'] ?? true );
+}
+
+/**
+ * Whether a block embeds a Flex experience. Flex blocks carry a manifest URL,
+ * except those saved before it was stored, which carry only the Inline snippet.
+ * Legacy Studio blocks carry neither. Mirrors isFlex in sidebar-controls.js.
+ *
+ * @param array $attributes Block attributes.
+ * @return bool True for a Flex block.
+ */
+function ceros_is_flex_block( $attributes ) {
+	return ! empty( $attributes['manifestUrl'] ) || ! empty( $attributes['inlineEmbedCode'] );
 }
 
 /**
@@ -78,7 +90,7 @@ function ceros_flex_analytics_attribute( $tracking ) {
  * @return string The markup with the attribute set.
  */
 function ceros_flex_stamp_analytics( $html, $tracking ) {
-	if ( '' === (string) $html || ! class_exists( 'WP_HTML_Tag_Processor' ) ) {
+	if ( '' === (string) $html ) {
 		return $html;
 	}
 
@@ -94,27 +106,40 @@ function ceros_flex_stamp_analytics( $html, $tracking ) {
 }
 
 /**
- * Remember, for the rest of the request, that the block is rendering for the
- * editor preview. Called with no argument it only reads.
+ * Whether the block renderer is rendering this block for the editor preview.
+ * Called with no argument it only reads; with a bool it sets the flag.
  *
- * @param bool $mark True to mark this request as an editor preview.
- * @return bool Whether it is one.
+ * @param bool|null $set True while an editor preview renders, false after.
+ * @return bool Whether one is rendering.
  */
-function ceros_flex_editor_preview_render( $mark = false ) {
+function ceros_flex_editor_preview_render( $set = null ) {
 	static $is_editor_preview = false;
-	if ( $mark ) {
-		$is_editor_preview = true;
+	if ( null !== $set ) {
+		$is_editor_preview = (bool) $set;
 	}
 	return $is_editor_preview;
 }
 
 /**
- * Mark a request to the block renderer for this block as an editor preview.
+ * Whether a REST request is the block renderer rendering this block.
+ *
+ * @param WP_REST_Request $request The request.
+ * @return bool True for this block's editor preview.
+ */
+function ceros_flex_is_editor_preview_request( $request ) {
+	return '/wp/v2/block-renderer/create-block/ceros' === rtrim( (string) $request->get_route(), '/' );
+}
+
+/**
+ * Mark the block renderer's dispatch for this block as an editor preview.
  *
  * The editor previews every Flex block through `/wp/v2/block-renderer` (see
  * src/ceros/components/ssr-preview.js). Matched on that route rather than on
  * REST_REQUEST, which is also true when a headless front end reads a post's
- * rendered content for real visitors.
+ * rendered content for real visitors. The flag is cleared again when the
+ * dispatch ends (ceros_flex_unflag_editor_preview()), so a block-renderer
+ * request dispatched in-process while building a real page cannot turn
+ * tracking off for the blocks rendered after it.
  *
  * @param mixed           $response The response so far, returned unchanged.
  * @param array           $handler  The route handler.
@@ -122,7 +147,7 @@ function ceros_flex_editor_preview_render( $mark = false ) {
  * @return mixed The response, unchanged.
  */
 function ceros_flex_flag_editor_preview( $response, $handler, $request ) {
-	if ( 0 === strpos( (string) $request->get_route(), '/wp/v2/block-renderer/create-block/ceros' ) ) {
+	if ( ceros_flex_is_editor_preview_request( $request ) ) {
 		ceros_flex_editor_preview_render( true );
 	}
 	return $response;
@@ -130,11 +155,29 @@ function ceros_flex_flag_editor_preview( $response, $handler, $request ) {
 add_filter( 'rest_request_before_callbacks', 'ceros_flex_flag_editor_preview', 10, 3 );
 
 /**
+ * Clear the editor-preview flag once the block renderer's dispatch ends.
+ *
+ * @param mixed           $response The response, returned unchanged.
+ * @param array           $handler  The route handler.
+ * @param WP_REST_Request $request  The request.
+ * @return mixed The response, unchanged.
+ */
+function ceros_flex_unflag_editor_preview( $response, $handler, $request ) {
+	if ( ceros_flex_is_editor_preview_request( $request ) ) {
+		ceros_flex_editor_preview_render( false );
+	}
+	return $response;
+}
+add_filter( 'rest_request_after_callbacks', 'ceros_flex_unflag_editor_preview', 10, 3 );
+
+/**
  * Whether the block is rendering for a preview: the editor's in-block preview,
- * or WordPress's post preview (`?preview=true`).
+ * WordPress's post preview (`?preview=true`), or the Customizer's.
  *
  * @return bool True for a preview.
  */
 function ceros_is_preview_render() {
-	return ceros_flex_editor_preview_render() || ( function_exists( 'is_preview' ) && is_preview() );
+	return ceros_flex_editor_preview_render()
+		|| ( function_exists( 'is_preview' ) && is_preview() )
+		|| ( function_exists( 'is_customize_preview' ) && is_customize_preview() );
 }

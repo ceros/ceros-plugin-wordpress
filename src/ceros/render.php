@@ -131,11 +131,12 @@ function ceros_render_block( $attributes ) {
 	}
 
 	// Sanitize the embed code before output to prevent XSS. A Flex block lands
-	// here only when its manifest couldn't be fetched; its saved embed code
-	// predates the block's tracking choice, so that choice is stamped onto it.
+	// here when its manifest couldn't be fetched, or when it was saved before
+	// the manifest URL was stored; its saved embed code predates the block's
+	// tracking choice, so that choice is stamped onto it.
 	if ( ! empty( $embed_code ) ) {
 		$embed_code = ceros_sanitize_embed_code( $embed_code );
-		if ( ! empty( $attributes['manifestUrl'] ) && function_exists( 'ceros_flex_stamp_analytics' ) ) {
+		if ( function_exists( 'ceros_is_flex_block' ) && ceros_is_flex_block( $attributes ) ) {
 			$embed_code = ceros_flex_stamp_analytics( $embed_code, $tracking );
 		}
 		return $embed_code;

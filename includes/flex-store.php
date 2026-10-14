@@ -585,7 +585,7 @@ function ceros_store_rrmdir( $dir, $depth = 0 ) {
  * @param bool   $tracking            Whether the embed reports to Ceros analytics.
  * @return string Rendered HTML, or '' when the bundle is missing/unreadable.
  */
-function ceros_render_flex_ssr_stored( $index_rel_path, $include_custom_html = true, $tracking = true ) {
+function ceros_render_flex_ssr_stored( $index_rel_path, $include_custom_html = true, $tracking = false ) {
 	$index_rel_path = ltrim( (string) $index_rel_path, '/' );
 	// Confine to our storage root.
 	if ( false !== strpos( $index_rel_path, '..' ) || 0 !== strpos( $index_rel_path, 'ceros-flex/' ) ) {
