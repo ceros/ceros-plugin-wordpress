@@ -1,5 +1,7 @@
 import type { FrameLocator, Locator, Page } from '@playwright/test'
 import { TIMEOUTS } from '@constants/timeouts'
+import { FlexRender } from '@pages/modules/flex-render'
+import type { DeliveryMode } from '@utils/ceros-embed'
 
 /**
  * The Ceros block as rendered inside the editor.
@@ -24,10 +26,13 @@ export class CerosBlock {
   readonly preview: Locator
   readonly previewNote: Locator
   readonly ssrPreviewFrame: Locator
+  readonly ssrPreview: FlexRender
+  readonly previewWarning: Locator
   readonly previewEmbedContainer: Locator
   readonly previewEmbedFrame: Locator
   readonly pasteEmbedFullRadio: Locator
   readonly pasteEmbedScrollRadio: Locator
+  readonly pasteDeliveryRadio: (mode: DeliveryMode) => Locator
 
   readonly errorPanel: Locator
   readonly errorHeading: Locator
@@ -56,6 +61,8 @@ export class CerosBlock {
     this.ssrPreviewFrame = root
       .locator('.ceros-block__ssr-preview-frame')
       .describe('server-rendered preview frame')
+    this.ssrPreview = new FlexRender(this.ssrPreviewFrame.contentFrame())
+    this.previewWarning = root.locator('.ceros-block__preview-warning').describe('preview warning')
     this.previewEmbedContainer = this.preview
       .locator('div[data-aspectRatio]')
       .describe('preview embed container')
@@ -68,6 +75,10 @@ export class CerosBlock {
     this.pasteEmbedScrollRadio = root
       .locator('.ceros-block__embed-options input[value="scroll"]')
       .describe('paste panel scrolling radio')
+    this.pasteDeliveryRadio = (mode: DeliveryMode) =>
+      root
+        .locator(`.ceros-block__embed-options input[value="${mode}"]`)
+        .describe(`paste panel ${mode} delivery radio`)
 
     this.errorPanel = root.locator('.ceros-block__error').describe('ceros block error panel')
     this.errorHeading = this.errorPanel
@@ -85,8 +96,9 @@ export class CerosBlock {
     await this.emptyState.waitFor({ timeout: TIMEOUTS.LONG })
   }
 
+  /** Studio blocks preview client-side; Flex blocks preview through the server render. */
   async waitForPreview(): Promise<void> {
-    await this.preview.waitFor({ timeout: TIMEOUTS.LONG })
+    await this.preview.or(this.ssrPreviewFrame).waitFor({ timeout: TIMEOUTS.LONG })
   }
 
   async waitForPasteResult(): Promise<void> {

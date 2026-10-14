@@ -1,12 +1,10 @@
 import { expect, test } from '@fixtures/fixtures'
 import { PublishedPostPage } from '@pages/published-post.page'
 import { resolvedLegacyStudioBlock } from '@utils/block-serializer'
-import { cerosLegacyExperienceUrl } from '@utils/env-utils'
+import { cerosLegacyExperienceUrl, experienceSlug } from '@utils/env-utils'
 import { TAGS } from '@utils/test-tags'
 
-/** The last path segment of the legacy experience URL — the slug the rendered iframe points at. */
-const legacySlug =
-  new URL(cerosLegacyExperienceUrl()).pathname.split('/').filter(Boolean).pop() ?? ''
+const legacySlug = experienceSlug(cerosLegacyExperienceUrl())
 
 /**
  * The published front-end render for a legacy Studio experience. render.php
@@ -36,6 +34,6 @@ test.describe('Legacy Studio published render', { tag: [TAGS.cerosBlock, TAGS.re
 
     // The Studio branch rendered, not the not-found or Flex-inline branches.
     await expect(publishedPost.missingExperience).toHaveCount(0)
-    await expect(publishedPost.inlineEmbed).toHaveCount(0)
+    await expect(publishedPost.flex.inlineEmbed).toHaveCount(0)
   })
 })

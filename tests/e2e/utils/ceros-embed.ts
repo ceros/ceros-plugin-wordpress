@@ -5,8 +5,14 @@ import { readStoredBlockAttributes } from '@utils/wp-rest-client'
 /** The two iframe embed sizes the block stores as `selectedOption`. */
 export type EmbedSize = 'full' | 'scroll'
 
-/** The class the legacy Studio (scroll-proxy) iframe carries; present in every stored Studio embed code. */
-export const STUDIO_EMBED_MARKER = 'class="ceros-experience"'
+/** How a Flex experience is delivered, stored as `deliveryMode`. */
+export type DeliveryMode = 'iframe' | 'inline' | 'ssr'
+
+/** The wrapper every stored Studio embed code keeps, even after filtering strips its iframe and script. */
+const STUDIO_EMBED_WRAPPER = /data-aspectratio=/i
+
+/** The attribute every Flex inline snippet carries. */
+export const FLEX_INLINE_MARKER = 'data-flex-inline'
 
 /** A pattern that requires a non-empty value containing the fragment; an empty fragment just requires non-empty. */
 const containsPattern = (fragment: string): RegExp =>
@@ -28,7 +34,8 @@ export async function expectStudioEmbedRendered(
 /**
  * Assert the block attributes WordPress stored describe a legacy Studio iframe
  * embed of the expected experience and size. The paste-URL flow leaves the
- * resource id empty; the browse flow sets it, so callers opt in.
+ * resource id empty; the browse flow sets it, so callers opt in. Stored embed code is
+ * filtered for users without `unfiltered_html`; render.php rebuilds from experienceUrl.
  */
 export async function expectStoredStudioAttributes(
   requestUtils: RequestUtils,
@@ -57,9 +64,30 @@ export async function expectStoredStudioAttributes(
 
   const embedCode =
     expected.selectedOption === 'scroll' ? stored.scrollableEmbedCode : stored.fullHeightEmbedCode
-  expect(String(embedCode ?? '')).toContain(STUDIO_EMBED_MARKER)
+  expect(String(embedCode ?? '')).toMatch(STUDIO_EMBED_WRAPPER)
 
   if (expected.requireResourceId) {
     expect(String(stored.experienceResourceId ?? '')).not.toBe('')
   }
+}
+
+/**
+ * Assert the block attributes WordPress stored describe a Flex experience in the
+ * given delivery mode. render.php rebuilds every Flex embed from the manifest URL.
+ */
+export async function expectStoredFlexAttributes(
+  requestUtils: RequestUtils,
+  postId: number,
+  expected: { deliveryMode: DeliveryMode; manifestUrl: string; experienceUrlFragment: string },
+): Promise<void> {
+  const attrs = await readStoredBlockAttributes(requestUtils, postId)
+  expect(attrs, 'the post should carry a configured Ceros block').toBeTruthy()
+  const stored = attrs ?? {}
+
+  expect(stored.deliveryMode ?? 'iframe').toBe(expected.deliveryMode)
+  expect(stored.manifestUrl).toBe(expected.manifestUrl)
+  expect(String(stored.experienceUrl ?? '')).toMatch(
+    containsPattern(expected.experienceUrlFragment),
+  )
+  expect(String(stored.inlineEmbedCode ?? '')).toContain(FLEX_INLINE_MARKER)
 }

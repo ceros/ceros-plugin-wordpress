@@ -11,9 +11,8 @@ import { TAGS } from '@utils/test-tags'
  * silently rendering nothing.
  */
 test.describe('Published post rendering', { tag: [TAGS.cerosBlock, TAGS.rendered] }, () => {
-  // A real reader is anonymous. The wordpress project reuses a saved admin
-  // session by default; render this published page logged out, exactly as this
-  // test did before the suite started reusing sessions.
+  // A real reader is anonymous; render this published page logged out rather than
+  // in the saved session browser contexts get by default.
   test.use({ storageState: { cookies: [], origins: [] } })
 
   test.use({
@@ -34,6 +33,6 @@ test.describe('Published post rendering', { tag: [TAGS.cerosBlock, TAGS.rendered
 
     // Prove the cascade fell through to not-found, not merely that nothing errored.
     await expect(publishedPost.iframeEmbed).toHaveCount(0)
-    await expect(publishedPost.inlineEmbed).toHaveCount(0)
+    await expect(publishedPost.flex.inlineEmbed).toHaveCount(0)
   })
 })

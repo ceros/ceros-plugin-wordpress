@@ -40,8 +40,22 @@ export const cerosEnv = (): string => process.env.E2E_CEROS_ENV?.trim() || 'late
 export const cerosLegacyExperienceUrl = (): string =>
   `https://${cerosEnv()}.view.cerosdev.com/automation/analytics-test-experience`
 
+/** The last path segment of an experience URL, which its embed points at. */
+export const experienceSlug = (url: string): string =>
+  new URL(url).pathname.split('/').filter(Boolean).pop() ?? ''
+
 export const cerosFlexExperienceUrl = (): string =>
-  `https://automation.${cerosEnv()}.cerosdev.site/sparkboard`
+  `https://automation.${cerosEnv()}.cerosdev.site/wp-paste-url`
+
+/** Where the Flex experience serves its manifest, as its `x-flex-manifest` header reports. */
+export const cerosFlexManifestUrl = (): string => `${cerosFlexExperienceUrl()}/manifest.v1.json`
+
+/**
+ * A manifest URL on the Flex host that serves nothing, for stubbed-response tests. No
+ * real experience points at it, so a stub left by a killed run can't reach other tests.
+ */
+export const cerosStubManifestUrl = (): string =>
+  `${new URL(cerosFlexExperienceUrl()).origin}/ceros-e2e/manifest.json`
 
 /**
  * A Ceros Studio *editor* URL (not a published experience). The resolver rejects

@@ -3,9 +3,9 @@
 # Provision a local wp-env instance for the suite: persist the connection
 # details and point the plugin at a Ceros environment.
 #
-# Run once after `npm run env:start`. The suite itself provisions nothing, so
-# this is the only piece that knows wp-env exists. Against any other WordPress,
-# fill in .env yourself and skip this.
+# Run once after `npm run env:start`. Apart from the settings fixture, which
+# resets plugin settings per test through wp-env, the suite provisions nothing.
+# Against any other WordPress, fill in .env yourself and skip this.
 
 set -euo pipefail
 

@@ -1,4 +1,5 @@
 import { BLOCK_NAME } from '@constants/wordpress-constants'
+import type { DeliveryMode } from '@utils/ceros-embed'
 
 export type CerosBlockAttributes = {
   experienceName: string
@@ -9,6 +10,8 @@ export type CerosBlockAttributes = {
   selectedOption: string
   fullHeightEmbedCode: string
   scrollableEmbedCode: string
+  storedAt: string
+  storedPublishedAt: string
   inlineEmbedCode: string
   cerosAnalytics: boolean
 }
@@ -38,6 +41,13 @@ export const resolvedLegacyStudioBlock = (
   experienceUrl: string,
   selectedOption: 'full' | 'scroll' = 'full',
 ): string => cerosBlock({ experienceUrl, selectedOption })
+
+/** A placed Flex block. render.php rebuilds each delivery mode from the manifest URL alone. */
+export const resolvedFlexBlock = (
+  experienceName: string,
+  manifestUrl: string,
+  deliveryMode: DeliveryMode,
+): string => cerosBlock({ experienceName, manifestUrl, deliveryMode })
 
 /**
  * A Flex block whose manifest can't be fetched, so render.php falls back to its
