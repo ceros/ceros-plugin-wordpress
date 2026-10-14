@@ -135,18 +135,17 @@ test.describe('Flex SSR preview — manifest warning', { tag: [TAGS.cerosBlock, 
     })
   })
 
-  const unavailableManifestUrl = cerosStubManifestUrl()
-
-  test.describe('manifest unavailable', { tag: [TAGS.stubbedHttp, TAGS.runsAlone] }, () => {
+  test.describe('manifest unavailable', { tag: [TAGS.stubbedHttp] }, () => {
     test.use({
-      postOptions: {
-        title: 'ceros block',
-        blocks: [resolvedFlexBlock(flexSlug, unavailableManifestUrl, 'ssr')],
-      },
+      postOptions: async ({}, use) =>
+        use({
+          title: 'ceros block',
+          blocks: [resolvedFlexBlock(flexSlug, cerosStubManifestUrl(), 'ssr')],
+        }),
     })
 
     test('the preview warns that server rendering is unavailable', async ({ editor, stubHttp }) => {
-      await stubHttp({ [unavailableManifestUrl]: { status: 404 } })
+      await stubHttp({ [cerosStubManifestUrl()]: { status: 404 } })
       await editor.page.reload()
 
       await expect(editor.cerosBlock.previewWarning).toContainText(BLOCK_TEXT.ssrUnavailable)
