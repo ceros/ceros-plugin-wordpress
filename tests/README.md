@@ -75,6 +75,12 @@ Currently deferred to that suite:
 - `Ceros_Encryption::get_api_key()` / `save_api_key()` — the options table. The
   crypto underneath them _is_ covered here.
 - The REST handlers — real `WP_REST_Request` objects.
+- `ceros_flex_stamp_analytics` — `WP_HTML_Tag_Processor`; the `is_preview()`
+  and `is_customize_preview()` halves of `ceros_is_preview_render` — WordPress's
+  query and Customizer. The editor-preview half, and the REST hooks that set and
+  clear it, _are_ covered here: they read only the request's route.
+  End to end, `tests/e2e/tests/analytics-tracking.spec.ts` checks the attribute
+  each case renders.
 
 Covered here on top of the URL, sanitizer, store and crypto cases:
 
