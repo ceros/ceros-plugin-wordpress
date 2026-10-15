@@ -9,12 +9,11 @@
 add_filter(
 	'pre_http_request',
 	function ( $pre, $args, $url ) {
-		$stubs = get_option( 'ceros_e2e_http_stubs', [] );
-		if ( ! isset( $stubs[ $url ] ) ) {
+		$stub = get_option( 'ceros_e2e_http_stub_' . md5( $url ) );
+		if ( ! is_array( $stub ) ) {
 			return $pre;
 		}
 
-		$stub = $stubs[ $url ];
 		if ( isset( $stub['error'] ) ) {
 			return new WP_Error( 'http_request_failed', $stub['error'] );
 		}
