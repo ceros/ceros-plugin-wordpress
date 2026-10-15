@@ -1,21 +1,25 @@
 /**
  * Lets a test answer chosen outbound requests from WordPress (`stubHttp`), and removes
- * every stub after the test, even when it fails.
+ * the test's stubs after it, even when it fails.
  */
 import { test as base } from '@playwright/test'
 import { clearHttpStubs, setHttpStubs, type HttpStubs } from '@utils/http-stubs'
 
 export interface HttpStubFixture {
-  /** Replaces any stubs in place, including ones a killed run left behind, with `stubs`. */
+  /** Stubs each URL in `stubs`, replacing any stub a killed run left on it. */
   stubHttp: (stubs: HttpStubs) => Promise<void>
 }
 
 export const httpStubFixture = base.extend<HttpStubFixture>({
   stubHttp: async ({}, use) => {
+    const urls = new Set<string>()
     try {
-      await use(setHttpStubs)
+      await use(async (stubs) => {
+        Object.keys(stubs).forEach((url) => urls.add(url))
+        await setHttpStubs(stubs)
+      })
     } finally {
-      await clearHttpStubs()
+      if (urls.size) await clearHttpStubs([...urls])
     }
   },
 })

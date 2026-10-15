@@ -117,6 +117,7 @@ function plugin_basename( $file ) {
 
 require_once dirname( __DIR__ ) . '/includes/class-ceros-encryption.php';
 require_once dirname( __DIR__ ) . '/includes/public-url-resolver.php';
+require_once dirname( __DIR__ ) . '/includes/flex-analytics.php';
 require_once dirname( __DIR__ ) . '/includes/flex-store.php';
 require_once dirname( __DIR__ ) . '/includes/flex-ssr-renderer.php';
 // functions.php and settings.php register hooks at file scope, which is the

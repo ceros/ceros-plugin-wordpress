@@ -24,6 +24,7 @@
 		"experienceResourceId": { "type": "string", "default": "" },
 		"deliveryMode": { "type": "string", "default": "iframe" },
 		"includeCustomHtml": { "type": "boolean", "default": true },
+		"cerosAnalytics": { "type": "boolean", "default": true },
 		"inlineEmbedCode": { "type": "string", "default": "" },
 		"manifestUrl": { "type": "string", "default": "" },
 		"experienceUrl": { "type": "string", "default": "" },

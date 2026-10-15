@@ -113,11 +113,12 @@ the settings surfaces refuse it, and deletes the user afterwards.
 
 The `@stubbedHttp` specs fix what WordPress's outbound requests get back, to reach errors
 a real Ceros URL never produces. `.wp-env.json` loads a test-only plugin
-(`plugins/ceros-e2e-http-stub`) that answers requests to exact URLs listed in the
-`ceros_e2e_http_stubs` option and does nothing while the option is absent. The
-`http-stub` fixture sets the option with WP-CLI and deletes it after each test, even when
-the test fails. The plugin ships with neither the distributable nor any other site, so
-these specs need local `wp-env`.
+(`plugins/ceros-e2e-http-stub`) that answers a request when an option named
+`ceros_e2e_http_stub_<md5 of the URL>` exists, and does nothing otherwise. The `http-stub`
+fixture writes those options with WP-CLI and deletes them after each test, even when the
+test fails. Each test stubs URLs under a path unique to it (`/ceros-e2e/<test id>/`), so
+the specs run in parallel without seeing each other's stubs. The plugin ships with neither
+the distributable nor any other site, so these specs need local `wp-env`.
 
 ### Stored files
 

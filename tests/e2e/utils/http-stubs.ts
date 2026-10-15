@@ -9,14 +9,15 @@ export type HttpStub =
 /** Stubs by exact request URL. Any other request goes out as normal. */
 export type HttpStubs = Record<string, HttpStub>
 
-/** The option the plugin reads; it does nothing while the option is absent. */
-const HTTP_STUBS_OPTION = 'ceros_e2e_http_stubs'
+/** The plugin reads one option per URL, named this prefix plus the URL's md5. */
+const HTTP_STUB_OPTION = phpString('ceros_e2e_http_stub_')
 
-/** Replace every stub with `stubs`. */
+const phpJson = (value: unknown): string => `json_decode(${phpString(JSON.stringify(value))}, true)`
+
 export const setHttpStubs = (stubs: HttpStubs): Promise<void> =>
   wpEval(
-    `update_option(${phpString(HTTP_STUBS_OPTION)}, json_decode(${phpString(JSON.stringify(stubs))}, true), false);`,
+    `foreach (${phpJson(stubs)} as $url => $stub) { update_option(${HTTP_STUB_OPTION} . md5($url), $stub, false); }`,
   )
 
-export const clearHttpStubs = (): Promise<void> =>
-  wpEval(`delete_option(${phpString(HTTP_STUBS_OPTION)});`)
+export const clearHttpStubs = (urls: readonly string[]): Promise<void> =>
+  wpEval(`foreach (${phpJson(urls)} as $url) { delete_option(${HTTP_STUB_OPTION} . md5($url)); }`)

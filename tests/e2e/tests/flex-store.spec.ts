@@ -117,13 +117,13 @@ test.describe('Flex store', { tag: [TAGS.cerosBlock, TAGS.flex] }, () => {
     })
   })
 
-  test.describe('failure', { tag: [TAGS.storesFiles, TAGS.stubbedHttp, TAGS.runsAlone] }, () => {
-    const unavailableManifestUrl = cerosStubManifestUrl()
+  test.describe('failure', { tag: [TAGS.storesFiles, TAGS.stubbedHttp] }, () => {
     test.use({
-      postOptions: {
-        title: 'flex store',
-        blocks: [resolvedFlexBlock(flexSlug, unavailableManifestUrl, 'ssr')],
-      },
+      postOptions: async ({}, use) =>
+        use({
+          title: 'flex store',
+          blocks: [resolvedFlexBlock(flexSlug, cerosStubManifestUrl(), 'ssr')],
+        }),
     })
 
     test('a manifest that fails to load is reported and nothing is stored', async ({
@@ -131,7 +131,7 @@ test.describe('Flex store', { tag: [TAGS.cerosBlock, TAGS.flex] }, () => {
       storedFiles,
       stubHttp,
     }) => {
-      await stubHttp({ [unavailableManifestUrl]: { status: 404 } })
+      await stubHttp({ [cerosStubManifestUrl()]: { status: 404 } })
       const controls = CerosBlockControlsActions.for(editor)
       await controls.openStoreControls()
       await controls.storeLocally()

@@ -1,3 +1,4 @@
+import { test } from '@playwright/test'
 import { WP_DEFAULT_PASSWORD, WP_DEFAULT_USER } from '@constants/wordpress-constants'
 
 /** wp-env's development port. Everything else derives from BASE_URL. */
@@ -51,11 +52,17 @@ export const cerosFlexExperienceUrl = (): string =>
 export const cerosFlexManifestUrl = (): string => `${cerosFlexExperienceUrl()}/manifest.v1.json`
 
 /**
- * A manifest URL on the Flex host that serves nothing, for stubbed-response tests. No
- * real experience points at it, so a stub left by a killed run can't reach other tests.
+ * A path under `/ceros-e2e/` unique to the running test, for stubbed-response tests. No
+ * real page or other test requests it, so a stub on it only ever answers this test.
  */
+const stubPath = (file: string): string => `/ceros-e2e/${test.info().testId}/${file}`
+
+/** A manifest URL on the Flex host that serves nothing, unique to the running test. */
 export const cerosStubManifestUrl = (): string =>
-  `${new URL(cerosFlexExperienceUrl()).origin}/ceros-e2e/manifest.json`
+  `${new URL(cerosFlexExperienceUrl()).origin}${stubPath('manifest.json')}`
+
+/** A page URL that is not Ceros, unique to the running test. */
+export const stubExperienceUrl = (): string => `https://example.com${stubPath('experience')}`
 
 /**
  * A Ceros Studio *editor* URL (not a published experience). The resolver rejects
