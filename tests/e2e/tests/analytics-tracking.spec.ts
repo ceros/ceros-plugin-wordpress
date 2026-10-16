@@ -71,6 +71,26 @@ test.describe('Ceros analytics tracking', { tag: [TAGS.cerosBlock, TAGS.rendered
         await expect(published.iframeEmbed).toHaveAttribute(ANALYTICS, 'disabled')
       })
     })
+
+    test.describe('in SSR Store mode, with the switch on', () => {
+      test.use({
+        postOptions: {
+          title: 'flex analytics store mode',
+          blocks: [
+            unfetchableFlexBlock(cerosFlexExperienceUrl(), { cerosAnalytics: true, stored: true }),
+          ],
+          status: 'publish',
+        },
+      })
+
+      // A stored copy has no reporting bundle, so Store mode never reports, even
+      // when the stored copy can't be read and the block falls back.
+      test('does not report', async ({ page, post }) => {
+        const published = new PublishedPostPage(page)
+        await published.open(post.id)
+        await expect(published.iframeEmbed).toHaveAttribute(ANALYTICS, 'disabled')
+      })
+    })
   })
 
   test.describe('in a preview, with the switch at its default', () => {

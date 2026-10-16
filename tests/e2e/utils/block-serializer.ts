@@ -11,6 +11,7 @@ export type CerosBlockAttributes = {
   fullHeightEmbedCode: string
   scrollableEmbedCode: string
   storedAt: string
+  storedIndexPath: string
   storedPublishedAt: string
   inlineEmbedCode: string
   cerosAnalytics: boolean
@@ -54,15 +55,20 @@ export const resolvedFlexBlock = (
  * stored iframe embed code and stamps the block's tracking choice onto it. The
  * manifest URL is http, which the fetch rejects before making a request, so the
  * render needs no network. `withManifestUrl: false` models a block saved before
- * the manifest URL was stored, which carries only the Inline snippet.
+ * the manifest URL was stored, which carries only the Inline snippet. `stored`
+ * puts the block in SSR Store mode with a stored copy that isn't on disk, so the
+ * render still falls through to the stored embed code.
  */
 export const unfetchableFlexBlock = (
   experienceUrl: string,
-  options: { cerosAnalytics?: boolean; withManifestUrl?: boolean } = {},
+  options: { cerosAnalytics?: boolean; withManifestUrl?: boolean; stored?: boolean } = {},
 ): string => {
   const manifestUrl = `${experienceUrl.replace(/^https:/, 'http:')}/manifest.v1.json`
   return cerosBlock({
     ...(options.withManifestUrl === false ? {} : { manifestUrl }),
+    ...(options.stored
+      ? { deliveryMode: 'ssr', storedIndexPath: 'ceros-flex/0/not-stored/v1/index.json' }
+      : {}),
     inlineEmbedCode: `<div data-flex-inline data-flex-manifest-url="${manifestUrl}"></div>`,
     fullHeightEmbedCode: `<div data-embed-width="100%" data-embed-height="auto" data-ceros-experience="${experienceUrl}"></div>`,
     ...(options.cerosAnalytics === undefined ? {} : { cerosAnalytics: options.cerosAnalytics }),

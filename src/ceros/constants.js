@@ -22,6 +22,23 @@ export const DELIVERY_MODES = {
 };
 
 /**
+ * Whether a block renders in SSR Store mode: SSR delivery from a copy stored on
+ * the site. A stored copy left behind after switching to another delivery mode
+ * doesn't count, because the server only reads it for SSR. Mirrors
+ * `ceros_flex_is_store_mode()` in includes/flex-analytics.php, which keeps
+ * Ceros analytics off in Store mode.
+ *
+ * @param {Object} attributes Block attributes.
+ * @return {boolean} True in Store mode.
+ */
+export function isStoreMode( attributes ) {
+	return (
+		attributes?.deliveryMode === DELIVERY_MODES.SSR &&
+		Boolean( attributes?.storedIndexPath )
+	);
+}
+
+/**
  * Undo the entity encoding wp_kses applies to attribute values, which rewrites a
  * bare `&` as `&#038;`. Parsing in a detached textarea keeps the content as raw
  * text — no markup in it is ever built or run.
