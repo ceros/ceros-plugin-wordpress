@@ -296,7 +296,7 @@ export function SidebarControls( {
 						help={
 							isStored
 								? __(
-										'A stored copy reports nothing to Ceros Analytics, so it keeps working without Ceros. Your own analytics still receives the experience’s events. Remove the stored copy to use this switch again.',
+										'Stored copies don’t report to Ceros Analytics. Remove the stored copy to use Ceros Analytics again.',
 										'ceros'
 								  )
 								: __(
