@@ -18,6 +18,7 @@ import {
 	ACTION_TYPES,
 	EMBED_OPTIONS,
 	DELIVERY_MODES,
+	isStoreMode,
 	manifestUrlFromInline,
 } from '../constants';
 import { StoreControls } from './store-controls';
@@ -58,6 +59,8 @@ export function SidebarControls( {
 	// includes/flex-analytics.php, which applies the choice at render. Legacy
 	// Studio embeds have no manifest and no way to switch Ceros analytics off.
 	const isFlex = hasInline || Boolean( attributes?.manifestUrl );
+	// SSR Store mode never reports to Ceros (see isStoreMode()).
+	const isStored = isStoreMode( attributes );
 	return (
 		<InspectorControls>
 			<PanelBody
@@ -290,11 +293,23 @@ export function SidebarControls( {
 					<ToggleControl
 						__nextHasNoMarginBottom
 						label={ __( 'Ceros analytics tracking', 'ceros' ) }
-						help={ __(
-							'Reports views and interactions to Ceros Analytics, as the published experience does. Turn it off to report nothing to Ceros; your own analytics still receives the experience’s events. Previews are never tracked.',
-							'ceros'
-						) }
-						checked={ attributes?.cerosAnalytics !== false }
+						help={
+							isStored
+								? __(
+										'A stored copy reports nothing to Ceros Analytics, so it keeps working without Ceros. Your own analytics still receives the experience’s events. Remove the stored copy to use this switch again.',
+										'ceros'
+								  )
+								: __(
+										'Reports views and interactions to Ceros Analytics, as the published experience does. Turn it off to report nothing to Ceros; your own analytics still receives the experience’s events. Previews are never tracked.',
+										'ceros'
+								  )
+						}
+						// Store mode is shown as off without changing the saved
+						// choice, which comes back if the stored copy is removed.
+						checked={
+							! isStored && attributes?.cerosAnalytics !== false
+						}
+						disabled={ isStored }
 						onChange={ ( value ) =>
 							setAttributes( { cerosAnalytics: value } )
 						}

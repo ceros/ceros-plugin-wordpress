@@ -15,9 +15,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   experience and the iframe embed do. Turn it off and the experience reports
   nothing to Ceros; the experience's analytics events still reach the page, so
   your own analytics keeps working. The block's editor preview, WordPress's post
-  preview and the Customizer never report, whatever the switch says. Inline and
-  server-rendered reporting needs an experience published after Ceros added it
-  to the manifest, and the account's Ceros Analytics setting on.
+  preview and the Customizer never report, whatever the switch says. Neither
+  does a server-rendered experience stored on your site (Store mode): the stored
+  copy works without Ceros, so the switch is off and can't be turned on until
+  you remove the stored copy. Inline and server-rendered reporting needs an
+  experience published after Ceros added it to the manifest, and the account's
+  Ceros Analytics setting on.
 
 ### Fixed
 - **The plugin reports an old plugin, not a bad API key.** The Ceros API rejects

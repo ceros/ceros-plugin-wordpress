@@ -84,6 +84,71 @@ final class FlexAnalyticsTest extends TestCase {
 		$this->assertFalse( ceros_flex_tracking_enabled( $attributes, true ) );
 	}
 
+	/**
+	 * @return array<string, array{0: array}>
+	 */
+	public static function store_mode_blocks() {
+		return [
+			'default'    => [ self::stored() ],
+			'toggle on'  => [ self::stored( [ 'cerosAnalytics' => true ] ) ],
+			'toggle off' => [ self::stored( [ 'cerosAnalytics' => false ] ) ],
+		];
+	}
+
+	/**
+	 * An SSR block rendering from a stored copy.
+	 *
+	 * @param array $attributes Attributes to add.
+	 * @return array
+	 */
+	private static function stored( $attributes = [] ) {
+		return array_merge(
+			[
+				'deliveryMode'    => 'ssr',
+				'storedIndexPath' => 'ceros-flex/12/exp/v1/index.json',
+			],
+			$attributes
+		);
+	}
+
+	/**
+	 * A stored copy has no reporting bundle, and analytics events aren't
+	 * versioned, so Store mode never reports.
+	 *
+	 * @dataProvider store_mode_blocks
+	 */
+	public function test_never_tracks_in_store_mode( $attributes ) {
+		$this->assertFalse( ceros_flex_tracking_enabled( $attributes, false ) );
+	}
+
+	/**
+	 * @return array<string, array{0: array, 1: bool}>
+	 */
+	public static function store_mode_cases() {
+		return [
+			'ssr with a stored copy'   => [ self::stored(), true ],
+			'live ssr'                 => [ [ 'deliveryMode' => 'ssr' ], false ],
+			'ssr with an empty path'   => [ self::stored( [ 'storedIndexPath' => '' ] ), false ],
+			'inline, stored copy left' => [ self::stored( [ 'deliveryMode' => 'inline' ] ), false ],
+			'iframe, stored copy left' => [ self::stored( [ 'deliveryMode' => 'iframe' ] ), false ],
+			'no delivery mode, stored' => [ [ 'storedIndexPath' => 'ceros-flex/12/exp/v1/index.json' ], false ],
+		];
+	}
+
+	/**
+	 * A stored copy left on a block that has switched away from SSR is never
+	 * rendered, so it doesn't turn tracking off.
+	 *
+	 * @dataProvider store_mode_cases
+	 */
+	public function test_detects_store_mode( $attributes, $expected ) {
+		$this->assertSame( $expected, ceros_flex_is_store_mode( $attributes ) );
+	}
+
+	public function test_tracks_after_switching_away_from_store_mode() {
+		$this->assertTrue( ceros_flex_tracking_enabled( self::stored( [ 'deliveryMode' => 'inline' ] ), false ) );
+	}
+
 	public function test_writes_enabled_when_tracking() {
 		$this->assertSame( 'enabled', ceros_flex_analytics_value( true ) );
 	}
