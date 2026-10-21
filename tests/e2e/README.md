@@ -3,8 +3,9 @@
 Playwright tests for the Ceros block in the WordPress editor and on the published page,
 run against a local `wp-env` instance.
 
-**Not wired into CI or the pre-push hook, and not a required check.** These need WordPress,
-Docker and network access, which the pre-push hook explicitly rules out. See [CI](#ci) below.
+**Runs in CI on pull requests that are ready for review, but is not a required check or part of
+the pre-push hook.** These need WordPress, Docker and network access, which the pre-push hook
+explicitly rules out. See [CI](#ci) below.
 
 ## Prerequisites
 
@@ -172,8 +173,13 @@ not extend a shared base class, because at this size it would hold nothing.
 
 ## CI
 
-The suite is not wired into CI and is not a required check — it spans two products (the
-plugin and Ceros), and that ownership is unresolved. Running it anywhere, CI or another
+`e2e-tests.yml` runs the suite on pull requests from this repository once they are ready for
+review and change the plugin, its build inputs or the suite. Drafts and fork pull requests are
+skipped, since a fork gets no secrets. A new push cancels the run it replaces. It can also be
+run by hand against another Ceros environment (`ceros_env`).
+
+It is not a required check: it spans two products (the plugin and Ceros), and that ownership
+is unresolved. Running it anywhere, CI or another
 machine, needs the same inputs as a local run: `E2E_CEROS_ENV`, the secret `E2E_CEROS_API_KEY`,
 network access to that environment, and a pinned WordPress version (`.wp-env.json` leaves core
 unset, which has resolved to a version with no tag in the mirror).
