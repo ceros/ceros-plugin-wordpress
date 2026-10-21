@@ -17,6 +17,12 @@
  * Previews never track: the editor's, WordPress's post preview and the
  * Customizer's. An author checking their own page is not an audience.
  *
+ * Store mode never tracks either. A stored copy doesn't include the reporting
+ * bundle, which the shell would still fetch from Ceros, and Ceros analytics
+ * events aren't versioned, so a stored runtime that falls behind could report
+ * events the pipeline no longer reads. Store mode is for a page that doesn't
+ * depend on Ceros, so it reports nothing.
+ *
  * @package ceros
  */
 
@@ -33,7 +39,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * @return bool True to report.
  */
 function ceros_flex_tracking_enabled( $attributes, $is_preview ) {
-	if ( $is_preview ) {
+	if ( $is_preview || ceros_flex_is_store_mode( $attributes ) ) {
 		return false;
 	}
 
@@ -41,6 +47,22 @@ function ceros_flex_tracking_enabled( $attributes, $is_preview ) {
 	// a block saved before the toggle existed arrives as true. Compared against
 	// false for the same reason as includeCustomHtml in render.php.
 	return false !== ( $attributes['cerosAnalytics'] ?? true );
+}
+
+/**
+ * Whether a block renders in SSR Store mode: SSR delivery from a copy stored on
+ * this site. A stored copy left behind after switching to another delivery mode
+ * doesn't count, because render.php only reads it for SSR. Mirrors
+ * isStoreMode() in src/ceros/constants.js.
+ *
+ * Applies whatever the block falls back to when the stored copy can't be read,
+ * so a Store-mode block never reports.
+ *
+ * @param array $attributes Block attributes.
+ * @return bool True in Store mode.
+ */
+function ceros_flex_is_store_mode( $attributes ) {
+	return 'ssr' === ( $attributes['deliveryMode'] ?? '' ) && ! empty( $attributes['storedIndexPath'] );
 }
 
 /**

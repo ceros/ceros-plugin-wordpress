@@ -15,6 +15,7 @@
 import { describe, it, expect } from 'vitest';
 import {
 	manifestUrlFromInline,
+	isStoreMode,
 	EMBED_OPTIONS,
 	DELIVERY_MODES,
 } from '../../src/ceros/constants';
@@ -105,5 +106,52 @@ describe( 'shared constant values', () => {
 			INLINE: 'inline',
 			SSR: 'ssr',
 		} );
+	} );
+} );
+
+/**
+ * Store mode keeps Ceros analytics off, so the sidebar and render.php
+ * (`ceros_flex_is_store_mode()`) must agree on what counts as Store mode.
+ */
+describe( 'isStoreMode', () => {
+	const storedIndexPath = 'ceros-flex/12/exp/v1/index.json';
+
+	it( 'is SSR rendering from a stored copy', () => {
+		expect(
+			isStoreMode( { deliveryMode: DELIVERY_MODES.SSR, storedIndexPath } )
+		).toBe( true );
+	} );
+
+	it( 'is not live SSR', () => {
+		expect( isStoreMode( { deliveryMode: DELIVERY_MODES.SSR } ) ).toBe(
+			false
+		);
+		expect(
+			isStoreMode( {
+				deliveryMode: DELIVERY_MODES.SSR,
+				storedIndexPath: '',
+			} )
+		).toBe( false );
+	} );
+
+	it( 'ignores a stored copy left behind by another delivery mode', () => {
+		expect(
+			isStoreMode( {
+				deliveryMode: DELIVERY_MODES.INLINE,
+				storedIndexPath,
+			} )
+		).toBe( false );
+		expect(
+			isStoreMode( {
+				deliveryMode: DELIVERY_MODES.IFRAME,
+				storedIndexPath,
+			} )
+		).toBe( false );
+		expect( isStoreMode( { storedIndexPath } ) ).toBe( false );
+	} );
+
+	it( 'is false with no attributes', () => {
+		expect( isStoreMode( undefined ) ).toBe( false );
+		expect( isStoreMode( {} ) ).toBe( false );
 	} );
 } );
