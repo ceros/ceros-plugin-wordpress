@@ -10,6 +10,7 @@ export class FlexRender {
   readonly inlineEmbed: Locator
   readonly inlineRuntime: Locator
   readonly ssrEmbed: Locator
+  readonly ssrHydrated: Locator
   readonly embed: (mode: DeliveryMode) => Locator
 
   constructor(readonly root: Page | FrameLocator) {
@@ -19,6 +20,9 @@ export class FlexRender {
       .locator('div[data-flex-inline] + script[src*="flex-client"]')
       .describe('flex inline runtime script')
     this.ssrEmbed = root.locator('div.ceros-block__flex-ssr').describe('flex server-rendered embed')
+    this.ssrHydrated = root
+      .locator('div.ceros-block__flex-ssr[data-flex-router-ready] > [data-flex-ready="true"]')
+      .describe('flex server-rendered embed, hydrated')
     this.embed = (mode: DeliveryMode) =>
       ({ iframe: this.iframeEmbed, inline: this.inlineEmbed, ssr: this.ssrEmbed })[mode]
   }
