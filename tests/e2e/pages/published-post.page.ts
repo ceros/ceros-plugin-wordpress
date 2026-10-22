@@ -31,20 +31,19 @@ export class PublishedPostPage {
   }
 
   async importMap(): Promise<ImportMap> {
-    return JSON.parse((await this.importMaps.first().textContent()) ?? '{}') as ImportMap
+    return JSON.parse(String(await this.importMaps.first().textContent())) as ImportMap
   }
 
-  /** Whether the import map comes before every module script and module preload. */
-  async importMapPrecedesModules(): Promise<boolean> {
+  /** The module scripts and module preloads that come before the import map. */
+  async modulesBeforeImportMap(): Promise<string[]> {
     return this.page.evaluate(() => {
       const map = document.querySelector('script[type="importmap"]')
-      const modules = document.querySelectorAll('script[type="module"], link[rel="modulepreload"]')
-      return (
-        !!map &&
-        Array.from(modules).every(
-          (m) => map.compareDocumentPosition(m) & Node.DOCUMENT_POSITION_FOLLOWING,
-        )
+      if (!map) return ['no import map']
+      return Array.from(
+        document.querySelectorAll('script[type="module"], link[rel="modulepreload"]'),
       )
+        .filter((m) => !(map.compareDocumentPosition(m) & Node.DOCUMENT_POSITION_FOLLOWING))
+        .map((m) => m.outerHTML)
     })
   }
 }

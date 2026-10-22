@@ -135,15 +135,20 @@ test.describe(
     }) => {
       const pageErrors: Error[] = []
       page.on('pageerror', (error) => pageErrors.push(error))
-      const manifest = (await (await request.get(manifestUrl)).json()) as { importMap: ImportMap }
-      const specifiers = Object.keys(manifest.importMap.imports)
+      const response = await request.get(manifestUrl)
+      await expect(response).toBeOK()
+      const manifest = (await response.json()) as { importMap?: ImportMap }
+      const specifiers = Object.keys(manifest.importMap?.imports ?? {})
+      // Without imports and hashes in the manifest, the checks below prove nothing.
+      expect(specifiers.length, 'manifest import map entries').toBeGreaterThan(0)
+      expect(manifest.importMap?.integrity, 'manifest import map integrity').toBeTruthy()
 
       const publishedPost = new PublishedPostPage(page)
       await publishedPost.open(post.id)
 
       await expect(publishedPost.flex.ssrHydrated).toHaveCount(1)
       await expect(publishedPost.importMaps).toHaveCount(1)
-      expect(await publishedPost.importMapPrecedesModules()).toBe(true)
+      expect(await publishedPost.modulesBeforeImportMap()).toEqual([])
       const map = await publishedPost.importMap()
       expect(Object.keys(map.imports)).toEqual(expect.arrayContaining(specifiers))
       for (const specifier of specifiers) {

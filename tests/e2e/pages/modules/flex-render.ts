@@ -21,7 +21,7 @@ export class FlexRender {
       .describe('flex inline runtime script')
     this.ssrEmbed = root.locator('div.ceros-block__flex-ssr').describe('flex server-rendered embed')
     this.ssrHydrated = root
-      .locator('div.ceros-block__flex-ssr[data-flex-router-ready] [data-flex-ready="true"]')
+      .locator('div.ceros-block__flex-ssr[data-flex-router-ready] > [data-flex-ready="true"]')
       .describe('flex server-rendered embed, hydrated')
     this.embed = (mode: DeliveryMode) =>
       ({ iframe: this.iframeEmbed, inline: this.inlineEmbed, ssr: this.ssrEmbed })[mode]
