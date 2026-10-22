@@ -3,7 +3,7 @@ import { BlockEditorActions } from '@actions/block-editor-actions'
 import { CerosBlockActions } from '@actions/ceros-block-actions'
 import { CerosBlockControlsActions } from '@actions/ceros-block-controls-actions'
 import { BLOCK_TEXT } from '@constants/ceros-block-constants'
-import { PublishedPostPage, type ImportMap } from '@pages/published-post.page'
+import { PublishedPostPage } from '@pages/published-post.page'
 import { emptyCerosBlock, resolvedFlexBlock } from '@utils/block-serializer'
 import { expectStoredFlexAttributes, type DeliveryMode } from '@utils/ceros-embed'
 import {
@@ -113,51 +113,6 @@ test.describe('Flex published render', { tag: [TAGS.cerosBlock, TAGS.rendered, T
     })
   }
 })
-
-/** WordPress prints one import map for the page; the SSR runtime's imports join it. */
-test.describe(
-  'Flex SSR published page',
-  { tag: [TAGS.cerosBlock, TAGS.rendered, TAGS.flex] },
-  () => {
-    test.use({ storageState: { cookies: [], origins: [] } })
-    test.use({
-      postOptions: {
-        title: 'flex ssr import map',
-        blocks: [resolvedFlexBlock(flexSlug, manifestUrl, 'ssr')],
-        status: 'publish',
-      },
-    })
-
-    test("one import map, ahead of every module, carries the experience's imports and the embed hydrates", async ({
-      page,
-      post,
-      request,
-    }) => {
-      const pageErrors: Error[] = []
-      page.on('pageerror', (error) => pageErrors.push(error))
-      const response = await request.get(manifestUrl)
-      await expect(response).toBeOK()
-      const manifest = (await response.json()) as { importMap?: ImportMap }
-      const specifiers = Object.keys(manifest.importMap?.imports ?? {})
-      // Without imports and hashes in the manifest, the checks below prove nothing.
-      expect(specifiers.length, 'manifest import map entries').toBeGreaterThan(0)
-      expect(manifest.importMap?.integrity, 'manifest import map integrity').toBeTruthy()
-
-      const publishedPost = new PublishedPostPage(page)
-      await publishedPost.open(post.id)
-
-      await expect(publishedPost.flex.ssrHydrated).toHaveCount(1)
-      await expect(publishedPost.importMaps).toHaveCount(1)
-      expect(await publishedPost.modulesBeforeImportMap()).toEqual([])
-      const map = await publishedPost.importMap()
-      expect(Object.keys(map.imports)).toEqual(expect.arrayContaining(specifiers))
-      for (const specifier of specifiers) {
-        expect(map.integrity?.[map.imports[specifier]], specifier).toBeTruthy()
-      }
-      expect(pageErrors).toEqual([])
-    })
-  },
-)
 
 /** The SSR preview reads the manifest and warns when it can't, since the page then renders another mode. */
 test.describe('Flex SSR preview — manifest warning', { tag: [TAGS.cerosBlock, TAGS.flex] }, () => {

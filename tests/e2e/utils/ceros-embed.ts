@@ -1,5 +1,6 @@
-import { expect, type Locator } from '@playwright/test'
+import { expect, type APIRequestContext, type Locator } from '@playwright/test'
 import type { RequestUtils } from '@wordpress/e2e-test-utils-playwright'
+import type { PublishedPostPage } from '@pages/published-post.page'
 import { readStoredBlockAttributes } from '@utils/wp-rest-client'
 
 /** The two iframe embed sizes the block stores as `selectedOption`. */
@@ -7,6 +8,9 @@ export type EmbedSize = 'full' | 'scroll'
 
 /** How a Flex experience is delivered, stored as `deliveryMode`. */
 export type DeliveryMode = 'iframe' | 'inline' | 'ssr'
+
+/** A page or manifest import map. */
+export type ImportMap = { imports: Record<string, string>; integrity?: Record<string, string> }
 
 /** The wrapper every stored Studio embed code keeps, even after filtering strips its iframe and script. */
 const STUDIO_EMBED_WRAPPER = /data-aspectratio=/i
@@ -90,4 +94,35 @@ export async function expectStoredFlexAttributes(
     containsPattern(expected.experienceUrlFragment),
   )
   expect(String(stored.inlineEmbedCode ?? '')).toContain(FLEX_INLINE_MARKER)
+}
+
+/**
+ * Read the import map from a Flex manifest. Fails when it has no imports or hashes,
+ * since checks against it would then prove nothing.
+ */
+export async function readManifestImportMap(
+  request: APIRequestContext,
+  manifestUrl: string,
+): Promise<ImportMap> {
+  const response = await request.get(manifestUrl)
+  await expect(response).toBeOK()
+  const { importMap } = (await response.json()) as { importMap?: ImportMap }
+  expect(Object.keys(importMap?.imports ?? {}), 'manifest import map entries').not.toEqual([])
+  expect(importMap?.integrity, 'manifest import map integrity').toBeTruthy()
+  return importMap as ImportMap
+}
+
+/** Assert the page prints one import map, ahead of every module, carrying the manifest's imports and hashes. */
+export async function expectImportMapCarries(
+  publishedPost: PublishedPostPage,
+  manifestMap: ImportMap,
+): Promise<void> {
+  await expect(publishedPost.importMaps).toHaveCount(1)
+  expect(await publishedPost.modulesBeforeImportMap()).toEqual([])
+  const map = await publishedPost.importMap()
+  const specifiers = Object.keys(manifestMap.imports)
+  expect(Object.keys(map.imports)).toEqual(expect.arrayContaining(specifiers))
+  for (const specifier of specifiers) {
+    expect(map.integrity?.[map.imports[specifier]], specifier).toBeTruthy()
+  }
 }

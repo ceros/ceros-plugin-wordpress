@@ -1,8 +1,7 @@
 import type { Locator, Page } from '@playwright/test'
 import { WP_ROUTES } from '@constants/wordpress-constants'
 import { FlexRender } from '@pages/modules/flex-render'
-
-export type ImportMap = { imports: Record<string, string>; integrity?: Record<string, string> }
+import type { ImportMap } from '@utils/ceros-embed'
 
 /** A published post on the front end — where the render cascade shows its work. */
 export class PublishedPostPage {
