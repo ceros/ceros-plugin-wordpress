@@ -11,6 +11,7 @@ export class FlexRender {
   readonly inlineRuntime: Locator
   readonly ssrEmbed: Locator
   readonly ssrHydrated: Locator
+  readonly ssrCanvas: Locator
   readonly embed: (mode: DeliveryMode) => Locator
 
   constructor(readonly root: Page | FrameLocator) {
@@ -23,6 +24,9 @@ export class FlexRender {
     this.ssrHydrated = root
       .locator('div.ceros-block__flex-ssr[data-flex-router-ready] > [data-flex-ready="true"]')
       .describe('flex server-rendered embed, hydrated')
+    this.ssrCanvas = this.ssrEmbed
+      .locator('#experience-canvas-container')
+      .describe('flex server-rendered experience canvas')
     this.embed = (mode: DeliveryMode) =>
       ({ iframe: this.iframeEmbed, inline: this.inlineEmbed, ssr: this.ssrEmbed })[mode]
   }

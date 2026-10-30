@@ -93,6 +93,7 @@ test.describe('Flex store', { tag: [TAGS.cerosBlock, TAGS.flex] }, () => {
           'data-flex-manifest-url',
           new RegExp(storedUrlPath),
         )
+        await expect(reader.flex.ssrEmbed).toHaveAttribute('data-flex-height', 'auto')
         await expect(reader.missingExperience).toHaveCount(0)
         const statuses = network.statusesUnder(storedUrlPath)
         expect.soft(statuses.length, 'assets served from the stored copy').toBeGreaterThan(0)
