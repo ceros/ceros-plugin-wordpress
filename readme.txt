@@ -2,7 +2,7 @@
 Contributors:      copiadigital
 Tags:              ceros, experiences, embed, blocks, api
 Tested up to:      6.9
-Stable tag:        0.32.0
+Stable tag:        0.33.0
 Requires at least: 6.7
 Requires PHP:      7.4
 License:           GPL-2.0-or-later
@@ -109,6 +109,14 @@ The appearance is controlled by the Ceros experience itself. The plugin provides
 
 == Changelog ==
 
+= 0.33.0 =
+* A Ceros analytics tracking switch on Flex blocks, on by default, so inline and server-rendered experiences report to Ceros Analytics like the iframe embed. Previews and stored copies never report.
+* An unsupported API version now shows an "update the plugin" message instead of a bad API key error.
+* Server-rendered experiences play adaptive video in Chrome and Firefox.
+* Server-rendered experiences load in Firefox under classic themes.
+* Module integrity hashes travel in the import map WordPress prints.
+* Server-rendered scale-mode experiences take their scaled height, so they no longer run over the content below them or leave a gap.
+
 = 0.32.0 =
 * Server-rendered embeds include the experience's custom Body HTML, so interactivity built with the Ceros Flex Experience SDK works without switching to the iframe embed.
 * Imports by bare specifier in that HTML resolve through an import map, under both block and classic themes.
@@ -128,6 +136,9 @@ The appearance is controlled by the Ceros experience itself. The plugin provides
 * Initial release.
 
 == Upgrade Notice ==
+
+= 0.33.0 =
+Inline and server-rendered Flex experiences now report to Ceros Analytics by default. Turn off the block's Ceros analytics tracking switch to keep one from reporting.
 
 = 0.32.0 =
 Adds custom Body HTML support to server-rendered embeds. Existing blocks pick it up with no editor action.
