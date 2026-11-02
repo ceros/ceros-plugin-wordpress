@@ -112,6 +112,43 @@ test.describe('Flex published render', { tag: [TAGS.cerosBlock, TAGS.rendered, T
       })
     })
   }
+
+  test.describe('ssr height', () => {
+    test.use({
+      postOptions: {
+        title: 'flex ssr experience',
+        blocks: [resolvedFlexBlock(flexSlug, manifestUrl, 'ssr')],
+        status: 'publish',
+      },
+    })
+
+    // flex-ssr.js sizes the viewer's immediate parent to the scaled experience only
+    // when it opts in. Without it a scale-mode experience keeps its design height,
+    // so it overlaps what follows on a wide block and leaves a gap on a narrow one.
+    test('the server-rendered wrapper takes the scaled experience height', async ({
+      page,
+      post,
+    }) => {
+      const publishedPost = new PublishedPostPage(page)
+      await publishedPost.open(post.id)
+      const { flex } = publishedPost
+
+      await expect(flex.ssrEmbed).toHaveAttribute('data-flex-height', 'auto')
+      await expect(flex.ssrHydrated).toBeVisible()
+      await expect
+        .poll(
+          async () => {
+            const [wrapper, canvas] = await Promise.all([
+              flex.ssrEmbed.boundingBox(),
+              flex.ssrCanvas.boundingBox(),
+            ])
+            return Math.abs((wrapper?.height ?? 0) - (canvas?.height ?? Infinity))
+          },
+          { message: 'wrapper height minus scaled canvas height' },
+        )
+        .toBeLessThanOrEqual(1)
+    })
+  })
 })
 
 /** The SSR preview reads the manifest and warns when it can't, since the page then renders another mode. */

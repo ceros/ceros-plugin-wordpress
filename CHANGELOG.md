@@ -51,6 +51,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Integrity checks on shared import maps.** The experience's module integrity
   hashes now travel in the import map WordPress prints, under both block and
   classic themes.
+- **Height of server-rendered scale-mode experiences.** A Flex experience in
+  scale mode shrinks or grows to fit the width of its block. Before, a
+  server-rendered block kept the experience's design height. On a block wider
+  than the design, the experience ran over the content below it, such as the
+  footer. On a narrower block, it left empty space below the experience. Now the
+  block takes the height of the scaled experience. This applies to a stored copy
+  (Store mode) too. Fluid experiences render as before. The Ceros AEM Connector
+  carries the same fix.
 
 ## [0.32.0] - 2026-08-31
 

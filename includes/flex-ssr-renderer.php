@@ -83,8 +83,11 @@ function ceros_flex_ssr_render_manifest( $manifest, $served_url, $include_custom
 	if ( '' !== (string) $served_url ) {
 		$wrapper_attrs = ' data-flex-manifest-url="' . esc_url( $served_url ) . '"';
 	}
-	// flex-ssr.js reads the opt-in off the viewer's immediate parent, which is
-	// this wrapper.
+	// flex-ssr.js reads both opt-ins off the viewer's immediate parent, which is
+	// this wrapper. Without the height one a scale-mode experience keeps its
+	// unscaled design height and overlaps, or leaves a gap above, what follows
+	// it; flex-ssr.js skips it for fluid experiences.
+	$wrapper_attrs .= ' data-flex-height="auto"';
 	$wrapper_attrs .= ceros_flex_analytics_attribute( $tracking );
 
 	$content = '<div class="ceros-block__flex-ssr"' . $wrapper_attrs . '>'
