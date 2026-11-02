@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       Ceros
  * Description:       Ceros API integration plugin
- * Version:           0.32.0
+ * Version:           0.33.0
  * Requires at least: 6.7
  * Requires PHP:      7.4
  * Author:            Ceros.com
@@ -26,7 +26,7 @@ if ( ! defined( 'CEROS_API_VERSION' ) ) {
 }
 if ( ! defined( 'CEROS_PLUGIN_VERSION' ) ) {
 	// Kept in step with the Version header above by tools/check-versions.sh.
-	define( 'CEROS_PLUGIN_VERSION', '0.32.0' );
+	define( 'CEROS_PLUGIN_VERSION', '0.33.0' );
 }
 if ( ! defined( 'CEROS_REST_NAMESPACE' ) ) {
 	define( 'CEROS_REST_NAMESPACE', 'ceros/v1' );
