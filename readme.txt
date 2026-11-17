@@ -2,7 +2,7 @@
 Contributors:      copiadigital
 Tags:              ceros, experiences, embed, blocks, api
 Tested up to:      6.9
-Stable tag:        0.33.1
+Stable tag:        1.0.0
 Requires at least: 6.7
 Requires PHP:      7.4
 License:           GPL-2.0-or-later
@@ -109,8 +109,8 @@ The appearance is controlled by the Ceros experience itself. The plugin provides
 
 == Changelog ==
 
-= 0.33.1 =
-* Inline, SSR and Store mode are no longer labelled Beta.
+= 1.0.0 =
+* First stable release. Inline, SSR and Store mode are no longer labelled Beta.
 
 = 0.33.0 =
 * A Ceros analytics tracking switch on Flex blocks, on by default, so inline and server-rendered experiences report to Ceros Analytics like the iframe embed. Previews and stored copies never report.
@@ -139,6 +139,9 @@ The appearance is controlled by the Ceros experience itself. The plugin provides
 * Initial release.
 
 == Upgrade Notice ==
+
+= 1.0.0 =
+First stable release. Inline, SSR and Store mode are no longer labelled Beta; nothing else changes.
 
 = 0.33.0 =
 Inline and server-rendered Flex experiences now report to Ceros Analytics by default. Turn off the block's Ceros analytics tracking switch to keep one from reporting.

@@ -5,12 +5,13 @@ All notable changes to the Ceros WordPress Plugin will be documented in this fil
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.33.1] - 2026-11-17
+## [1.0.0] - 2026-11-17
 
 ### Changed
-- **Delivery modes are no longer labelled Beta.** Inline, SSR and Store mode
-  dropped their "(Beta)" labels in the block, the sidebar and the readme. They
-  are generally available, as the Ceros docs already say. Nothing else changes.
+- **First stable release.** Inline, SSR and Store mode are generally available,
+  as the Ceros docs already say, so they dropped their "(Beta)" labels in the
+  block, the sidebar and the readme. Nothing else changes: existing blocks and
+  settings carry over as they are.
 
 ## [0.33.0] - 2026-11-02
 
