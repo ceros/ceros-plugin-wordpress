@@ -59,7 +59,7 @@ function ceros_render_block( $attributes ) {
 		}
 	}
 
-	// Flex SSR (Beta) delivery. On any failure we fall through to the iframe
+	// Flex SSR delivery. On any failure we fall through to the iframe
 	// embed below.
 	if ( 'ssr' === $delivery_mode ) {
 		// Store mode: render fully from the locally-persisted bundle (no CDN).

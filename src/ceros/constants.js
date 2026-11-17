@@ -10,10 +10,10 @@ export const EMBED_OPTIONS = {
  * Delivery mode values.
  *
  * - IFRAME: the classic iframe embed (works for every experience).
- * - INLINE: Flex Inline — iframeless, Shadow DOM (Flex experiences only, Beta).
+ * - INLINE: Flex Inline — iframeless, Shadow DOM (Flex experiences only).
  * - SSR: Flex SSR — the WP server fetches the manifest and renders the
  *   experience HTML inline; the browser only loads a hydration script
- *   (Flex experiences only, Beta).
+ *   (Flex experiences only).
  */
 export const DELIVERY_MODES = {
 	IFRAME: 'iframe',

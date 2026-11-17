@@ -1,6 +1,6 @@
 <?php
 /**
- * Flex SSR (Beta) renderer.
+ * Flex SSR renderer.
  *
  * Server-side renders a Flex experience from its public manifest: emits the
  * pre-rendered `html-body`, the SSR delivery-mode styles/scripts, and the

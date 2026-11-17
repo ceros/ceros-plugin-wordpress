@@ -60,15 +60,14 @@ describe( 'DeliveryOptions', () => {
 		expect( setSelected ).toHaveBeenCalledWith( expected );
 	} );
 
-	it( 'labels the two beta modes as beta', () => {
+	it( 'labels no mode as beta', () => {
 		setup();
 
+		expect( screen.getByText( 'Inline — iframeless' ) ).toBeInTheDocument();
 		expect(
-			screen.getByText( /Inline — iframeless \(Beta\)/ )
+			screen.getByText( 'SSR — server-rendered' )
 		).toBeInTheDocument();
-		expect(
-			screen.getByText( /SSR — server-rendered \(Beta\)/ )
-		).toBeInTheDocument();
+		expect( screen.queryByText( /beta/i ) ).not.toBeInTheDocument();
 	} );
 
 	// The checkbox lives here, alongside the radio it belongs to, because both

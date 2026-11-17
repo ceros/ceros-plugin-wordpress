@@ -2,7 +2,7 @@
 Contributors:      copiadigital
 Tags:              ceros, experiences, embed, blocks, api
 Tested up to:      6.9
-Stable tag:        0.33.0
+Stable tag:        0.33.1
 Requires at least: 6.7
 Requires PHP:      7.4
 License:           GPL-2.0-or-later
@@ -109,6 +109,9 @@ The appearance is controlled by the Ceros experience itself. The plugin provides
 
 == Changelog ==
 
+= 0.33.1 =
+* Inline, SSR and Store mode are no longer labelled Beta.
+
 = 0.33.0 =
 * A Ceros analytics tracking switch on Flex blocks, on by default, so inline and server-rendered experiences report to Ceros Analytics like the iframe embed. Previews and stored copies never report.
 * An unsupported API version now shows an "update the plugin" message instead of a bad API key error.
@@ -123,8 +126,8 @@ The appearance is controlled by the Ceros experience itself. The plugin provides
 * Store mode mirrors the modules that HTML depends on, so a stored page renders without fetching them remotely.
 
 = 0.31.0 =
-* Flex Inline (iframeless, Beta) and Flex SSR (Beta) delivery modes.
-* Store mode (Beta), under Flex SSR delivery, which copies an experience and its assets into the site's uploads directory.
+* Flex Inline (iframeless) and Flex SSR delivery modes.
+* Store mode, under Flex SSR delivery, which copies an experience and its assets into the site's uploads directory.
 * Paste a public experience URL to embed without an API key.
 
 = 0.30.0 =

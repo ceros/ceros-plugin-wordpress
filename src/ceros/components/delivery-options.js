@@ -45,7 +45,7 @@ export const DeliveryOptions = ( {
 					}
 				/>
 				<span>
-					<span>Inline — iframeless (Beta)</span>
+					<span>Inline — iframeless</span>
 					<span className="ceros-block__embed-options-description">
 						Renders inline with no iframe. Best for a native feel.
 					</span>
@@ -61,7 +61,7 @@ export const DeliveryOptions = ( {
 					}
 				/>
 				<span>
-					<span>SSR — server-rendered (Beta)</span>
+					<span>SSR — server-rendered</span>
 					<span className="ceros-block__embed-options-description">
 						WordPress fetches and renders the experience HTML on the
 						server. Best for SEO and first paint.
