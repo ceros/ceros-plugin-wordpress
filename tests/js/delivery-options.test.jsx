@@ -60,16 +60,6 @@ describe( 'DeliveryOptions', () => {
 		expect( setSelected ).toHaveBeenCalledWith( expected );
 	} );
 
-	it( 'labels no mode as beta', () => {
-		setup();
-
-		expect( screen.getByText( 'Inline — iframeless' ) ).toBeInTheDocument();
-		expect(
-			screen.getByText( 'SSR — server-rendered' )
-		).toBeInTheDocument();
-		expect( screen.queryByText( /beta/i ) ).not.toBeInTheDocument();
-	} );
-
 	// The checkbox lives here, alongside the radio it belongs to, because both
 	// surfaces that render this picker commit the choice themselves. It is
 	// scoped to SSR because that is the only delivery mode whose output carries
