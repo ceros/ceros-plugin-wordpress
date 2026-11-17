@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       Ceros
  * Description:       Ceros API integration plugin
- * Version:           0.33.0
+ * Version:           1.0.0
  * Requires at least: 6.7
  * Requires PHP:      7.4
  * Author:            Ceros.com
@@ -26,7 +26,7 @@ if ( ! defined( 'CEROS_API_VERSION' ) ) {
 }
 if ( ! defined( 'CEROS_PLUGIN_VERSION' ) ) {
 	// Kept in step with the Version header above by tools/check-versions.sh.
-	define( 'CEROS_PLUGIN_VERSION', '0.33.0' );
+	define( 'CEROS_PLUGIN_VERSION', '1.0.0' );
 }
 if ( ! defined( 'CEROS_REST_NAMESPACE' ) ) {
 	define( 'CEROS_REST_NAMESPACE', 'ceros/v1' );
@@ -87,7 +87,7 @@ require_once plugin_dir_path( __FILE__ ) . 'includes/flex-analytics.php';
 // ceros_is_public_host() (settings.php) at request time.
 require_once plugin_dir_path( __FILE__ ) . 'includes/public-url-resolver.php';
 
-// Flex SSR (Beta) renderer — server-side fetches the manifest and renders the
+// Flex SSR renderer — server-side fetches the manifest and renders the
 // experience's pre-rendered HTML body, with deep-link support.
 require_once plugin_dir_path( __FILE__ ) . 'includes/flex-ssr-renderer.php';
 

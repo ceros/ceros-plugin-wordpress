@@ -167,10 +167,7 @@ export function SidebarControls( {
 								/>
 								<div className="ceros-sidebar__radio-content">
 									<span className="ceros-sidebar__radio-title">
-										{ __(
-											'Inline — iframeless (Beta)',
-											'ceros'
-										) }
+										{ __( 'Inline — iframeless', 'ceros' ) }
 									</span>
 									<span className="ceros-sidebar__radio-description">
 										{ __(
@@ -222,7 +219,7 @@ export function SidebarControls( {
 								<div className="ceros-sidebar__radio-content">
 									<span className="ceros-sidebar__radio-title">
 										{ __(
-											'SSR — server-rendered (Beta)',
+											'SSR — server-rendered',
 											'ceros'
 										) }
 									</span>
@@ -240,7 +237,7 @@ export function SidebarControls( {
 			) }
 			{ deliveryMode === DELIVERY_MODES.SSR && (
 				<PanelBody
-					title={ __( 'Store locally (Beta)', 'ceros' ) }
+					title={ __( 'Store locally', 'ceros' ) }
 					initialOpen={ true }
 				>
 					<StoreControls

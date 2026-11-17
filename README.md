@@ -557,7 +557,7 @@ Error messages are environment-aware. In **Production**, messages are user-frien
 
 See [CHANGELOG.md](CHANGELOG.md) for detailed version history.
 
-**Current Version: 0.33.0**
+**Current Version: 1.0.0**
 
 ---
 
